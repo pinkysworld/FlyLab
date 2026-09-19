@@ -4,6 +4,8 @@ Virtual pharmacology bench on **MaleCNS v1.0** (adult male *Drosophila* brain + 
 
 https://github.com/pinkysworld/FlyLab
 
+**Agents / next model:** read [`HANDOFF.md`](HANDOFF.md) then [`docs/RESEARCH_MAP.md`](docs/RESEARCH_MAP.md).
+
 One compound, two scorecards (insect circuit / census + vertebrate receptors), one notebook JSON.
 
 ## Install
@@ -20,34 +22,22 @@ flylab serve    # http://127.0.0.1:8765
 
 ```bash
 flylab occupancy imidacloprid --conc 1e-6
-flylab assay --compound imidacloprid --conc 1e-6          # reduced taste→MN9
-flylab assay-cns --compound imidacloprid --conc 1e-6      # MaleCNS census (~165k traced)
-flylab assay-subgraph --compound imidacloprid --conc 1e-6 # real 1-hop MN9+DNp01 graph
+flylab assay --compound imidacloprid --conc 1e-6
+flylab assay-cns --compound imidacloprid --conc 1e-6
+flylab assay-subgraph --compound imidacloprid --conc 1e-6
 flylab list-drugs
 ```
 
-Atlas (optional, for census refresh):
+Atlas / weights (optional):
 
 ```bash
-flylab download-malecns           # ~55 MB annotations + transmitters
-flylab download-malecns --full    # + 1.1 GB weights
-flylab extract-subgraph           # rebuild data/derived/malecns_named_neighborhood.json
+flylab download-malecns
+flylab download-malecns --full
+flylab extract-subgraph --types MN9,DNp01
 ```
 
-Or let GitHub Actions do the 1.1 GB cut: **Actions → extract-malecns-subgraph**.
-
-## What is real vs modelled
-
-| Object | Status |
-|---|---|
-| MaleCNS named cells MN9, DNp01 | real body IDs |
-| 1-hop neighborhood (1126 cells, 1360 edges) | real synapse counts from the public matrix |
-| Traced-neuron NT census | real map counts |
-| Hill occupancy / vertebrate panel | literature-order teaching EC50s |
-| Rate dynamics on the subgraph | model, predicted-transmitter signs |
-| Full 166k LIF | not shipped |
-| Live fly pairing | protocol drafts only |
+Or **Actions → extract-malecns-subgraph** for the 1.1 GB cut. Only the neighborhood JSON is committed.
 
 ## Paper
 
-`papers/IJRC_FlyLab_draft.md` — architecture draft. Do not submit as empirical biology until a live table exists.
+`papers/IJRC_FlyLab_draft.md` — architecture draft. No live-animal dataset.
