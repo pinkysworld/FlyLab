@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flylab"
+version = "0.1.0"
+description = "Virtual pharmacology lab on the Drosophila connectome"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "FlyLab contributors" }]
+dependencies = [
+  "numpy>=1.26",
+  "pydantic>=2.6",
+  "typer>=0.12",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+flylab = "flylab.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["flylab*"]
+
+[tool.setuptools.package-data]
+flylab = ["pharm/*.yaml"]

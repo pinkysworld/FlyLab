@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+dist/
+build/
+.DS_Store
+
+# connectomes — download locally, never commit
+data/raw/
+*.feather
+*.parquet
+*.h5
+*.hdf5
+*.nrrd
+*.pkl

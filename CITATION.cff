@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+title: FlyLab
+message: Cite the connectome papers first, then this software.
+type: software
+authors:
+  - name: FlyLab contributors
+repository-code: https://github.com/pinkysworld/FlyLab
+license: MIT
+references:
+  - title: Neuronal wiring diagram of an adult brain (FlyWire)
+    type: article
+  - title: MaleCNS v1.0 whole male Drosophila CNS connectome
+    type: article
