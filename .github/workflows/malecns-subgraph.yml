@@ -1,0 +1,70 @@
+name: extract-malecns-subgraph
+
+on:
+  workflow_dispatch:
+    inputs:
+      hops:
+        description: "Synaptic hops around seed cells"
+        default: "1"
+      min_weight:
+        description: "Drop edges weaker than this synapse count"
+        default: "5"
+  schedule:
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install pandas pyarrow pyyaml
+      - name: Download MaleCNS atlas + weights
+        env:
+          B: https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome
+        run: |
+          mkdir -p "$HOME/.flylab/malecns_v1"
+          cd "$HOME/.flylab/malecns_v1"
+          curl -L --fail --retry 5 -O "$B/body-annotations-male-cns-v1.0-minconf-0.5.feather"
+          curl -L --fail --retry 5 -O "$B/body-neurotransmitters-male-cns-v1.0.feather"
+          curl -L --fail --retry 5 -O "$B/connectome-weights-male-cns-v1.0-minconf-0.5.feather"
+          ls -lh
+      - name: Extract MN9 / DNp01 neighborhood
+        env:
+          HOPS: ${{ github.event.inputs.hops || '1' }}
+          MINW: ${{ github.event.inputs.min_weight || '5' }}
+        run: |
+          export FLYLAB_MALECNS="$HOME/.flylab/malecns_v1"
+          export PYTHONPATH="$GITHUB_WORKSPACE"
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          from flylab.maps.extract import extract_neighborhood
+          payload = extract_neighborhood(
+              hops=int(os.environ.get("HOPS", "1")),
+              min_weight=int(os.environ.get("MINW", "5")),
+              out=Path("data/derived/malecns_named_neighborhood.json"),
+          )
+          print("nodes", payload["n_nodes"], "edges", payload["n_edges"], "seeds", payload["seeds"])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: malecns-named-neighborhood
+          path: data/derived/malecns_named_neighborhood.json
+      - name: Commit subgraph if changed
+        run: |
+          git config user.name "flylab-ci"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/derived/malecns_named_neighborhood.json
+          if git diff --cached --quiet; then echo "no change"; else
+            git commit -m "chore: refresh MaleCNS named-cell neighborhood from CI"
+            git push
+          fi
