@@ -30,17 +30,19 @@
     <label>conc (M) <input id="conc" value="1e-6" size="10" /></label>
     <label>sugar GRN (Hz) <input id="sugar" value="150" size="6" /></label>
     <label>bitter GRN (Hz) <input id="bitter" value="0" size="6" /></label>
-    <button id="run">Run assay</button>
+    <button id="run">Run taste</button>
+    <button id="runcns" class="secondary">Run whole CNS</button>
+    <button id="runsub" class="secondary">Run MN9/DNp01 graph</button>
     <button id="export" class="secondary">Export notebook</button>
   </header>
   <main>
     <section>
-      <h2>Fly circuit (reduced taste → MN9)</h2>
+      <h2>Fly readouts</h2>
       <div id="flyplot"></div>
       <table id="flytable"></table>
     </section>
     <section>
-      <h2>Vertebrate panel (same compound, same dose)</h2>
+      <h2>Receptor occupancy (same dose)</h2>
       <div id="vertplot"></div>
       <table id="verttable"></table>
     </section>
@@ -49,6 +51,16 @@
   </main>
   <script>
     let lastNotebook = null;
+    function occPane(nb) {
+      const occ = nb.occupancy || [];
+      Plotly.newPlot("vertplot", [{ type: "bar", x: occ.map(r => r.receptor), y: occ.map(r => r.occupancy),
+        marker: { color: occ.map(r => r.receptor.startsWith("insect") ? "#d9772c" : "#3d5a5b") } }],
+        { margin: { t: 10, l: 40, r: 10, b: 90 }, height: 260, yaxis: { title: "occupancy", range: [0,1] } }, { displayModeBar: false });
+      document.getElementById("verttable").innerHTML = occ.map(r =>
+        `<tr><th>${r.receptor}</th><td>${r.occupancy.toFixed(3)}</td><td>${r.direction}</td></tr>`).join("");
+      document.getElementById("warn").innerHTML = (nb.warnings || []).map(w => "! " + w).join("<br/>");
+      document.getElementById("json").textContent = JSON.stringify(nb, null, 2);
+    }
     async function init() {
       const data = await (await fetch("/api/drugs")).json();
       const sel = document.getElementById("compound");
@@ -68,20 +80,53 @@
       lastNotebook = nb;
       const cells = nb.readouts.cells;
       Plotly.newPlot("flyplot", [{ type: "bar", x: Object.keys(cells), y: Object.values(cells), marker: { color: "#1f4e5f" } }],
-        { margin: { t: 10, l: 40, r: 10, b: 80 }, height: 260, yaxis: { title: "rate (model units)" } }, { displayModeBar: false });
+        { margin: { t: 10, l: 40, r: 10, b: 80 }, height: 260, yaxis: { title: "rate" } }, { displayModeBar: false });
       document.getElementById("flytable").innerHTML =
-        `<tr><th>MN9 sugar</th><td>${nb.readouts.mn9_sugar_hz.toFixed(2)} Hz</td></tr>` +
-        `<tr><th>MN9 sugar+bitter</th><td>${nb.readouts.mn9_sugar_bitter_hz.toFixed(2)} Hz</td></tr>` +
-        `<tr><th>vehicle MN9</th><td>${nb.readouts.mn9_vehicle_sugar_hz.toFixed(2)} Hz</td></tr>` +
+        `<tr><th>MN9 sugar</th><td>${nb.readouts.mn9_sugar_hz.toFixed(2)}</td></tr>` +
+        `<tr><th>MN9 sugar+bitter</th><td>${nb.readouts.mn9_sugar_bitter_hz.toFixed(2)}</td></tr>` +
         `<tr><th>g_ACh</th><td>${nb.readouts.g_ach.toFixed(3)}</td></tr>`;
-      const occ = nb.occupancy || [];
-      Plotly.newPlot("vertplot", [{ type: "bar", x: occ.map(r => r.receptor), y: occ.map(r => r.occupancy),
-        marker: { color: occ.map(r => r.receptor.startsWith("insect") ? "#d9772c" : "#3d5a5b") } }],
-        { margin: { t: 10, l: 40, r: 10, b: 90 }, height: 260, yaxis: { title: "occupancy", range: [0, 1] } }, { displayModeBar: false });
-      document.getElementById("verttable").innerHTML = occ.map(r =>
-        `<tr><th>${r.receptor}</th><td>${r.occupancy.toFixed(3)}</td><td>${r.direction}</td></tr>`).join("");
-      document.getElementById("warn").innerHTML = (nb.warnings || []).map(w => "! " + w).join("<br/>");
-      document.getElementById("json").textContent = JSON.stringify(nb, null, 2);
+      occPane(nb);
+    }
+    async function runCns() {
+      const compound = document.getElementById("compound").value;
+      const conc_M = Number(document.getElementById("conc").value);
+      const nb = await (await fetch("/api/assay/cns", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ compound, conc_M })
+      })).json();
+      lastNotebook = nb;
+      const n = nb.readouts.neurotransmitter_counts || {};
+      Plotly.newPlot("flyplot", [{ type: "bar", x: Object.keys(n), y: Object.values(n), marker: { color: "#1f4e5f" } }],
+        { margin: { t: 10, l: 50, r: 10, b: 80 }, height: 260, yaxis: { title: "traced neurons" } }, { displayModeBar: false });
+      const t = nb.readouts.treated, v = nb.readouts.vehicle;
+      document.getElementById("flytable").innerHTML =
+        `<tr><th>traced</th><td>${nb.readouts.n_traced}</td></tr>` +
+        `<tr><th>E vehicle</th><td>${v.cns_excitation_index.toFixed(3)}</td></tr>` +
+        `<tr><th>E treated</th><td>${t.cns_excitation_index.toFixed(3)}</td></tr>` +
+        `<tr><th>delta E</th><td>${nb.readouts.delta_excitation.toFixed(3)}</td></tr>`;
+      occPane(nb);
+    }
+    async function runSub() {
+      const compound = document.getElementById("compound").value;
+      const conc_M = Number(document.getElementById("conc").value);
+      const nb = await (await fetch("/api/assay/subgraph", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ compound, conc_M })
+      })).json();
+      lastNotebook = nb;
+      const labels = [], vals = [];
+      Object.entries(nb.readouts.named || {}).forEach(([typ, rows]) => {
+        rows.forEach(r => { labels.push(typ + " " + r.bodyId); vals.push(r.hz); });
+      });
+      Plotly.newPlot("flyplot", [{ type: "bar", x: labels, y: vals, marker: { color: "#1f4e5f" } }],
+        { margin: { t: 10, l: 40, r: 10, b: 80 }, height: 260, yaxis: { title: "model Hz" } }, { displayModeBar: false });
+      document.getElementById("flytable").innerHTML =
+        `<tr><th>nodes</th><td>${nb.readouts.n_nodes}</td></tr>` +
+        `<tr><th>edges</th><td>${nb.readouts.n_edges}</td></tr>` +
+        `<tr><th>g_ACh</th><td>${nb.readouts.g_ach.toFixed(3)}</td></tr>` +
+        `<tr><th>g_GABA</th><td>${nb.readouts.g_gaba.toFixed(3)}</td></tr>` +
+        labels.map((l,i) => `<tr><th>${l}</th><td>${Number(vals[i]).toFixed(2)}</td></tr>`).join("");
+      occPane(nb);
     }
     function exportNb() {
       if (!lastNotebook) return;
@@ -92,6 +137,8 @@
       a.click();
     }
     document.getElementById("run").onclick = run;
+    document.getElementById("runcns").onclick = runCns;
+    document.getElementById("runsub").onclick = runSub;
     document.getElementById("export").onclick = exportNb;
     init();
   </script>
