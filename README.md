@@ -1,32 +1,53 @@
 # FlyLab
 
-Virtual pharmacology bench on the **MaleCNS v1.0** adult male *Drosophila* nervous system (brain + ventral nerve cord).
+Virtual pharmacology bench on **MaleCNS v1.0** (adult male *Drosophila* brain + ventral nerve cord).
 
 https://github.com/pinkysworld/FlyLab
 
-## Map choice
+One compound, two scorecards (insect circuit / census + vertebrate receptors), one notebook JSON.
 
-MaleCNS, not FlyWire-only: motor neurons and descending neurons (MN9, DNp01) live in the cord as well as the brain.
-
-## Install and run
+## Install
 
 ```bash
+git clone https://github.com/pinkysworld/FlyLab
+cd FlyLab
 python -m pip install -e ".[dev]"
-flylab download-malecns          # ~55 MB atlas (annotations + transmitters)
-# flylab download-malecns --full # also the 1.1 GB synapse-weight matrix
 pytest
-flylab serve                     # http://127.0.0.1:8765
-flylab assay-cns --compound imidacloprid --conc 1e-6
+flylab serve    # http://127.0.0.1:8765
 ```
 
-## What the numbers are
+## Commands that work today
 
-- **Taste assay:** reduced MN9 circuit (directional Shiu control).
-- **Whole CNS:** real traced-neuron census from MaleCNS (~165k traced cells; ACh / GABA / Glu counts) + occupancy-patched excitation index + vertebrate panel.
-- Notebook JSON export for both.
+```bash
+flylab occupancy imidacloprid --conc 1e-6
+flylab assay --compound imidacloprid --conc 1e-6          # reduced taste→MN9
+flylab assay-cns --compound imidacloprid --conc 1e-6      # MaleCNS census (~165k traced)
+flylab assay-subgraph --compound imidacloprid --conc 1e-6 # real 1-hop MN9+DNp01 graph
+flylab list-drugs
+```
 
-The whole-CNS layer is **not** yet a 166k-cell LIF on the weight matrix. The notebook says so. Named cells MN9 and DNp01 are looked up from the real map.
+Atlas (optional, for census refresh):
 
-## Paper draft
+```bash
+flylab download-malecns           # ~55 MB annotations + transmitters
+flylab download-malecns --full    # + 1.1 GB weights
+flylab extract-subgraph           # rebuild data/derived/malecns_named_neighborhood.json
+```
 
-`papers/IJRC_FlyLab_draft.md`
+Or let GitHub Actions do the 1.1 GB cut: **Actions → extract-malecns-subgraph**.
+
+## What is real vs modelled
+
+| Object | Status |
+|---|---|
+| MaleCNS named cells MN9, DNp01 | real body IDs |
+| 1-hop neighborhood (1126 cells, 1360 edges) | real synapse counts from the public matrix |
+| Traced-neuron NT census | real map counts |
+| Hill occupancy / vertebrate panel | literature-order teaching EC50s |
+| Rate dynamics on the subgraph | model, predicted-transmitter signs |
+| Full 166k LIF | not shipped |
+| Live fly pairing | protocol drafts only |
+
+## Paper
+
+`papers/IJRC_FlyLab_draft.md` — architecture draft. Do not submit as empirical biology until a live table exists.

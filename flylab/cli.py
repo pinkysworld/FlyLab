@@ -1,8 +1,10 @@
 from __future__ import annotations
 import json
+from pathlib import Path
 import typer
 from flylab.assays.taste import run_taste_assay
 from flylab.assays.wholens import run_wholens_assay
+from flylab.assays.subgraph import run_subgraph_assay
 from flylab.maps.malecns import download as download_malecns_files
 from flylab.pharm.occupancy import compare_compound, load_library
 
@@ -42,9 +44,19 @@ def assay(compound: str = "imidacloprid", conc: float = 1e-6, sugar: float = 150
 def download_malecns(full: bool = typer.Option(False, "--full")):
     typer.echo(str(download_malecns_files(kind="full" if full else "atlas")))
 
+@app.command("extract-subgraph")
+def extract_subgraph(hops: int = 1, min_weight: int = 5):
+    from flylab.maps.extract import extract_neighborhood
+    payload = extract_neighborhood(hops=hops, min_weight=min_weight, out=Path("data/derived/malecns_named_neighborhood.json"))
+    typer.echo(f"nodes={payload['n_nodes']} edges={payload['n_edges']} -> {payload['path']}")
+
 @app.command("assay-cns")
 def assay_cns(compound: str = "imidacloprid", conc: float = 1e-6):
     typer.echo(json.dumps(run_wholens_assay(compound, conc), indent=2, default=str))
+
+@app.command("assay-subgraph")
+def assay_subgraph(compound: str = "imidacloprid", conc: float = 1e-6):
+    typer.echo(json.dumps(run_subgraph_assay(compound, conc), indent=2))
 
 @app.command()
 def serve(host: str = "127.0.0.1", port: int = 8765):
