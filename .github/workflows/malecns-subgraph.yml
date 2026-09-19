@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -64,7 +66,7 @@ jobs:
           git config user.name "flylab-ci"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/derived/malecns_named_neighborhood.json
-          if git diff --cached --quiet; then echo "no change"; else
-            git commit -m "chore: refresh MaleCNS named-cell neighborhood from CI"
-            git push
-          fi
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git commit -m "chore: refresh MaleCNS named-cell neighborhood from CI"
+          git pull --rebase origin main
+          git push
