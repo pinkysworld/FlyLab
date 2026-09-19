@@ -1,20 +1,32 @@
 """Cut named-cell neighborhoods from MaleCNS weights via Arrow batches."""
 from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Iterable
+
 import pandas as pd
 import pyarrow as pa
+
 from flylab.maps.malecns import FILES, MAP_CITATION, MAP_ID, default_dir
 
 DEFAULT_TYPES = ("MN9", "DNp01")
+GUSTATORY_TYPES = ("LB1a", "LB1b", "LB1c", "LB1d", "LB3b", "LB3c")
+
 
 def seed_ids(ann: pd.DataFrame, types: Iterable[str]) -> dict[str, list[int]]:
-    out = {}
+    """Exact type match, then prefix match (LB1a matches LB1a_L)."""
+    col = ann["type"].fillna("").astype(str)
+    out: dict[str, list[int]] = {}
     for t in types:
-        hits = ann[ann["type"].fillna("") == t]
-        out[t] = [int(x) for x in hits["bodyId"].tolist()]
+        exact = ann[col == t]
+        if len(exact):
+            hits = exact
+        else:
+            hits = ann[col.str.startswith(t)]
+        out[t] = sorted({int(x) for x in hits["bodyId"].tolist()})
     return out
+
 
 def _touching_edges(weights_path: Path, ids: set[int], min_weight: int):
     src = pa.memory_map(str(weights_path), "r")
@@ -33,6 +45,7 @@ def _touching_edges(weights_path: Path, ids: set[int], min_weight: int):
                 rows.append((int(a), int(c), int(wt)))
     return rows
 
+
 def extract_neighborhood(dest=None, types=DEFAULT_TYPES, hops=1, min_weight=5, out=None):
     dest = dest or default_dir()
     weights_path = dest / FILES["weights"]
@@ -44,7 +57,7 @@ def extract_neighborhood(dest=None, types=DEFAULT_TYPES, hops=1, min_weight=5, o
     seeds = seed_ids(traced, types)
     keep = {i for ids in seeds.values() for i in ids}
     if not keep:
-        raise ValueError("no seeds")
+        raise ValueError(f"no seeds for types={list(types)}")
     partner = set(keep)
     all_edges = []
     frontier = set(keep)
@@ -75,10 +88,26 @@ def extract_neighborhood(dest=None, types=DEFAULT_TYPES, hops=1, min_weight=5, o
             r = meta.loc[body]
             if isinstance(r, pd.DataFrame):
                 r = r.iloc[0]
-            nodes.append({"bodyId": int(body), "type": None if pd.isna(r.get("type")) else str(r["type"]), "superclass": None if pd.isna(r.get("superclass")) else str(r["superclass"]), "consensus_nt": None if pd.isna(r.get("consensus_nt")) else str(r["consensus_nt"])})
+            nodes.append({
+                "bodyId": int(body),
+                "type": None if pd.isna(r.get("type")) else str(r["type"]),
+                "superclass": None if pd.isna(r.get("superclass")) else str(r["superclass"]),
+                "consensus_nt": None if pd.isna(r.get("consensus_nt")) else str(r["consensus_nt"]),
+            })
         else:
             nodes.append({"bodyId": int(body), "type": None, "superclass": None, "consensus_nt": None})
-    payload = {"map": MAP_ID, "citation": MAP_CITATION, "types": list(types), "hops": hops, "min_weight": min_weight, "n_nodes": len(nodes), "n_edges": len(edges), "seeds": seeds, "nodes": nodes, "edges": edges}
+    payload = {
+        "map": MAP_ID,
+        "citation": MAP_CITATION,
+        "types": list(types),
+        "hops": hops,
+        "min_weight": min_weight,
+        "n_nodes": len(nodes),
+        "n_edges": len(edges),
+        "seeds": seeds,
+        "nodes": nodes,
+        "edges": edges,
+    }
     dest_out = out or Path("data/derived/malecns_named_neighborhood.json")
     dest_out.parent.mkdir(parents=True, exist_ok=True)
     dest_out.write_text(json.dumps(payload))
