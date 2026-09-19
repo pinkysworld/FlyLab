@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>FlyLab bench</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root { font-family: "IBM Plex Sans", "Segoe UI", sans-serif; color: #102027; background: #f4f1ea; }
+    body { margin: 0; }
+    header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; background: #102027; color: #f4f1ea; }
+    header h1 { font-size: 18px; margin: 0 16px 0 0; letter-spacing: .04em; }
+    label { font-size: 12px; opacity: .85; }
+    select, input, button { font: inherit; padding: 6px 8px; }
+    button { background: #d9772c; color: white; border: 0; cursor: pointer; }
+    button.secondary { background: #3d5a5b; }
+    main { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; }
+    section { background: white; padding: 12px; border: 1px solid #d7d1c4; min-height: 280px; }
+    h2 { margin: 0 0 8px; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    td, th { text-align: left; padding: 4px 6px; border-bottom: 1px solid #eee; }
+    #warn { grid-column: 1 / -1; background: #fff6e5; font-size: 13px; padding: 10px 12px; }
+    #json { grid-column: 1 / -1; font: 12px/1.4 ui-monospace, monospace; white-space: pre-wrap; max-height: 240px; overflow: auto; background: #102027; color: #d7e0c5; padding: 12px; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>FLYLAB</h1>
+    <label>compound <select id="compound"></select></label>
+    <label>conc (M) <input id="conc" value="1e-6" size="10" /></label>
+    <label>sugar GRN (Hz) <input id="sugar" value="150" size="6" /></label>
+    <label>bitter GRN (Hz) <input id="bitter" value="0" size="6" /></label>
+    <button id="run">Run assay</button>
+    <button id="export" class="secondary">Export notebook</button>
+  </header>
+  <main>
+    <section>
+      <h2>Fly circuit (reduced taste → MN9)</h2>
+      <div id="flyplot"></div>
+      <table id="flytable"></table>
+    </section>
+    <section>
+      <h2>Vertebrate panel (same compound, same dose)</h2>
+      <div id="vertplot"></div>
+      <table id="verttable"></table>
+    </section>
+    <div id="warn"></div>
+    <pre id="json"></pre>
+  </main>
+  <script>
+    let lastNotebook = null;
+    async function init() {
+      const data = await (await fetch("/api/drugs")).json();
+      const sel = document.getElementById("compound");
+      data.compounds.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); });
+      sel.value = "imidacloprid";
+      run();
+    }
+    async function run() {
+      const compound = document.getElementById("compound").value;
+      const conc_M = Number(document.getElementById("conc").value);
+      const sugar_hz = Number(document.getElementById("sugar").value);
+      const bitter_hz = Number(document.getElementById("bitter").value);
+      const nb = await (await fetch("/api/assay/taste", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ compound, conc_M, sugar_hz, bitter_hz })
+      })).json();
+      lastNotebook = nb;
+      const cells = nb.readouts.cells;
+      Plotly.newPlot("flyplot", [{ type: "bar", x: Object.keys(cells), y: Object.values(cells), marker: { color: "#1f4e5f" } }],
+        { margin: { t: 10, l: 40, r: 10, b: 80 }, height: 260, yaxis: { title: "rate (model units)" } }, { displayModeBar: false });
+      document.getElementById("flytable").innerHTML =
+        `<tr><th>MN9 sugar</th><td>${nb.readouts.mn9_sugar_hz.toFixed(2)} Hz</td></tr>` +
+        `<tr><th>MN9 sugar+bitter</th><td>${nb.readouts.mn9_sugar_bitter_hz.toFixed(2)} Hz</td></tr>` +
+        `<tr><th>vehicle MN9</th><td>${nb.readouts.mn9_vehicle_sugar_hz.toFixed(2)} Hz</td></tr>` +
+        `<tr><th>g_ACh</th><td>${nb.readouts.g_ach.toFixed(3)}</td></tr>`;
+      const occ = nb.occupancy || [];
+      Plotly.newPlot("vertplot", [{ type: "bar", x: occ.map(r => r.receptor), y: occ.map(r => r.occupancy),
+        marker: { color: occ.map(r => r.receptor.startsWith("insect") ? "#d9772c" : "#3d5a5b") } }],
+        { margin: { t: 10, l: 40, r: 10, b: 90 }, height: 260, yaxis: { title: "occupancy", range: [0, 1] } }, { displayModeBar: false });
+      document.getElementById("verttable").innerHTML = occ.map(r =>
+        `<tr><th>${r.receptor}</th><td>${r.occupancy.toFixed(3)}</td><td>${r.direction}</td></tr>`).join("");
+      document.getElementById("warn").innerHTML = (nb.warnings || []).map(w => "! " + w).join("<br/>");
+      document.getElementById("json").textContent = JSON.stringify(nb, null, 2);
+    }
+    function exportNb() {
+      if (!lastNotebook) return;
+      const blob = new Blob([JSON.stringify(lastNotebook, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "flylab_notebook.json";
+      a.click();
+    }
+    document.getElementById("run").onclick = run;
+    document.getElementById("export").onclick = exportNb;
+    init();
+  </script>
+</body>
+</html>
