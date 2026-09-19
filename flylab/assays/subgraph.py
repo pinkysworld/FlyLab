@@ -6,13 +6,24 @@ from flylab.notebook.schema import empty_notebook
 from flylab.pharm.occupancy import compare_compound
 
 SIGN = {"acetylcholine": 1.0, "glutamate": -0.4, "gaba": -1.0, "histamine": -0.5, "dopamine": 0.2, "serotonin": 0.2, "octopamine": 0.2}
-DEFAULT_GRAPH = Path("data/derived/malecns_named_neighborhood.json")
+CANDIDATES = [
+    Path("data/derived/malecns_named_neighborhood.json"),
+    Path(__file__).resolve().parents[2] / "data/derived/malecns_named_neighborhood.json",
+    Path.home() / ".flylab/malecns_named_neighborhood.json",
+]
+
+def graph_path(path=None) -> Path:
+    if path:
+        p = Path(path)
+        if p.exists():
+            return p
+    for p in CANDIDATES:
+        if p.exists():
+            return p
+    raise FileNotFoundError("neighborhood JSON missing. Run extract-malecns-subgraph Action.")
 
 def load_graph(path=None):
-    p = path or DEFAULT_GRAPH
-    if not p.exists():
-        raise FileNotFoundError(f"{p} missing. Run extract-malecns-subgraph Action or flylab extract-subgraph")
-    return json.loads(p.read_text())
+    return json.loads(graph_path(path).read_text())
 
 def _g_ach(compound, conc_M):
     if not compound:
@@ -28,8 +39,8 @@ def _g_ach(compound, conc_M):
         gain = 1.0
     return gain, occ
 
-def run_subgraph_assay(compound=None, conc_M=0.0, graph_path=None, drive_hz=40.0, steps=80):
-    g = load_graph(graph_path)
+def run_subgraph_assay(compound=None, conc_M=0.0, graph_path_arg=None, drive_hz=40.0, steps=80):
+    g = load_graph(graph_path_arg)
     nodes = g["nodes"]
     index = {n["bodyId"]: i for i, n in enumerate(nodes)}
     n = len(nodes)

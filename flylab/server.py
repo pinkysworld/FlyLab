@@ -6,10 +6,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from flylab.assays.taste import dose_response, library_keys, run_taste_assay
 from flylab.assays.wholens import run_wholens_assay
+from flylab.assays.subgraph import run_subgraph_assay
 from flylab.pharm.occupancy import compare_compound
 
 STATIC = Path(__file__).parent / "static"
-app = FastAPI(title="FlyLab", version="0.3.0")
+app = FastAPI(title="FlyLab", version="0.4.0")
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 class AssayRequest(BaseModel):
@@ -41,3 +42,7 @@ def assay_dose(compound: str):
 @app.post("/api/assay/cns")
 def assay_cns(req: AssayRequest):
     return run_wholens_assay(req.compound, req.conc_M)
+
+@app.post("/api/assay/subgraph")
+def assay_subgraph(req: AssayRequest):
+    return run_subgraph_assay(req.compound, req.conc_M)
