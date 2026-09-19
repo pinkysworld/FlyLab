@@ -45,9 +45,20 @@ def download_malecns(full: bool = typer.Option(False, "--full")):
     typer.echo(str(download_malecns_files(kind="full" if full else "atlas")))
 
 @app.command("extract-subgraph")
-def extract_subgraph(hops: int = 1, min_weight: int = 5):
+def extract_subgraph(
+    hops: int = 1,
+    min_weight: int = 5,
+    types: str = typer.Option("MN9,DNp01", help="Comma-separated MaleCNS type names"),
+):
     from flylab.maps.extract import extract_neighborhood
-    payload = extract_neighborhood(hops=hops, min_weight=min_weight, out=Path("data/derived/malecns_named_neighborhood.json"))
+    type_list = tuple(t.strip() for t in types.split(",") if t.strip())
+    payload = extract_neighborhood(
+        types=type_list,
+        hops=hops,
+        min_weight=min_weight,
+        out=Path("data/derived/malecns_named_neighborhood.json"),
+    )
+    typer.echo(f"seeds={payload['seeds']}")
     typer.echo(f"nodes={payload['n_nodes']} edges={payload['n_edges']} -> {payload['path']}")
 
 @app.command("assay-cns")
