@@ -1,80 +1,41 @@
-# EC50 values are order-of-magnitude teaching defaults compiled from public
-# literature on insect vs vertebrate receptors. Replace with lab-fitted numbers
-# before any research claim. Every entry must keep a source string.
 compounds:
   imidacloprid:
     name: Imidacloprid
     class: neonicotinoid
     receptors:
-      insect_nAChR:
-        ec50_M: 2.0e-8
-        n: 1.2
-        direction: agonist
-        source: "Dederer et al. 2011; Cf-alpha1 hybrid EC50 ~0.02 uM (order)"
-      vertebrate_nAChR_a4b2:
-        ec50_M: 1.0e-5
-        n: 1.0
-        direction: agonist
-        source: "literature contrast; vertebrate nAChR much less sensitive"
-      vertebrate_GABA_A:
-        ec50_M: 1.0e-2
-        n: 1.0
-        direction: none
-        source: "not a primary GABA-A ligand; placeholder high EC50"
+      insect_nAChR: {ec50_M: 2.0e-08, n: 1.2, direction: agonist, source: Dederer 2011 order}
+      vertebrate_nAChR_a4b2: {ec50_M: 1.0e-05, n: 1.0, direction: agonist, source: selectivity contrast}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
   nitenpyram:
     name: Nitenpyram
     class: neonicotinoid
     receptors:
-      insect_nAChR:
-        ec50_M: 5.0e-8
-        n: 1.2
-        direction: agonist
-        source: "insect nAChR adulticide class; refine from assay"
-      vertebrate_nAChR_a4b2:
-        ec50_M: 2.0e-5
-        n: 1.0
-        direction: agonist
-        source: "selectivity contrast; refine"
-      vertebrate_GABA_A:
-        ec50_M: 1.0e-2
-        n: 1.0
-        direction: none
-        source: "placeholder"
+      insect_nAChR: {ec50_M: 5.0e-08, n: 1.2, direction: agonist, source: class order}
+      vertebrate_nAChR_a4b2: {ec50_M: 2.0e-05, n: 1.0, direction: agonist, source: selectivity contrast}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
   nicotine:
     name: Nicotine
     class: alkaloid
     receptors:
-      insect_nAChR:
-        ec50_M: 2.0e-7
-        n: 1.1
-        direction: agonist
-        source: "shared nAChR ligand"
-      vertebrate_nAChR_a4b2:
-        ec50_M: 1.0e-6
-        n: 1.2
-        direction: agonist
-        source: "mammalian neuronal nAChR, order-of-magnitude"
-      vertebrate_GABA_A:
-        ec50_M: 1.0e-2
-        n: 1.0
-        direction: none
-        source: "placeholder"
+      insect_nAChR: {ec50_M: 2.0e-07, n: 1.1, direction: agonist, source: shared ligand}
+      vertebrate_nAChR_a4b2: {ec50_M: 1.0e-06, n: 1.2, direction: agonist, source: mammalian order}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
   diazepam:
     name: Diazepam
     class: benzodiazepine
     receptors:
-      insect_nAChR:
-        ec50_M: 1.0e-2
-        n: 1.0
-        direction: none
-        source: "not an insect nAChR agonist; placeholder"
-      vertebrate_nAChR_a4b2:
-        ec50_M: 1.0e-2
-        n: 1.0
-        direction: none
-        source: "placeholder"
-      vertebrate_GABA_A:
-        ec50_M: 1.0e-8
-        n: 1.3
-        direction: positive_modulator
-        source: "GABA-A benzodiazepine site; teaching value"
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+      vertebrate_GABA_A: {ec50_M: 1.0e-08, n: 1.3, direction: positive_modulator, source: GABA-A BZD site}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+  fipronil:
+    name: Fipronil
+    class: phenylpyrazole
+    receptors:
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+      vertebrate_GABA_A: {ec50_M: 1.0e-05, n: 1.0, direction: antagonist, source: weaker vertebrate contrast}
+      insect_RDL: {ec50_M: 3.0e-08, n: 1.2, direction: antagonist, source: insect GABA-Cl blocker order}
