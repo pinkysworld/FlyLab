@@ -92,7 +92,6 @@ def run_subgraph_assay(compound=None, conc_M=0.0, graph_path_arg=None, drive_hz=
     named = {}
     for typ, ids in g["seeds"].items():
         named[typ] = [{"bodyId": nid, "hz": float(r[index[nid]]) if nid in index else None} for nid in ids]
-    veh = run_subgraph_assay.__defaults__  # placeholder avoided
     nb = empty_notebook("malecns_neighborhood")
     nb["map"] = {"name": g["map"], "version": "neighborhood", "citation": g["citation"]}
     nb["compound"] = compound
@@ -120,10 +119,11 @@ def dose_response_subgraph(compound: str, concs=None):
     for c in concs:
         nb = run_subgraph_assay(compound, c)
         mn9 = nb["readouts"]["named"].get("MN9", [])
+        hz = [row["hz"] for row in mn9 if row["hz"] is not None]
         points.append({
             "conc_M": c,
             "mean_hz": nb["readouts"]["mean_hz"],
-            "mn9_hz": float(np.mean([row["hz"] for row in mn9 if row["hz"] is not None])) if mn9 else None,
+            "mn9_hz": float(np.mean(hz)) if hz else None,
             "g_ach": nb["readouts"]["g_ach"],
             "g_gaba": nb["readouts"]["g_gaba"],
         })
