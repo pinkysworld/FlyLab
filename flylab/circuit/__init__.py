@@ -1,1 +1,3 @@
-"""Connectome loaders. Intentionally empty until Gate 1."""
+from flylab.circuit.reduced_taste import CIRCUIT_ID, run_taste_circuit
+
+__all__ = ["run_taste_circuit", "CIRCUIT_ID"]

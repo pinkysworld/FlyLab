@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-NOTEBOOK_VERSION = "0.1"
+NOTEBOOK_VERSION = "0.2"
 
 
 def empty_notebook(assay: str) -> dict[str, Any]:
@@ -15,8 +15,5 @@ def empty_notebook(assay: str) -> dict[str, Any]:
         "occupancy": [],
         "readouts": {},
         "live_lab": None,
-        "warnings": [
-            "Circuit runtime not attached.",
-            "Do not cite occupancy-only output as a connectome result.",
-        ],
+        "warnings": [],
     }

@@ -4,6 +4,7 @@ import json
 
 import typer
 
+from flylab.assays.taste import run_taste_assay
 from flylab.pharm.occupancy import compare_compound, load_library
 
 app = typer.Typer(help="FlyLab — virtual fly pharmacology bench")
@@ -20,9 +21,6 @@ def _print_table(result: dict) -> None:
         )
     typer.echo("")
     typer.echo(result["disclaimer"])
-    typer.echo("Sources:")
-    for row in result["receptors"]:
-        typer.echo(f"  - {row['receptor']}: {row['source']}")
 
 
 @app.command()
@@ -31,7 +29,6 @@ def occupancy(
     conc: float = typer.Option(..., "--conc", help="Concentration in mol/L"),
     json_out: bool = typer.Option(False, "--json"),
 ) -> None:
-    """Receptor occupancy. No connectome required."""
     result = compare_compound(compound, conc)
     if json_out:
         typer.echo(json.dumps(result, indent=2))
@@ -41,10 +38,9 @@ def occupancy(
 
 @app.command()
 def compare(
-    compounds: list[str] = typer.Argument(..., help="Two or more library keys"),
-    conc: float = typer.Option(..., "--conc", help="Concentration in mol/L"),
+    compounds: list[str] = typer.Argument(...),
+    conc: float = typer.Option(..., "--conc"),
 ) -> None:
-    """Side-by-side occupancy at one concentration."""
     for name in compounds:
         _print_table(compare_compound(name, conc))
         typer.echo("-" * 64)
@@ -55,6 +51,25 @@ def list_drugs() -> None:
     lib = load_library()
     for key, spec in lib["compounds"].items():
         typer.echo(f"{key:16} {spec['name']}  ({spec.get('class', '')})")
+
+
+@app.command()
+def assay(
+    compound: str = typer.Option("imidacloprid", "--compound"),
+    conc: float = typer.Option(1e-6, "--conc"),
+    sugar: float = typer.Option(150.0, "--sugar"),
+    bitter: float = typer.Option(0.0, "--bitter"),
+) -> None:
+    nb = run_taste_assay(compound=compound, conc_M=conc, sugar_hz=sugar, bitter_hz=bitter)
+    typer.echo(json.dumps(nb, indent=2))
+
+
+@app.command()
+def serve(host: str = "127.0.0.1", port: int = 8765) -> None:
+    import uvicorn
+
+    typer.echo(f"FlyLab bench → http://{host}:{port}")
+    uvicorn.run("flylab.server:app", host=host, port=port, reload=False)
 
 
 if __name__ == "__main__":
