@@ -126,6 +126,7 @@ python scripts/reproduce_paper.py --fast       # ~1 min
 python scripts/reproduce_paper.py --only nulls --outdir /tmp/x
 python scripts/reproduce_paper.py --only paper # re-render prose from results.json
 python scripts/reproduce_paper.py --list
+flylab reproduce-paper                         # prints the recipe; does not run it
 
 # data (optional, never committed)
 flylab download-malecns           # ~55 MB atlas

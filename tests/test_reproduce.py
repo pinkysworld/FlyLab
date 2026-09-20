@@ -123,10 +123,10 @@ def template_keys() -> set[str]:
 @pytest.fixture(scope="module")
 def fast_run(tmp_path_factory) -> Path:
     out = tmp_path_factory.mktemp("repro")
-    argv = ["--fast", "--outdir", str(out), "--quiet", "--no-reexec"]
+    argv = ["--fast", "--outdir", str(out), "--quiet"]
     for step in QUICK_STEPS:
         argv += ["--only", step]
-    rc = main(argv, allow_reexec=False)
+    rc = main(argv)
     assert rc == 0, "reproduce_paper reported a failed step"
     return out
 
@@ -163,20 +163,28 @@ def test_fast_run_is_deterministic(tmp_path: Path) -> None:
     runs = []
     for i in range(2):
         out = tmp_path / f"run{i}"
-        assert main(
-            ["--fast", "--outdir", str(out), "--quiet", "--no-reexec", "--only", "census"],
-            allow_reexec=False,
-        ) == 0
+        assert main(["--fast", "--outdir", str(out), "--quiet", "--only", "census"]) == 0
         doc = json.loads((out / "results.json").read_text())
         runs.append({k: v["value"] for k, v in doc["values"].items()})
     assert runs[0] == runs[1]
 
 
+def test_library_call_with_no_argv_only_prints_guidance(capsys, tmp_path: Path) -> None:
+    """`flylab reproduce-paper` calls main() with no argv.
+
+    It must not inherit the host process's command line and must not spend
+    minutes writing into papers/ as a side effect of being imported.
+    """
+    before = sorted(PAPERS.glob("**/*")) if PAPERS.exists() else []
+    assert main() == 0
+    out = capsys.readouterr().out
+    assert "scripts/reproduce_paper.py" in out
+    assert "--fast" in out
+    assert sorted(PAPERS.glob("**/*")) == before
+
+
 def test_unknown_step_is_rejected(tmp_path: Path) -> None:
-    assert main(
-        ["--outdir", str(tmp_path), "--quiet", "--no-reexec", "--only", "does_not_exist"],
-        allow_reexec=False,
-    ) == 2
+    assert main(["--outdir", str(tmp_path), "--quiet", "--only", "does_not_exist"]) == 2
 
 
 # --------------------------------------------------------------------------
@@ -233,7 +241,7 @@ def test_rendered_draft_has_no_unresolved_placeholders() -> None:
 def test_full_fast_pipeline(tmp_path: Path) -> None:
     """Every step, at --fast, into a temp dir. Minutes, not seconds."""
     out = tmp_path / "full"
-    assert main(["--fast", "--outdir", str(out), "--quiet", "--no-reexec"], allow_reexec=False) == 0
+    assert main(["--fast", "--outdir", str(out), "--quiet"]) == 0
     doc = json.loads((out / "results.json").read_text())
     assert validate_results(doc) == []
     assert [n for n, s in doc["steps"].items() if s["status"] != "ok"] == []

@@ -51,7 +51,7 @@ flylab selectivity --conc 1e-6                        # receptor vs circuit sele
 flylab predictions                                    # pre-registered H1–H7
 flylab graph info --graph taste_motor
 flylab experiment example > design.yaml && flylab experiment run design.yaml
-flylab reproduce-paper                                # every figure, table and number
+flylab reproduce-paper                                # prints how to run the paper pipeline
 ```
 
 **Local server**
@@ -59,6 +59,8 @@ flylab reproduce-paper                                # every figure, table and 
 ```bash
 flylab serve          # http://127.0.0.1:8765
 ```
+
+`flylab reproduce-paper` deliberately only prints the recipe: the pipeline takes options and writes into `papers/`, so it is driven by the script (below) rather than by a CLI shim that cannot pass flags.
 
 **In the browser, with nothing installed**
 

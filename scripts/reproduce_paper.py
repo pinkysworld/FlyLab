@@ -69,6 +69,8 @@ _THREAD_VARS = (
 )
 for _var in _THREAD_VARS:
     os.environ.setdefault(_var, "1")
+# If numpy was already imported by the host process these have no effect and
+# the run is simply slower; run the script as a subprocess to get the pinning.
 
 import argparse  # noqa: E402
 import csv  # noqa: E402
@@ -214,7 +216,7 @@ def _fmt_M(x: float | None) -> str:
     """Concentration as a readable molar string (3.5e-08 M -> 35 nM)."""
     if x is None:
         return "n/a"
-    for scale, unit in ((1e-3, "mM"), (1e-6, "uM"), (1e-9, "nM"), (1e-12, "pM")):
+    for scale, unit in ((1e-3, "mM"), (1e-6, "\u00b5M"), (1e-9, "nM"), (1e-12, "pM")):
         if abs(x) >= scale:
             v = x / scale
             return f"{v:.3g} {unit}"
@@ -1442,8 +1444,9 @@ def step_genotype(ctx: Ctx) -> None:
                 }
             )
             key = f"geno_{compound}_{r['genotype']}"
-            ctx.put(f"{key}_occ", _f(r.get("occupancy")))
-            ctx.put(f"{key}_fold", _f(r.get("fold_shift")))
+            occ, fold = _f(r.get("occupancy")), _f(r.get("fold_shift"))
+            ctx.put(f"{key}_occ", occ)
+            ctx.put(f"{key}_fold", fold, text=("n/a" if fold is None else f"{fold:g}"))
     save_table(
         ctx,
         "T9_genotype",
@@ -1884,19 +1887,19 @@ def step_architecture(ctx: Ctx) -> None:
     box(26, 68, 48, 15, "occupancy engine", "Hill occupancy, sourced EC50 + tier\ngenotype shift  |  mixtures  |  exposure C(t)", SEQ[0])
     box(2, 46, 42, 16, "insect scorecard", "nAChR, RDL, GluCl, AChE, Nav, OctR\n-> mechanism table -> gain patch", "#dbe9fb", INSECT)
     box(56, 46, 42, 16, "vertebrate scorecard", "a4b2, a7, GABA-A, GlyR, AChE, Nav1.x\noccupancy only: no vertebrate circuit", "#fbe2d6", VERTEBRATE)
-    box(2, 24, 42, 17, "MaleCNS netlist (CC-BY)", "1-hop MN9/DNp01 cut  1126 / 1360\ntaste-motor cut  1841 / 19066\ncensus 165122 traced cells", "#e6f6ef", "#1baf7a")
+    box(2, 23, 42, 19, "MaleCNS netlist (CC-BY)", "1-hop MN9/DNp01 cut  1126 / 1360\ntaste-motor cut  1841 / 19066\ncensus 165122 traced cells", "#e6f6ef", "#1baf7a")
     box(2, 4, 42, 15, "circuit runtime", "rate network (deterministic)\nLIF, Shiu-style + background Poisson", "#ffffff")
-    box(56, 16, 42, 25, "analysis + validation", "null models (4 degradations)\nselectivity landscape\nrank validation  |  mixtures\nHill fit + bootstrap  |  predictions", "#ffffff")
-    box(56, 2, 42, 11, "notebook JSON + provenance", "readouts, gains, warnings, live_lab\nversion / git sha / library sha256", SEQ[0])
+    box(56, 19, 42, 22, "analysis + validation", "null models (4 degradations)\nselectivity landscape\nrank validation  |  mixtures\nHill fit + bootstrap  |  predictions", "#ffffff")
+    box(56, 1, 42, 15, "notebook JSON + provenance", "readouts, gains, warnings, live_lab\nversion / git sha / library sha256", SEQ[0])
 
     arrow(50, 88, 50, 83.5)
     arrow(38, 68, 26, 62.5, colour=INSECT)
     arrow(62, 68, 74, 62.5, colour=VERTEBRATE)
-    arrow(23, 46, 23, 41.5, "gain patch", INSECT)
-    arrow(23, 24, 23, 19.5, "netlist", "#1baf7a")
-    arrow(44, 11.5, 56, 22, "readouts")
+    arrow(23, 46, 23, 42.5, "gain patch", INSECT)
+    arrow(23, 23, 23, 19.5, "netlist", "#1baf7a")
+    arrow(44, 11.5, 56, 24, "readouts")
     arrow(77, 46, 77, 41.5, "same dose", VERTEBRATE)
-    arrow(77, 16, 77, 13.5)
+    arrow(77, 19, 77, 16.5)
     ax.text(
         50,
         -7.5,
@@ -2158,18 +2161,39 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--list", action="store_true", help="list the steps and exit")
     ap.add_argument("--seed", type=int, default=0, help="global RNG seed (default 0)")
     ap.add_argument("--quiet", action="store_true", help="only print the summary table")
-    ap.add_argument("--no-reexec", action="store_true", help="never re-exec to pin BLAS threads")
     return ap
 
 
-def main(argv: list[str] | None = None, allow_reexec: bool = True) -> int:
-    """Run the pipeline. ``argv`` defaults to *no* arguments, never to
-    ``sys.argv``: ``flylab reproduce-paper`` and the test suite call this as a
-    library function, and inheriting the host process's command line there
-    would make pytest's own flags look like pipeline options. The module entry
-    point passes ``sys.argv[1:]`` explicitly.
+GUIDANCE = """\
+FlyLab paper reproduction is driven by the script, not by this shim, because it
+takes options (and writes into papers/). Run one of:
+
+  python scripts/reproduce_paper.py            full run, ~3.5 min, no downloads
+  python scripts/reproduce_paper.py --fast     ~1.5 min, fewer shuffles/replicates
+  python scripts/reproduce_paper.py --only nulls --outdir /tmp/x
+  python scripts/reproduce_paper.py --list     the named steps
+
+Outputs: papers/figures/*.png(+svg), papers/tables/T*.csv|md, papers/results.json,
+and papers/IJRC_FlyLab_draft.md re-rendered from its template.
+"""
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the pipeline.
+
+    ``argv`` is the command line to parse. ``None`` means *no command line was
+    supplied at all* — the ``flylab reproduce-paper`` shim calls this as a
+    library function — and prints :data:`GUIDANCE` instead of running anything.
+    Two reasons: inheriting the host process's ``sys.argv`` would make a test
+    runner's own flags look like pipeline options, and a library call that
+    silently spends minutes writing into ``papers/`` is a bad neighbour. Pass
+    ``[]`` for an explicit default run; the module entry point passes
+    ``sys.argv[1:]``.
     """
-    raw = [] if argv is None else list(argv)
+    if argv is None:
+        print(GUIDANCE, end="")
+        return 0
+    raw = list(argv)
     # tolerate the subcommand name if a caller forwards it verbatim
     if raw and raw[0] == "reproduce-paper":
         raw = raw[1:]
@@ -2179,20 +2203,6 @@ def main(argv: list[str] | None = None, allow_reexec: bool = True) -> int:
         for name, desc, _ in STEPS:
             print(f"{name:14} {desc}")
         return 0
-
-    # numpy is already imported (e.g. via `flylab reproduce-paper`), so the
-    # thread env set at module import had no effect on BLAS. Re-exec once.
-    if (
-        allow_reexec
-        and not args.no_reexec
-        and "numpy" in sys.modules
-        and os.environ.get("FLYLAB_REPRO_REEXEC") != "1"
-    ):
-        env = dict(os.environ, FLYLAB_REPRO_REEXEC="1")
-        for v in _THREAD_VARS:
-            env.setdefault(v, "1")
-        print("[reproduce] re-exec with single-threaded BLAS (small matrices)", flush=True)
-        os.execve(sys.executable, [sys.executable, str(Path(__file__).resolve()), *raw], env)
 
     only = set(args.only or [])
     unknown = only - set(STEP_NAMES)
