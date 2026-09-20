@@ -58,7 +58,12 @@ from flylab.analysis.dependence import (
     dependence_profile,
 )
 from flylab.circuit.rate import DATA_DIRS, GRAPHS, load_graph
-from flylab.maps.extract import LADDER_RECIPE, LADDER_SIZES, ladder_filename
+# the ladder's constants and naming live in a pandas-free module on purpose:
+# this module is reachable from flylab.browser.bridge, which must import with
+# pandas and pyarrow hidden (tests/test_browser_bridge.py enforces it).
+# flylab.maps.extract, which needs pandas and pyarrow to *build* a cut, is
+# never imported here.
+from flylab.maps.ladder import LADDER_RECIPE, LADDER_SIZES, ladder_filename
 
 # --------------------------------------------------------------------------
 # the ladder of cuts

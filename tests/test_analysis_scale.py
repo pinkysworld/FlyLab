@@ -19,7 +19,10 @@ on a synthetic cut; the full-ladder run is marked ``slow``.
 """
 from __future__ import annotations
 
+import builtins
+import importlib
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -501,3 +504,75 @@ def test_the_real_ladder_runs_end_to_end():
     rep = scale_report(res)
     assert len(res["rows"]) == 2 * len(cuts)
     assert rep["markdown"].count("\n") >= len(res["rows"])
+
+
+# --------------------------------------------------------------------------
+# the browser guarantee: the core imports without the heavy stack
+# --------------------------------------------------------------------------
+#: what Pyodide does not have; the same list tests/test_browser_bridge.py uses
+HEAVY = ("pydantic", "fastapi", "starlette", "typer", "uvicorn", "pandas", "pyarrow")
+
+
+@pytest.fixture
+def without_heavy_stack(monkeypatch):
+    real_import = builtins.__import__
+
+    def guarded(name, *args, **kw):
+        if name.split(".")[0] in HEAVY:
+            raise ImportError(f"{name} is not available in this environment")
+        return real_import(name, *args, **kw)
+
+    for mod in list(sys.modules):
+        if mod.split(".")[0] in HEAVY or mod.startswith("flylab"):
+            monkeypatch.delitem(sys.modules, mod, raising=False)
+    monkeypatch.setattr(builtins, "__import__", guarded)
+    yield
+    for mod in list(sys.modules):
+        if mod.startswith("flylab"):
+            sys.modules.pop(mod, None)
+
+
+@pytest.mark.parametrize(
+    "module",
+    [
+        "flylab.maps.ladder",
+        "flylab.analysis.scale",
+        "flylab.assays.fullcns",
+        "flylab.analysis",
+        "flylab.assays",
+    ],
+)
+def test_the_scaling_layer_imports_with_pandas_and_pyarrow_hidden(
+    without_heavy_stack, module
+):
+    """``flylab.browser.bridge`` reaches all of these, and Pyodide has no pandas.
+
+    The ladder's *constants* therefore live in ``flylab.maps.ladder`` (stdlib
+    only) and ``flylab.maps.extract``, which needs pandas and pyarrow to build
+    a cut, is never imported at module scope from the analysis or assay layer.
+    """
+    importlib.import_module(module)
+    assert "pandas" not in sys.modules and "pyarrow" not in sys.modules
+    assert "flylab.maps.extract" not in sys.modules
+
+
+def test_the_ladder_constants_module_has_no_heavy_imports():
+    """A regression guard that does not need the import machinery to run."""
+    import ast
+
+    tree = ast.parse((ROOT / "flylab" / "maps" / "ladder.py").read_text())
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported |= {a.name.split(".")[0] for a in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    assert not (imported & {"pandas", "pyarrow", "numpy"}), sorted(imported)
+
+
+def test_extract_still_re_exports_the_ladder_constants():
+    """Moving the constants must not break `from flylab.maps.extract import ...`."""
+    from flylab.maps import extract, ladder
+
+    for name in ladder.__all__:
+        assert getattr(extract, name) is getattr(ladder, name), name

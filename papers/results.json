@@ -1,13 +1,13 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-20T12:44:36+00:00",
+  "generated_utc": "2026-09-20T13:54:55+00:00",
   "fast": false,
   "seed": 0,
   "jobs": 4,
-  "runtime_s": 5221.4,
+  "runtime_s": 3828.64,
   "provenance": {
     "flylab_version": "0.6.0",
-    "git_sha": "08aa857850dff720562b2c127819f126a46d53c2",
+    "git_sha": "f8de601f10531b9c804f3c4e502efb0b43293fb7",
     "library_sha256": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8",
     "library_version": "0.6",
     "library_schema_version": 3,
@@ -39,7 +39,7 @@
   "steps": {
     "provenance": {
       "status": "ok",
-      "runtime_s": 0.42,
+      "runtime_s": 0.82,
       "description": "versions, hashes, map ids, graph sizes",
       "figures": 0,
       "tables": 0,
@@ -47,7 +47,7 @@
     },
     "census": {
       "status": "ok",
-      "runtime_s": 0.01,
+      "runtime_s": 0.0,
       "description": "MaleCNS census + labellar GRN type proof (T0)",
       "figures": 0,
       "tables": 2,
@@ -55,7 +55,7 @@
     },
     "scorecard": {
       "status": "ok",
-      "runtime_s": 1.42,
+      "runtime_s": 3.39,
       "description": "insect vs vertebrate panel + library table (F2, T1)",
       "figures": 1,
       "tables": 2,
@@ -63,7 +63,7 @@
     },
     "evidence": {
       "status": "ok",
-      "runtime_s": 1.01,
+      "runtime_s": 2.41,
       "description": "typed evidence census, schema v3 (F11, T10)",
       "figures": 1,
       "tables": 4,
@@ -71,7 +71,7 @@
     },
     "curves": {
       "status": "ok",
-      "runtime_s": 2.55,
+      "runtime_s": 6.43,
       "description": "engagement curves and selectivity windows (F3)",
       "figures": 1,
       "tables": 0,
@@ -79,7 +79,7 @@
     },
     "mechanisms": {
       "status": "ok",
-      "runtime_s": 0.0,
+      "runtime_s": 0.01,
       "description": "mechanism -> gain rules (T2)",
       "figures": 0,
       "tables": 4,
@@ -87,7 +87,7 @@
     },
     "graph": {
       "status": "ok",
-      "runtime_s": 2.83,
+      "runtime_s": 7.26,
       "description": "taste-motor graph and GRN->MN9 paths (F4, T7)",
       "figures": 1,
       "tables": 4,
@@ -95,7 +95,7 @@
     },
     "veto": {
       "status": "ok",
-      "runtime_s": 10.56,
+      "runtime_s": 26.8,
       "description": "map-based bitter veto, rate vs LIF (F5)",
       "figures": 1,
       "tables": 0,
@@ -103,7 +103,7 @@
     },
     "dependence": {
       "status": "ok",
-      "runtime_s": 5031.21,
+      "runtime_s": 3610.41,
       "description": "connectome dependence + landscape (F6, F12, T6, T11, T12)",
       "figures": 3,
       "tables": 12,
@@ -111,7 +111,7 @@
     },
     "ablation": {
       "status": "ok",
-      "runtime_s": 81.85,
+      "runtime_s": 77.87,
       "description": "ablation ladder over the library (F13, T13, T13b)",
       "figures": 1,
       "tables": 8,
@@ -119,7 +119,7 @@
     },
     "landscape": {
       "status": "ok",
-      "runtime_s": 63.23,
+      "runtime_s": 63.87,
       "description": "receptor vs circuit selectivity (F7, T8)",
       "figures": 1,
       "tables": 2,
@@ -127,7 +127,7 @@
     },
     "dose": {
       "status": "ok",
-      "runtime_s": 7.23,
+      "runtime_s": 6.94,
       "description": "model dose-response + sensitivity tornado (F8)",
       "figures": 1,
       "tables": 0,
@@ -135,7 +135,7 @@
     },
     "genotype": {
       "status": "ok",
-      "runtime_s": 0.54,
+      "runtime_s": 0.51,
       "description": "resistance-allele panels (F9, T9)",
       "figures": 1,
       "tables": 2,
@@ -151,7 +151,7 @@
     },
     "predictions": {
       "status": "ok",
-      "runtime_s": 15.24,
+      "runtime_s": 15.08,
       "description": "prospective predictions (T3)",
       "figures": 0,
       "tables": 2,
@@ -159,7 +159,7 @@
     },
     "mixtures": {
       "status": "ok",
-      "runtime_s": 0.38,
+      "runtime_s": 0.36,
       "description": "binary mixtures vs published verdicts (T5)",
       "figures": 0,
       "tables": 2,
@@ -167,7 +167,7 @@
     },
     "expression": {
       "status": "ok",
-      "runtime_s": 0.2,
+      "runtime_s": 0.19,
       "description": "expression-weighted sensitivity coverage",
       "figures": 0,
       "tables": 0,
@@ -175,7 +175,7 @@
     },
     "stability": {
       "status": "ok",
-      "runtime_s": 0.65,
+      "runtime_s": 0.62,
       "description": "specification robustness + threshold grid (F14, T14, T14b, T15)",
       "figures": 1,
       "tables": 6,
@@ -183,7 +183,7 @@
     },
     "uncertainty": {
       "status": "ok",
-      "runtime_s": 0.62,
+      "runtime_s": 0.6,
       "description": "global uncertainty budget + VOI (F15, T16, T17)",
       "figures": 1,
       "tables": 4,
@@ -197,9 +197,17 @@
       "tables": 2,
       "values": 15
     },
+    "scale": {
+      "status": "ok",
+      "runtime_s": 3.7,
+      "description": "where the dependence verdict settles with the cut (T26, T27 when the study exists)",
+      "figures": 0,
+      "tables": 2,
+      "values": 26
+    },
     "architecture": {
       "status": "ok",
-      "runtime_s": 0.53,
+      "runtime_s": 0.42,
       "description": "architecture schematic (F1)",
       "figures": 2,
       "tables": 0,
@@ -207,7 +215,7 @@
     },
     "paper": {
       "status": "ok",
-      "runtime_s": 0.02,
+      "runtime_s": 0.01,
       "description": "render the draft and supplement from their templates",
       "figures": 0,
       "tables": 0,
@@ -223,8 +231,8 @@
       "step": "provenance"
     },
     "git_sha": {
-      "value": "08aa857850dff720562b2c127819f126a46d53c2",
-      "text": "08aa857850df",
+      "value": "f8de601f10531b9c804f3c4e502efb0b43293fb7",
+      "text": "f8de601f1053",
       "unit": null,
       "note": null,
       "step": "provenance"
@@ -7041,30 +7049,224 @@
       "note": null,
       "step": "claims"
     },
+    "scale_ladder_sizes": {
+      "value": [
+        1000,
+        5000,
+        10000,
+        25000,
+        50000
+      ],
+      "text": "1k, 5k, 10k, 25k, 50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_rungs_on_disk": {
+      "value": [
+        "scale_1k",
+        "scale_5k",
+        "scale_10k",
+        "scale_25k",
+        "scale_50k"
+      ],
+      "text": "scale_1k, scale_5k, scale_10k, scale_25k, scale_50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_rungs_missing": {
+      "value": [],
+      "text": "none",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_n_rungs_on_disk": {
+      "value": 5,
+      "text": "5",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_name": {
+      "value": "scale_1k",
+      "text": "scale_1k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_nodes": {
+      "value": 1000,
+      "text": "1000",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_edges": {
+      "value": 22857,
+      "text": "22\u202f857",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_mean_degree": {
+      "value": 22.857,
+      "text": "22.9",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_share_onto_seeds": {
+      "value": 0.06501290633066456,
+      "text": "7%",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_in_star": {
+      "value": false,
+      "text": "no",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_frontier_n_paper": {
+      "value": 1000,
+      "text": "1000",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_largest_feasible_profile": {
+      "value": "scale_50k",
+      "text": "scale_50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_largest_feasible_lif": {
+      "value": "scale_50k",
+      "text": "scale_50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_top_rung": {
+      "value": "50k",
+      "text": "50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_top_profile_hours": {
+      "value": 21.13708841666667,
+      "text": "21.1",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_top_landscape_days": {
+      "value": 7.397980945833334,
+      "text": "7",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_whole_cns_profile_hours": {
+      "value": 59.427331277777775,
+      "text": "59",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_status": {
+      "value": "not yet run",
+      "text": "not yet run",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_source": {
+      "value": null,
+      "text": "none",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_cuts": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_compounds": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_sequences": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_n_cuts": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_settled": {
+      "value": null,
+      "text": "not measured",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_settled_clean_ladder": {
+      "value": null,
+      "text": "not measured",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_statement": {
+      "value": null,
+      "text": "Where the verdict settles with the size of the cut has not been measured at this commit: the scale ladder's rungs on disk are scale_1k, scale_5k, scale_10k, scale_25k, scale_50k and the study over the full ladder had not been run.",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
     "paper_words_body": {
-      "value": 6993,
-      "text": "6993",
+      "value": 7005,
+      "text": "7005",
       "unit": "words",
       "note": null,
       "step": "paper"
     },
     "paper_words": {
-      "value": 10426,
-      "text": "10\u202f426",
+      "value": 10438,
+      "text": "10\u202f438",
       "unit": null,
       "note": null,
       "step": "paper"
     },
     "paper_words_in_target": {
-      "value": true,
-      "text": "yes",
+      "value": false,
+      "text": "no",
       "unit": null,
       "note": null,
       "step": "paper"
     },
     "supplement_words": {
-      "value": 5368,
-      "text": "5368",
+      "value": 5739,
+      "text": "5739",
       "unit": "words",
       "note": null,
       "step": "paper"
@@ -7079,7 +7281,7 @@
     "_provenance": {
       "value": {
         "flylab_version": "0.6.0",
-        "git_sha": "08aa857850dff720562b2c127819f126a46d53c2",
+        "git_sha": "f8de601f10531b9c804f3c4e502efb0b43293fb7",
         "library_sha256": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8",
         "library_version": "0.6",
         "library_schema_version": 3,
@@ -7110,7 +7312,7 @@
       },
       "text": "",
       "unit": null,
-      "note": "carried over from the previous run in this outdir",
+      "note": "provenance block, not a paper scalar",
       "step": "provenance"
     }
   },
@@ -7217,7 +7419,7 @@
       "bytes": 250459,
       "step": "validation",
       "figure": "F10_rank_validation",
-      "caption": "Left: the model's compound ordering against each published ordering that the teaching library can cover, with Spearman's rho per entry and the mean across entries (0.88 over 8 evaluated entries; 16 entry-assay combinations are skipped because the library cannot cover them). Right: the two inversions the validation module records rather than fixes. Nitenpyram sits near the top of the library's insect nAChR potency ordering and is the least potent neonicotinoid in *Drosophila* whole-animal bioassays, and clothianidin/imidacloprid are ordered the opposite way from the bioassays. Both are receptor-EC50 versus whole-animal-potency differences: the whole-animal number contains uptake, penetration and metabolism, which FlyLab does not model."
+      "caption": "Left: the model's compound ordering against each published ordering that the teaching library can cover, with Spearman's rho per entry and the number of compounds it orders. 8 entry-assay combinations are evaluable and 16 are skipped because the library cannot cover them; 4 of the evaluable ones order exactly two compounds, where rho can only be +-1, so no bare mean is quoted: over the 4 entries with more than two compounds the mean is 0.756, and as a concordance count the result is 8 concordant against 0 discordant orderings (two-sided binomial p = 0.008). Right: the two inversions the validation module records rather than fixes. Nitenpyram sits near the top of the library's insect nAChR potency ordering and is the least potent neonicotinoid in *Drosophila* whole-animal bioassays, and clothianidin/imidacloprid are ordered the opposite way from the bioassays. Both are receptor-EC50 versus whole-animal-potency differences: the whole-animal number contains uptake, penetration and metabolism, which FlyLab does not model."
     },
     {
       "name": "F14_conclusion_stability.png",
@@ -7225,7 +7427,7 @@
       "bytes": 263855,
       "step": "stability",
       "figure": "F14_conclusion_stability",
-      "caption": "Each row is a conclusion this paper could state; each column is one prespecified, admissible way of turning receptor engagement into synaptic gain. Green retains the conclusion, red reverses it, amber means the readout does not exist under that specification. The topology conclusions, the RDL disinhibition and the map bitter-veto direction survive every specification; the nicotinic suppression conclusion is reversed by every monotone rule, which is how a result that depends on a modelling choice looks when it is tested rather than asserted."
+      "caption": "Each row is a conclusion this paper could state; each column is one prespecified, admissible way of turning receptor engagement into synaptic gain. Green retains the conclusion, red reverses it, amber means the readout does not exist under that specification. The topology rows are decided on 100 permutations per specification and on Benjamini-Hochberg adjusted probabilities across the 100 structural tests of the run; until v0.6.1 the specification never reached the engine those rows were computed on, so their uniformity was guaranteed by construction rather than measured. Retained by every specification: C2_rdl_disinhibition, C3_imidacloprid_topology_not_distinguishable, C4_fipronil_topology_exceeds, C7_map_bitter_veto. The nicotinic suppression conclusion is reversed by every monotone rule, which is how a result that depends on a modelling choice looks when it is tested rather than asserted; and for a conclusion shaped as a failure to reject, the fraction retained is only as strong as the equivalence behind it (T14's `n_equivalent_within_tolerance` against `n_indeterminate`)."
     },
     {
       "name": "F15_uncertainty_voi.png",
@@ -7241,7 +7443,7 @@
       "bytes": 288705,
       "step": "architecture",
       "figure": "F1_architecture",
-      "caption": "FlyLab dataflow. A compound and a free concentration enter the occupancy engine, which reads the sourced library (optionally shifted by a genotype, combined with a mixture partner, or driven by an exposure profile). Occupancy splits into two scorecards. The insect side passes through the mechanism table to a gain patch on transmitter classes of a named MaleCNS cut; the vertebrate side is scored at the same dose and never touches a circuit. The circuit runtime (rate or LIF) produces named-cell readouts, which the analysis and validation layers turn into null-model z-scores, selectivity indices, rank correlations and pre-registered predictions. Everything lands in one notebook JSON with a provenance block."
+      "caption": "FlyLab dataflow. A compound and a free concentration enter the occupancy engine, which reads the sourced library (optionally shifted by a genotype, combined with a mixture partner, or driven by an exposure profile). Occupancy splits into two scorecards. The insect side passes through the mechanism table to a gain patch on transmitter classes of a named MaleCNS cut; the vertebrate side is scored at the same dose and never touches a circuit. The circuit runtime (rate or LIF) produces named-cell readouts, which the analysis and validation layers turn into empirical permutation probabilities with their three-way verdicts, selectivity indices, rank correlations and prospective predictions. Everything lands in one notebook JSON with a provenance block."
     },
     {
       "name": "F1_architecture.svg",
@@ -7557,7 +7759,7 @@
     {
       "name": "T3_predictions.md",
       "path": "tables/T3_predictions.md",
-      "bytes": 1191,
+      "bytes": 1209,
       "rows": 7,
       "step": "predictions"
     },
@@ -7578,14 +7780,14 @@
     {
       "name": "T14b_specification_diagnostics.csv",
       "path": "tables/T14b_specification_diagnostics.csv",
-      "bytes": 2181,
+      "bytes": 2183,
       "rows": 25,
       "step": "stability"
     },
     {
       "name": "T14b_specification_diagnostics.md",
       "path": "tables/T14b_specification_diagnostics.md",
-      "bytes": 2072,
+      "bytes": 2071,
       "rows": 25,
       "step": "stability"
     },
@@ -7658,6 +7860,20 @@
       "bytes": 2907,
       "rows": 9,
       "step": "claims"
+    },
+    {
+      "name": "T26_scale_frontier.csv",
+      "path": "tables/T26_scale_frontier.csv",
+      "bytes": 699,
+      "rows": 9,
+      "step": "scale"
+    },
+    {
+      "name": "T26_scale_frontier.md",
+      "path": "tables/T26_scale_frontier.md",
+      "bytes": 1285,
+      "rows": 9,
+      "step": "scale"
     }
   ],
   "notes": [
@@ -7668,7 +7884,7 @@
     "[dependence] the transmitter null matters to the equivalence claim and not to the probability: imidacloprid's gap from the null median is 2.65 Hz under the plain label permutation and 0.24 Hz under the weight-matched null, against a prespecified margin of 0.332 Hz. The plain permutation is a joint target-set-and-sign null and is reported as one.",
     "[dependence] the fipronil bitter-veto ratio on the taste-motor path is a negative at n=300 shuffles (max |z| = 0.220, p resolution 0.0033): the veto ratio is model behaviour, not evidence about the wiring, and the verdicts say which modes are equivalent within tolerance (none) and which are merely indeterminate (erdos_renyi, rewire_degree_preserving, sign_permute, sign_permute_weight_matched, weight_permute).",
     "[dependence] plain transmitter-label permutation does NOT preserve the weighted excitation/inhibition balance: the cholinergic share of total outgoing synaptic weight is 0.619 on the real `named` cut against 0.544 +- 0.027 over 1000 permutations, putting the real graph at the 100th percentile of its own null. The weight-matched null holds every tracked share within 0.002.",
-    "[dependence] instrument validation: the ladder recovered 2 of 3 planted topology-dependent effects at n = 200 and returned no false positive on the unplanted control. Detection over the planted grid is n=50: 0.61, n=200: 0.61, n=1000: 0.67; the empirical false-positive rate on the unplanted control is 0 of 18. Effect size dominates the permutation count (n=50: 0.61, n=200: 0.61, n=1000: 0.67).",
+    "[dependence] instrument validation: the ladder recovered 2 of 3 planted topology-dependent effects at n = 200 and returned no false positive on the unplanted control. Detection over the planted grid by permutation count is n=50: 0.61, n=200: 0.61, n=1000: 0.67 and by planted strength strength 0.25: 0.00-0.17; strength 0.5: 0.67-0.83; strength 1: 1.00-1.00; the empirical false-positive rate on the unplanted control is 0 of 18. Effect size dominates the permutation count: full power at planted strength 1, detection at or below one in four at 0.25.",
     "[dependence] multiplicity changes the headline count on the `named` cut: 14 cells are topology-dependent on the raw permutation p and 11 survive Benjamini-Hochberg across the 168 structural tests of the landscape. The corrected count is the one the paper quotes.",
     "[dependence] the central RQ2 result REVERSES on a cut that has topology: repeated on `taste_motor` (1841 nodes, 19066 edges, mean degree 10.4) the landscape returns 0 composition-dominated cells of 84, against 42 of 84 on the in-star `named` cut. The composition-dominated majority is a property of the substrate, not of receptor perturbation on connectomes.",
     "[ablation] the ablation ladder's ranking is concentration-dependent: with the historical depression-only level-C rule the weakest level is 10 nM: C_topology_only; 100 nM: A_receptor_only; 1 \u00b5M: A_receptor_only; 10 \u00b5M: A_receptor_only. Any sentence of the form 'the topology-only level is the worst of the four' is true of one column and false of the others.",
@@ -7684,7 +7900,9 @@
     "[stability] T8 and T15 have different scopes and must be read that way: T8 scores the whole library on both cuts, T15 only the 10 compounds of the two mechanism classes the conclusion is about. acetylcholine carries a circuit index in T8 and is outside T15's compound set entirely.",
     "[stability] the amplify/buffer split is NOT stable across the 3x3 threshold grid: nav_ache fails at circuit_frac=0.50,vert_limit=0.10. The paper quotes the range over the grid, never the point estimate.",
     "[uncertainty] the estimator's noise floor is 0.046, set by the most negative first-order estimate (gain_coef), not by the declared null factor lif_seed at -0.007. Only gain_transform, weight_threshold have a first-order confidence interval that excludes zero; every other factor is unresolved at this sample size, and a negative point estimate is estimator error rather than a negative contribution.",
-    "[claims] the provenance chain behind a circuit readout has 9 links and exactly 1 of them (malecns_edges) is a measurement of the system being simulated; the rest are literature reuse, asserted modelling choices and computation."
+    "[claims] the provenance chain behind a circuit readout has 9 links and exactly 1 of them (malecns_edges) is a measurement of the system being simulated; the rest are literature reuse, asserted modelling choices and computation.",
+    "[scale] the scaling study has not been run at this commit (rungs on disk: scale_1k, scale_5k, scale_10k, scale_25k, scale_50k; missing: none); the manuscript reports the open question, not a verdict.",
+    "[paper] body word count 7005 is outside the 5000-7000 target"
   ],
   "partial": false,
   "honesty": [

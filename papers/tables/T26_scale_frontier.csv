@@ -1,0 +1,10 @@
+scale,n_nodes,n_edges,single_run_s,dependence_profile_h,dependence_profile_feasible,landscape_days,landscape_feasible,lif_dense_gb,lif_feasible
+named,1126,1360,0.002,0.03,True,0.01,True,0.01,True
+taste_motor,1841,19066,0.006,0.2,True,0.07,True,0.01,True
+scale_1k,1000,22857,0.011,0.23,True,0.08,True,0.0,True
+scale_5k,5000,279845,0.077,2.68,True,0.94,True,0.1,True
+scale_10k,10000,621600,0.171,5.94,True,2.08,False,0.4,True
+scale_25k,25000,1364375,0.469,13.01,True,4.56,False,2.5,True
+scale_50k,50000,2216881,0.967,21.14,True,7.4,False,10.0,True
+whole_cns_w5,165122,6235682,4.149,59.43,False,20.8,False,109.06,False
+whole_cns_w1,165122,25563197,30.26,243.58,False,85.25,False,109.06,False

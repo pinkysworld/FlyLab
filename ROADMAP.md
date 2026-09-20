@@ -9,7 +9,7 @@ Full research plan: `docs/RESEARCH_MAP.md`. Numbers: `papers/results.json` (rege
 | 1b Named subgraph | MN9/DNp01 1-hop cut, 1126 / 1360 | **done** |
 | 1c Gustatory types | LB1/LB3 seeds resolved on MaleCNS `type` | **done in v0.5** — all 16 `LB*` types proven present (was open issue #2) |
 | 1d Map taste path | sugar/bitter drive on real GRN body IDs, MN9 read out | **done** (rate + LIF) |
-| 2 Drug panel | insect vs vertebrate across the library | **done** — 21 compounds, 101 rows |
+| 2 Drug panel | insect vs vertebrate across the library | **done** — 21 compounds, 102 rows |
 | 3 Local bench | assays + export in one UI | **done** |
 | 4 Whole-CNS census | traced transmitter counts | **done** — committed fallback, no download |
 | 4b 166k LIF | full matrix as a spike network | **out of scope** |

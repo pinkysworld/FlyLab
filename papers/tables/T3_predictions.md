@@ -1,4 +1,4 @@
-**T3_predictions.** Pre-registered predictions H1-H7. `predicted_effect` and its CI are model-internal (teaching-EC50 jitter, drive jitter, RNG seed) and carry no biological variance; `suggested_n_per_group` therefore caps the standardised effect at d = 1.0 before the power calculation. `live_result` is null for every row and stays null until a real table is imported by hand.
+**T3_predictions.** Prospective (not pre-registered) predictions H1-H7. `predicted_effect` and its CI are model-internal (teaching-EC50 jitter, drive jitter, RNG seed) and carry no biological variance; `suggested_n_per_group` therefore caps the standardised effect at d = 1.0 before the power calculation. `live_result` is null for every row and stays null until a real table is imported by hand.
 
 | id | assay | compound | readout | predicted_direction | predicted_effect | suggested_n_per_group | status |
 |---|---|---|---|---|---|---|---|

@@ -2090,15 +2090,19 @@ def step_dependence(ctx: Ctx) -> None:
         ),
     )
     ctx.note(
-        "instrument validation: %s Detection over the planted grid is %s; the "
-        "empirical false-positive rate on the unplanted control is %d of %d. Effect "
-        "size dominates the permutation count (%s)."
+        "instrument validation: %s Detection over the planted grid by permutation "
+        "count is %s and by planted strength %s; the empirical false-positive rate on "
+        "the unplanted control is %d of %d. Effect size dominates the permutation "
+        "count: full power at planted strength %s, detection at or below one in four "
+        "at %s."
         % (
             rec["statement"],
             ctx.text("val_power_by_n"),
+            ctx.text("val_power_by_strength"),
             int(sum(g["n_detected"] for g in controls)),
             int(sum(g["replicates"] for g in controls)),
-            ctx.text("val_power_by_n"),
+            ctx.text("val_power_full_strengths"),
+            ctx.text("val_power_weak_strengths"),
         )
     )
     save_table(
@@ -3208,10 +3212,16 @@ def step_validation(ctx: Ctx) -> None:
         fig,
         "F10_rank_validation",
         "Left: the model's compound ordering against each published ordering that the "
-        "teaching library can cover, with Spearman's rho per entry and the mean across "
-        f"entries ({s['mean_rho']:.2f} over {s['n_evaluated']} evaluated entries; "
-        f"{s['n_skipped']} entry-assay combinations are skipped because the library "
-        "cannot cover them). Right: the two inversions the validation module records "
+        "teaching library can cover, with Spearman's rho per entry and the number of "
+        f"compounds it orders. {s['n_evaluated']} entry-assay combinations are "
+        f"evaluable and {s['n_skipped']} are skipped because the library cannot cover "
+        f"them; {ctx.get('rank_n_degenerate')} of the evaluable ones order exactly two "
+        "compounds, where rho can only be +-1, so no bare mean is quoted: over the "
+        f"{ctx.get('rank_n_informative')} entries with more than two compounds the mean "
+        f"is {ctx.text('rank_mean_rho_informative')}, and as a concordance count the "
+        f"result is {ctx.get('rank_concordant')} concordant against "
+        f"{ctx.get('rank_discordant')} discordant orderings (two-sided binomial p = "
+        f"{ctx.text('rank_binomial_p')}). Right: the two inversions the validation module records "
         "rather than fixes. Nitenpyram sits near the top of the library's insect nAChR "
         "potency ordering and is the least potent neonicotinoid in *Drosophila* "
         "whole-animal bioassays, and clothianidin/imidacloprid are ordered the opposite "
@@ -3295,7 +3305,7 @@ def step_predictions(ctx: Ctx) -> None:
             "status",
             "live_result",
         ],
-        "Pre-registered predictions H1-H7. `predicted_effect` and its CI are "
+        "Prospective (not pre-registered) predictions H1-H7. `predicted_effect` and its CI are "
         "model-internal (teaching-EC50 jitter, drive jitter, RNG seed) and carry no "
         "biological variance; `suggested_n_per_group` therefore caps the standardised "
         "effect at d = 1.0 before the power calculation. `live_result` is null for "
@@ -4608,6 +4618,170 @@ def step_claims(ctx: Ctx) -> None:
     )
 
 
+
+def step_scale(ctx: Ctx) -> None:
+    """Where the dependence verdict might settle with the size of the cut.
+
+    The verdict reversed between the two committed cuts, and nothing in the
+    method says where -- or whether -- it stabilises.  A scaling study
+    (:func:`flylab.analysis.scale.dependence_vs_scale`) answers that on a
+    ladder of nested cuts of 1k to 50k cells built by one fixed recipe.  Only
+    the 1k rung is small enough to commit; the rest are CI artifacts, so the
+    study is run outside this pipeline and its result is **read** here from
+    ``<outdir>/scale_study.json`` (or ``data/derived/scale_study.json``) when
+    one exists.  Without it, this step still records what is on disk, what the
+    study would cost at each rung (T26) and an explicit "not yet measured"
+    statement, so the manuscript's open question is rendered from a key rather
+    than typed by hand.
+    """
+    from flylab.analysis.dependence import cut_census
+    from flylab.analysis.scale import (
+        LADDER_SIZES,
+        cut_path,
+        feasibility_frontier,
+        scale_report,
+        verdict_stability,
+    )
+
+    ladder = [f"scale_{k // 1000}k" for k in LADDER_SIZES]
+    ctx.put("scale_ladder_sizes", list(LADDER_SIZES), text=", ".join(f"{k // 1000}k" for k in LADDER_SIZES))
+    # check existence by path only -- never JSON-load the multi-hundred-MB
+    # ladder rungs (5k-50k) just to count them; the committed 1k rung is the
+    # only one this step reads, for its census.
+    on_disk = [name for name in ladder if cut_path(name) is not None]
+    absent = [name for name in ladder if cut_path(name) is None]
+    ctx.put("scale_rungs_on_disk", on_disk, text=", ".join(on_disk) or "none")
+    ctx.put("scale_rungs_missing", absent, text=", ".join(absent) or "none")
+    ctx.put("scale_n_rungs_on_disk", len(on_disk))
+
+    # the committed rung's structure, beside the two cuts of T19
+    small_path = cut_path("scale_1k")
+    if small_path is not None:
+        cen = cut_census(str(small_path))
+        ctx.put("scale_1k_name", "scale_1k")
+        ctx.put("scale_1k_nodes", int(cen.get("n_nodes") or 0))
+        ctx.put("scale_1k_edges", int(cen.get("n_edges") or 0))
+        ctx.put("scale_1k_mean_degree", _f(cen.get("mean_degree")), text=f"{float(cen.get('mean_degree') or 0):.1f}")
+        share = cen.get("share_onto_seeds")
+        ctx.put("scale_1k_share_onto_seeds", _f(share), text=(f"{100 * float(share):.0f}%" if share is not None else "n/a"))
+        ctx.put("scale_1k_in_star", bool(cen.get("in_star")), text="yes" if cen.get("in_star") else "no")
+    else:
+        for key, txt in (
+            ("scale_1k_name", "n/a"), ("scale_1k_nodes", "n/a"), ("scale_1k_edges", "n/a"),
+            ("scale_1k_mean_degree", "n/a"), ("scale_1k_share_onto_seeds", "n/a"), ("scale_1k_in_star", "n/a"),
+        ):
+            ctx.put(key, None, text=txt)
+
+    # what the study costs, rung by rung (measured constants, one core)
+    fr = feasibility_frontier()
+    rows = []
+    for r in fr["rows"]:
+        rows.append(
+            {
+                "scale": r["scale"],
+                "n_nodes": r["n_nodes"],
+                "n_edges": r["n_edges"],
+                "single_run_s": round(float(r["single_run_s"]), 3),
+                "dependence_profile_h": round(float(r["dependence_profile_h"]), 2),
+                "dependence_profile_feasible": r["dependence_profile_feasible"],
+                "landscape_days": round(float(r["landscape_days"]), 2),
+                "landscape_feasible": r["landscape_feasible"],
+                "lif_dense_gb": round(float(r["lif_dense_gb"]), 2),
+                "lif_feasible": r["lif_feasible"],
+            }
+        )
+    by_scale = {r["scale"]: r for r in fr["rows"]}
+    top = by_scale.get(f"scale_{LADDER_SIZES[-1] // 1000}k")
+    ctx.put("scale_frontier_n_paper", int(fr["n_paper"]))
+    ctx.put("scale_largest_feasible_profile", fr["largest_cut_with_feasible_profile"], text=str(fr["largest_cut_with_feasible_profile"] or "none"))
+    ctx.put("scale_largest_feasible_lif", fr["largest_cut_with_feasible_lif"], text=str(fr["largest_cut_with_feasible_lif"] or "none"))
+    ctx.put("scale_top_rung", f"{LADDER_SIZES[-1] // 1000}k")
+    ctx.put("scale_top_profile_hours", _f(top["dependence_profile_h"]) if top else None, text=(f"{top['dependence_profile_h']:.1f}" if top else "n/a"))
+    ctx.put("scale_top_landscape_days", _f(top["landscape_days"]) if top else None, text=(f"{top['landscape_days']:.0f}" if top else "n/a"))
+    whole = by_scale.get("whole_cns_w5")
+    ctx.put("scale_whole_cns_profile_hours", _f(whole["dependence_profile_h"]) if whole else None, text=(f"{whole['dependence_profile_h']:.0f}" if whole else "n/a"))
+    save_table(
+        ctx,
+        "T26_scale_frontier",
+        rows,
+        list(rows[0].keys()) if rows else ["scale"],
+        "What a dependence analysis costs at each scale, from the measured per-shuffle "
+        f"and per-edge constants of `flylab.analysis.scale` on one core: a profile at n = {fr['n_paper']} "
+        f"permutations, an {fr['landscape_cells']}-cell landscape at n = {fr['n_landscape']}, and the dense "
+        "matrix the LIF engine materialises. `feasible` means one result in under a day on one core, "
+        "which is a generous bar for a single result and a hopeless one for a study repeated over "
+        "the specification family. Node and edge counts are measured on MaleCNS v1.0.",
+        md_fields=["scale", "n_nodes", "n_edges", "dependence_profile_h", "dependence_profile_feasible", "landscape_days", "lif_dense_gb", "lif_feasible"],
+    )
+
+    # the study itself, if it has been run
+    study = None
+    for cand in (ctx.outdir / "scale_study.json", REPO_ROOT / "data" / "derived" / "scale_study.json"):
+        if cand.is_file():
+            try:
+                study = json.loads(cand.read_text())
+                ctx.put("scale_study_source", str(cand.relative_to(REPO_ROOT)) if cand.is_relative_to(REPO_ROOT) else str(cand))
+                break
+            except (OSError, ValueError) as exc:
+                ctx.note(f"scale study at {cand} could not be read: {exc}")
+    if isinstance(study, dict) and study.get("rows"):
+        rep = scale_report(study)
+        stab = study.get("stability") or verdict_stability(study)
+        clean = verdict_stability(study, recipe="scale_ladder")
+        cuts_run = sorted({r["cut"] for r in study["rows"]}, key=lambda c: next((int(r["n_nodes"]) for r in study["rows"] if r["cut"] == c), 0))
+        ctx.put("scale_study_status", "reported")
+        ctx.put("scale_study_cuts", cuts_run, text=", ".join(cuts_run))
+        ctx.put("scale_study_n_cuts", len(cuts_run))
+        ctx.put("scale_study_compounds", list(study.get("compounds") or []), text=", ".join(study.get("compounds") or []))
+        ctx.put("scale_study_settled", bool(stab.get("all_settled")), text="yes" if stab.get("all_settled") else "no")
+        ctx.put("scale_study_settled_clean_ladder", bool(clean.get("all_settled")), text="yes" if clean.get("all_settled") else "no")
+        ctx.put("scale_study_statement", rep["statements"], text=" ".join(rep["statements"]))
+        seqs = []
+        for comp, b in (clean.get("by_compound") or {}).items():
+            seqs.append(f"{comp}: " + " -> ".join(f"{c} ({v})" for c, v in zip(b["cuts"], b["sequence"])))
+        ctx.put("scale_study_sequences", seqs, text="; ".join(seqs) or "n/a")
+        save_table(
+            ctx,
+            "T27_scale_study",
+            rep["rows"],
+            list(rep["columns"]),
+            "The same dependence profile across the cuts the scaling study could afford, "
+            "smallest first: the cut's structure, the permutation count it was run at (which "
+            "falls with the edge count, so the resolution coarsens up the ladder), the per-mode "
+            "empirical probabilities, the necessary information level and the class. `named` "
+            "and `taste_motor` are built by a different recipe from the `scale_*` rungs, so the "
+            "clean scale axis is the `scale_*` rows alone. " + str(stab.get("caveat") or ""),
+            md_fields=["cut", "n_nodes", "n_edges", "mean_degree", "compound", "n", "p_degree", "p_weight", "p_sign_wm", "necessary_information_level", "class"],
+        )
+        ctx.note(
+            "scale study: %d cuts (%s); verdicts settled on the clean ladder: %s. %s"
+            % (len(cuts_run), ", ".join(cuts_run), "yes" if clean.get("all_settled") else "no", " ".join(rep["statements"]))
+        )
+    else:
+        ctx.put("scale_study_status", "not yet run")
+        ctx.put("scale_study_source", None, text="none")
+        for key in ("scale_study_cuts", "scale_study_compounds", "scale_study_sequences"):
+            ctx.put(key, None, text="n/a")
+        ctx.put("scale_study_n_cuts", 0)
+        ctx.put("scale_study_settled", None, text="not measured")
+        ctx.put("scale_study_settled_clean_ladder", None, text="not measured")
+        ctx.put(
+            "scale_study_statement",
+            None,
+            text=(
+                "Where the verdict settles with the size of the cut has not been measured at "
+                "this commit: the scale ladder's rungs on disk are "
+                + (", ".join(on_disk) or "none")
+                + " and the study over the full ladder had not been run."
+            ),
+        )
+        ctx.note(
+            "the scaling study has not been run at this commit (rungs on disk: %s; missing: %s); "
+            "the manuscript reports the open question, not a verdict."
+            % (", ".join(on_disk) or "none", ", ".join(absent) or "none")
+        )
+
+
 def step_architecture(ctx: Ctx) -> None:
     """F1: the architecture / dataflow schematic (PNG + SVG)."""
     plt = _plt()
@@ -4776,6 +4950,7 @@ STEPS: list[Step] = [
     ("stability", "specification robustness + threshold grid (F14, T14, T14b, T15)", step_stability),
     ("uncertainty", "global uncertainty budget + VOI (F15, T16, T17)", step_uncertainty),
     ("claims", "claim provenance chain (T18)", step_claims),
+    ("scale", "where the dependence verdict settles with the cut (T26, T27 when the study exists)", step_scale),
     ("architecture", "architecture schematic (F1)", step_architecture),
     ("paper", "render the draft and supplement from their templates", step_paper),
 ]
@@ -5005,6 +5180,18 @@ PAPER_KEYS: tuple[str, ...] = (
     "rank_skipped",
     "rank_source_disjoint",
     "rank_source_disjoint_be",
+    "scale_1k_edges",
+    "scale_1k_in_star",
+    "scale_1k_mean_degree",
+    "scale_1k_nodes",
+    "scale_frontier_n_paper",
+    "scale_ladder_sizes",
+    "scale_study_settled_clean_ladder",
+    "scale_study_statement",
+    "scale_top_landscape_days",
+    "scale_top_profile_hours",
+    "scale_top_rung",
+    "scale_whole_cns_profile_hours",
     "sign_asserted",
     "sign_asserted_transmitters",
     "stab_C1_claim",

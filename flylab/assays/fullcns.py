@@ -43,7 +43,6 @@ when the cut boundary is removed, not as evidence about the connectome.
 """
 from __future__ import annotations
 
-import resource
 import time
 from pathlib import Path
 from typing import Any, Sequence
@@ -157,7 +156,16 @@ SECONDS_PER_EDGE_STEP = 1.48e-8
 
 
 def _peak_rss_gb() -> float:
-    """Peak resident set size of this process, in GB (Linux ru_maxrss is KB)."""
+    """Peak resident set size of this process, in GB (Linux ``ru_maxrss`` is KB).
+
+    ``resource`` is imported here rather than at module scope: it is absent
+    from the Emscripten build, and this module is reachable from
+    ``flylab.assays.__init__``, which the browser bridge imports.
+    """
+    try:
+        import resource
+    except ImportError:  # pragma: no cover - Pyodide / Windows
+        return 0.0
     return float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / 1e6
 
 
