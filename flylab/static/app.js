@@ -298,8 +298,46 @@
   }
 
   // ------------------------------------------------------------------ api
+  /* Two transports, one contract. The served bench talks HTTP to
+     flylab/server.py; the static bench (GitHub Pages) talks to
+     window.flylabCall, which is flylab.browser.bridge.call running in
+     Pyodide. Same routes, same payloads, same JSON, so nothing below this
+     function knows or cares which one is in use. */
+  const isStatic = () => window.FLYLAB_STATIC === true;
+
+  /* Both transports report failures as {"error": {status, detail}} or as an
+     HTTP status; this turns either into the Error the panels already expect. */
+  function apiError(status, detail) {
+    return Object.assign(new Error(detail || `HTTP ${status}`), { status: status });
+  }
+  function unwrap(body) {
+    if (body && typeof body === "object" && body.error && typeof body.error === "object") {
+      throw apiError(body.error.status || 500, body.error.detail);
+    }
+    return body;
+  }
+
+  async function staticApi(path, opts) {
+    let payload = null;
+    if (opts && opts.body) {
+      try {
+        payload = JSON.parse(opts.body);
+      } catch (err) {
+        payload = null;
+      }
+    }
+    let body;
+    try {
+      body = await window.flylabCall(path, payload);
+    } catch (err) {
+      throw apiError(0, "the in-browser bench is not running");
+    }
+    return unwrap(body);
+  }
+
   async function api(path, options) {
     const opts = Object.assign({ headers: { Accept: "application/json" } }, options || {});
+    if (isStatic()) return staticApi(path, opts);
     let res;
     try {
       res = await fetch(path, opts);
@@ -316,7 +354,7 @@
       throw Object.assign(new Error(detail), { status: res.status });
     }
     const ctype = res.headers.get("content-type") || "";
-    return ctype.indexOf("application/json") >= 0 ? res.json() : res.text();
+    return ctype.indexOf("application/json") >= 0 ? unwrap(await res.json()) : res.text();
   }
   const post = (path, body) =>
     api(path, {
@@ -1149,7 +1187,8 @@
   // ==================================================================
   async function runSpikes() {
     const d = design();
-    const t_ms = Math.min(3000, Math.max(50, Number($("#f-tms").value) || 500));
+    const fallbackT = isStatic() ? STATIC_T_MS : 500;
+    const t_ms = Math.min(3000, Math.max(50, Number($("#f-tms").value) || fallbackT));
     const body = { conc_M: 0, drive_hz: 40, t_ms: t_ms, seed: d.seed, graph: d.graph, genotype: d.genotype };
     const [vehicle, treated] = await Promise.all([
       post("/api/assay/spiking", Object.assign({}, body, { compound: null, conc_M: 0 })),
@@ -1841,8 +1880,22 @@
   // ==================================================================
   // 10. CONTROLS
   // ==================================================================
+  /* In the browser build every one of these shuffles is a circuit run on this
+     machine, single-threaded, with the page frozen while it happens. Say so
+     before starting instead of after. */
+  function confirmLongRun(what, estimate) {
+    if (!isStatic()) return true;
+    const ok = window.confirm(
+      `${what} runs entirely in this browser tab and takes about ${estimate}. ` +
+        "The page will not respond until it finishes.\n\nRun it now?"
+    );
+    if (!ok) toast(`${what} cancelled`, "info");
+    return ok;
+  }
+
   async function runControls() {
     const d = design();
+    if (!confirmLongRun("The null panel and the selectivity landscape", "1-3 minutes")) return null;
     const n = Math.max(1, Math.min(200, Number($("#f-null-n").value) || 5));
     const modes = $$("#f-null-modes option:checked").map((o) => o.value);
     const results = await Promise.allSettled([
@@ -1879,6 +1932,7 @@
     const d = design();
     const mode = $("#f-null-hist-mode").value;
     const n = Math.max(2, Math.min(200, Number($("#f-null-n").value) || 5));
+    if (!confirmLongRun(`A ${n}-shuffle ${mode} null distribution`, "10-60 seconds")) return;
     const out = await post("/api/analysis/null", {
       assay: "subgraph",
       compound: d.compound,
@@ -2421,6 +2475,40 @@
   }
 
   // ==================================================================
+  // static build
+  // ==================================================================
+  /* flylab.circuit.lif.BROWSER_T_MS: the browser keeps the 0.1 ms integration
+     step and shortens the window instead, so a run here is the same model as
+     a run on the server, not a coarser one. */
+  const STATIC_T_MS = 200;
+
+  function staticNote(panelId, text) {
+    const head = document.querySelector("#panel-" + panelId + " .panel-head");
+    if (!head || head.querySelector(".static-note")) return;
+    const p = document.createElement("p");
+    p.className = "sub static-note";
+    p.textContent = text;
+    const heading = head.querySelector("h1");
+    if (heading && heading.nextSibling) head.insertBefore(p, heading.nextSibling);
+    else head.appendChild(p);
+  }
+
+  function applyStaticDefaults() {
+    const tms = $("#f-tms");
+    if (tms) tms.value = String(STATIC_T_MS);
+    staticNote(
+      "spikes",
+      `Browser build: ${STATIC_T_MS} ms window by default (same 0.1 ms step as the served bench, shorter run), ` +
+        "and the rate engine is the default elsewhere."
+    );
+    const build = window.FLYLAB_BUILD || {};
+    toast(
+      `static build: Python ${build.pyodide_version ? "(Pyodide " + build.pyodide_version + ") " : ""}runs in this tab; nothing is uploaded`,
+      "info"
+    );
+  }
+
+  // ==================================================================
   // boot
   // ==================================================================
   async function boot() {
@@ -2432,6 +2520,15 @@
     updateLadderHint();
 
     await ensureLibraries();
+    if (isStatic()) {
+      try {
+        await window.flylabReady;
+      } catch (err) {
+        status("error", "the in-browser Python runtime did not start");
+        return;
+      }
+      applyStaticDefaults();
+    }
     if (!hasPlotly()) toast("Plotly did not load from either CDN; charts fall back to tables", "info");
     if (!hasCytoscape()) toast("cytoscape.js did not load from either CDN; the circuit view falls back to tables", "info");
 

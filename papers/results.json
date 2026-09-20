@@ -1,0 +1,1837 @@
+{
+  "schema": "flylab-paper-results/1",
+  "generated_utc": "2026-09-19T18:13:35+00:00",
+  "fast": false,
+  "seed": 0,
+  "runtime_s": 0.0,
+  "provenance": {
+    "flylab_version": "0.5.0",
+    "git_sha": "3d1545269ac265b59dbb85801a0e75cd2762fadb",
+    "library_sha256": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
+    "library_version": "0.5",
+    "library_schema_version": 2,
+    "notebook_schema_version": "0.3",
+    "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39 python-3.11.15",
+    "map_id": "male-cns:v1.0",
+    "map_citation": "MaleCNS v1.0, HHMI Janelia FlyEM / Cambridge / MRC LMB / Google Research. CC-BY 4.0.",
+    "graphs": {
+      "named": {
+        "n_nodes": 1126,
+        "n_edges": 1360,
+        "hops": 1,
+        "min_weight": 5,
+        "closure_min_weight": null
+      },
+      "taste_motor": {
+        "n_nodes": 1841,
+        "n_edges": 19066,
+        "hops": 1,
+        "min_weight": 5,
+        "closure_min_weight": 10
+      }
+    },
+    "seeds": {
+      "global": 0
+    },
+    "fast": false
+  },
+  "steps": {
+    "paper": {
+      "status": "ok",
+      "runtime_s": 0.0,
+      "description": "render the draft from its template",
+      "figures": 0,
+      "tables": 0,
+      "values": 1
+    }
+  },
+  "values": {
+    "flylab_version": {
+      "value": "0.5.0",
+      "text": "0.5.0",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "git_sha": {
+      "value": "3d1545269ac265b59dbb85801a0e75cd2762fadb",
+      "text": "3d1545269ac2",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "library_sha256": {
+      "value": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
+      "text": "68252432a397",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "map_id": {
+      "value": "male-cns:v1.0",
+      "text": "male-cns:v1.0",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_nodes": {
+      "value": 1126,
+      "text": "1 126",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_edges": {
+      "value": 1360,
+      "text": "1 360",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_nodes": {
+      "value": 1841,
+      "text": "1 841",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_edges": {
+      "value": 19066,
+      "text": "19 066",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_min_weight": {
+      "value": 5,
+      "text": "5",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_closure_min_weight": {
+      "value": 10,
+      "text": "10",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "census_traced": {
+      "value": 165122,
+      "text": "165 122",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "census_ach": {
+      "value": 103718,
+      "text": "103 718",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "census_glu": {
+      "value": 29296,
+      "text": "29 296",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "census_gaba": {
+      "value": 22055,
+      "text": "22 055",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "census_unclear": {
+      "value": 3602,
+      "text": "3 602",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "census_gustatory": {
+      "value": 1428,
+      "text": "1 428",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "census_labellar_bristle": {
+      "value": 163,
+      "text": "163",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "lb_type_count": {
+      "value": 16,
+      "text": "16",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "lb_cell_count": {
+      "value": 165,
+      "text": "165",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "sweet_grn_cells": {
+      "value": 34,
+      "text": "34",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "bitter_grn_cells": {
+      "value": 38,
+      "text": "38",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "sweet_grn_breakdown": {
+      "value": {
+        "LB3b": 11,
+        "LB3c": 23
+      },
+      "text": "LB3b 11, LB3c 23",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "bitter_grn_breakdown": {
+      "value": {
+        "LB1a": 11,
+        "LB1b": 6,
+        "LB1c": 16,
+        "LB1d": 5
+      },
+      "text": "LB1a 11, LB1b 6, LB1c 16, LB1d 5",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "gate1_proven": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "census"
+    },
+    "imi_insect_occ": {
+      "value": 0.9909367919777582,
+      "text": "0.991",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "imi_vert_occ": {
+      "value": 0.0909090909090909,
+      "text": "0.091",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "imi_occ_gap": {
+      "value": 0.9000277010686673,
+      "text": "0.900",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "imi_ec50_ratio": {
+      "value": 500.00000000000006,
+      "text": "500",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "imi_insect_ec50": {
+      "value": 2e-08,
+      "text": "20 nM",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "imi_vert_ec50": {
+      "value": 1e-05,
+      "text": "10 uM",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "fip_insect_occ": {
+      "value": 0.9853400782049834,
+      "text": "0.985",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "fip_vert_occ": {
+      "value": 0.4761904761904761,
+      "text": "0.476",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "fip_ec50_ratio": {
+      "value": 36.66666666666667,
+      "text": "37",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "fip_insect_ec50": {
+      "value": 3e-08,
+      "text": "30 nM",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "fip_vert_ec50": {
+      "value": 1.1e-06,
+      "text": "1.1 uM",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "dia_insect_rdl_occ": {
+      "value": 9.999000099990002e-05,
+      "text": "1.00e-04",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "dia_vert_gabaa_occ": {
+      "value": 0.9974944073327143,
+      "text": "0.997",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "dia_insect_rdl_tier": {
+      "value": "class_placeholder",
+      "text": "class_placeholder",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "library_compounds": {
+      "value": 21,
+      "text": "21",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "library_receptor_classes": {
+      "value": 12,
+      "text": "12",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "library_rows": {
+      "value": 99,
+      "text": "99",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "library_rows_sourced": {
+      "value": 43,
+      "text": "43",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "library_rows_placeholder": {
+      "value": 56,
+      "text": "56",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "library_selectivity_pairs": {
+      "value": 5,
+      "text": "5",
+      "unit": null,
+      "note": null,
+      "step": "scorecard"
+    },
+    "window_log10_imidacloprid": {
+      "value": 2.6989700043360187,
+      "text": "2.70",
+      "unit": null,
+      "note": null,
+      "step": "curves"
+    },
+    "window_log10_fipronil": {
+      "value": 1.5642714304385628,
+      "text": "1.56",
+      "unit": null,
+      "note": null,
+      "step": "curves"
+    },
+    "window_log10_deltamethrin": {
+      "value": 2.0655015487564325,
+      "text": "2.07",
+      "unit": null,
+      "note": null,
+      "step": "curves"
+    },
+    "window_log10_ivermectin": {
+      "value": 1.6989700043360187,
+      "text": "1.70",
+      "unit": null,
+      "note": null,
+      "step": "curves"
+    },
+    "panel4": {
+      "value": [
+        "imidacloprid",
+        "fipronil",
+        "deltamethrin",
+        "ivermectin"
+      ],
+      "text": "imidacloprid, fipronil, deltamethrin, ivermectin",
+      "unit": null,
+      "note": null,
+      "step": "curves"
+    },
+    "mechanism_rules": {
+      "value": 15,
+      "text": "15",
+      "unit": null,
+      "note": null,
+      "step": "mechanisms"
+    },
+    "gain_keys": {
+      "value": [
+        "g_ach",
+        "g_gaba",
+        "g_glu",
+        "g_oct",
+        "g_nav",
+        "ach_tone"
+      ],
+      "text": "g_ach, g_gaba, g_glu, g_oct, g_nav, ach_tone",
+      "unit": null,
+      "note": null,
+      "step": "mechanisms"
+    },
+    "paths_sweet": {
+      "value": 2595,
+      "text": "2 595",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "paths_bitter": {
+      "value": 2372,
+      "text": "2 372",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "paths_max_len": {
+      "value": 3,
+      "text": "3",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "named_frac_ach_syn": {
+      "value": 0.6188311115034872,
+      "text": "0.619",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "named_frac_gaba_syn": {
+      "value": 0.3007857332038492,
+      "text": "0.301",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "named_frac_glu_syn": {
+      "value": 0.04405403019334334,
+      "text": "0.044",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "named_ei_ratio_syn": {
+      "value": 1.7945468509984637,
+      "text": "1.795",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "taste_motor_frac_ach_syn": {
+      "value": 0.5868443687762142,
+      "text": "0.587",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "taste_motor_frac_gaba_syn": {
+      "value": 0.30350172470360814,
+      "text": "0.304",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "taste_motor_frac_glu_syn": {
+      "value": 0.08414602786127885,
+      "text": "0.084",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "taste_motor_ei_ratio_syn": {
+      "value": 1.5138598505817065,
+      "text": "1.514",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "taste_view_edges_drawn": {
+      "value": 1200,
+      "text": "1 200",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "taste_view_min_weight": {
+      "value": 25.0,
+      "text": "25.0",
+      "unit": null,
+      "note": null,
+      "step": "graph"
+    },
+    "veto_rate_vehicle_sugar": {
+      "value": 0.2931028813192072,
+      "text": "0.293",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_rate_vehicle_sugar_bitter": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_rate_vehicle_ratio": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": null,
+      "note": null,
+      "step": "veto"
+    },
+    "veto_rate_fipronil_sugar": {
+      "value": 4.177454859032482,
+      "text": "4.177",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_rate_fipronil_sugar_bitter": {
+      "value": 1.7236839300867062,
+      "text": "1.724",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_rate_fipronil_ratio": {
+      "value": 0.412615812319255,
+      "text": "0.413",
+      "unit": null,
+      "note": null,
+      "step": "veto"
+    },
+    "veto_rate_imidacloprid_sugar": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_rate_imidacloprid_sugar_bitter": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_rate_imidacloprid_ratio": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "veto"
+    },
+    "veto_lif_vehicle_sugar": {
+      "value": 104.6875,
+      "text": "105",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_lif_vehicle_sugar_bitter": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_lif_vehicle_ratio": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": null,
+      "note": null,
+      "step": "veto"
+    },
+    "veto_lif_fipronil_sugar": {
+      "value": 256.25,
+      "text": "256",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_lif_fipronil_sugar_bitter": {
+      "value": 40.625,
+      "text": "40.6",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_lif_fipronil_ratio": {
+      "value": 0.15853658536585366,
+      "text": "0.159",
+      "unit": null,
+      "note": null,
+      "step": "veto"
+    },
+    "veto_lif_imidacloprid_sugar": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_lif_imidacloprid_sugar_bitter": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_lif_imidacloprid_ratio": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "veto"
+    },
+    "veto_n_sweet_grn": {
+      "value": 34,
+      "text": "34",
+      "unit": null,
+      "note": null,
+      "step": "veto"
+    },
+    "veto_n_bitter_grn": {
+      "value": 38,
+      "text": "38",
+      "unit": null,
+      "note": null,
+      "step": "veto"
+    },
+    "veto_sugar_hz": {
+      "value": 150.0,
+      "text": "150",
+      "unit": "Hz",
+      "note": null,
+      "step": "veto"
+    },
+    "veto_imi_mn9_silenced": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "veto"
+    },
+    "null_n_shuffles": {
+      "value": 50,
+      "text": "50",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_n_shuffles_taste": {
+      "value": 10,
+      "text": "10",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_z_imidacloprid_sign_permute": {
+      "value": -1.227640533947596,
+      "text": "-1.228",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_p_imidacloprid_sign_permute": {
+      "value": 0.2549019607843137,
+      "text": "0.255",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_real_effect_imidacloprid": {
+      "value": -6.172782166134219,
+      "text": "-6.173",
+      "unit": "Hz",
+      "note": null,
+      "step": "nulls"
+    },
+    "null_z_imidacloprid_weight_permute": {
+      "value": -0.5346730469448319,
+      "text": "-0.535",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_p_imidacloprid_weight_permute": {
+      "value": 0.5294117647058824,
+      "text": "0.529",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_z_imidacloprid_rewire_degree_preserving": {
+      "value": -0.7937360106107395,
+      "text": "-0.794",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_p_imidacloprid_rewire_degree_preserving": {
+      "value": 0.37254901960784315,
+      "text": "0.373",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_z_imidacloprid_erdos_renyi": {
+      "value": -45.68337098392473,
+      "text": "-45.7",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_p_imidacloprid_erdos_renyi": {
+      "value": 0.0196078431372549,
+      "text": "0.020",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "nulltaste_z_imidacloprid_sign_permute": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "nulltaste_z_imidacloprid_weight_permute": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "nulltaste_z_imidacloprid_rewire_degree_preserving": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "nulltaste_z_imidacloprid_erdos_renyi": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_score_imidacloprid": {
+      "value": 0.25,
+      "text": "0.250",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_z_fipronil_sign_permute": {
+      "value": 1.6817027476951987,
+      "text": "1.682",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_p_fipronil_sign_permute": {
+      "value": 0.17647058823529413,
+      "text": "0.176",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_real_effect_fipronil": {
+      "value": 0.899607623554787,
+      "text": "0.900",
+      "unit": "Hz",
+      "note": null,
+      "step": "nulls"
+    },
+    "null_z_fipronil_weight_permute": {
+      "value": 3.372072205632216,
+      "text": "3.372",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_p_fipronil_weight_permute": {
+      "value": 0.0196078431372549,
+      "text": "0.020",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_z_fipronil_rewire_degree_preserving": {
+      "value": 3.0160148461411396,
+      "text": "3.016",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_p_fipronil_rewire_degree_preserving": {
+      "value": 0.0392156862745098,
+      "text": "0.039",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_z_fipronil_erdos_renyi": {
+      "value": 1355.248227533342,
+      "text": "1355",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_p_fipronil_erdos_renyi": {
+      "value": 0.0196078431372549,
+      "text": "0.020",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "nulltaste_z_fipronil_sign_permute": {
+      "value": -0.20111407537327874,
+      "text": "-0.201",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "nulltaste_z_fipronil_weight_permute": {
+      "value": 0.24886859215510687,
+      "text": "0.249",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "nulltaste_z_fipronil_rewire_degree_preserving": {
+      "value": 0.4606512610160825,
+      "text": "0.461",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "nulltaste_z_fipronil_erdos_renyi": {
+      "value": 0.7109123638282273,
+      "text": "0.711",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_score_fipronil": {
+      "value": 0.375,
+      "text": "0.375",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_imi_max_structural_z": {
+      "value": 1.227640533947596,
+      "text": "1.228",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_fip_max_structural_z": {
+      "value": 3.372072205632216,
+      "text": "3.372",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "null_fip_taste_max_z": {
+      "value": 0.7109123638282273,
+      "text": "0.711",
+      "unit": null,
+      "note": null,
+      "step": "nulls"
+    },
+    "landscape_n_concs": {
+      "value": 13,
+      "text": "13",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "landscape_rows": {
+      "value": 42,
+      "text": "42",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "landscape_scored": {
+      "value": 22,
+      "text": "22",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "landscape_compounds_scored": {
+      "value": 11,
+      "text": "11",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "landscape_amplify_rows": {
+      "value": 8,
+      "text": "8",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "landscape_buffer_rows": {
+      "value": 14,
+      "text": "14",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "landscape_amplify_compounds": {
+      "value": [
+        "chlorpyrifos_oxon",
+        "ddt",
+        "deltamethrin",
+        "permethrin"
+      ],
+      "text": "chlorpyrifos_oxon, ddt, deltamethrin, permethrin",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "landscape_buffer_compounds": {
+      "value": [
+        "acetamiprid",
+        "acetylcholine",
+        "clothianidin",
+        "imidacloprid",
+        "nicotine",
+        "nitenpyram",
+        "spinosad"
+      ],
+      "text": "acetamiprid, acetylcholine, clothianidin, imidacloprid, nicotine, nitenpyram, spinosad",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "landscape_amplify_mean_gap": {
+      "value": 0.2864971832082256,
+      "text": "0.286",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "landscape_buffer_mean_gap": {
+      "value": -0.8822337903153011,
+      "text": "-0.882",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "landscape_gap_split": {
+      "value": 1.1687309735235267,
+      "text": "1.169",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "landscape_unscored_compounds": {
+      "value": [
+        "chlordimeform",
+        "dieldrin",
+        "fipronil",
+        "gaba",
+        "ivermectin",
+        "picrotoxin",
+        "sulfoxaflor",
+        "thiamethoxam"
+      ],
+      "text": "chlordimeform, dieldrin, fipronil, gaba, ivermectin, picrotoxin, sulfoxaflor, thiamethoxam",
+      "unit": null,
+      "note": null,
+      "step": "landscape"
+    },
+    "ic50_n_boot": {
+      "value": 200,
+      "text": "200",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "ic50_n_rep": {
+      "value": 4,
+      "text": "4",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "ic50_M": {
+      "value": 3.4703524844493196e-08,
+      "text": "34.7 nM",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "ic50_lo_M": {
+      "value": 3.00737853098516e-08,
+      "text": "30.1 nM",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "ic50_hi_M": {
+      "value": 4.484102585184239e-08,
+      "text": "44.8 nM",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "ic50_slope": {
+      "value": 2.3924129976318875,
+      "text": "2.392",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "ic50_r2": {
+      "value": 0.9998823400388599,
+      "text": "0.9999",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "ic50_top_hz": {
+      "value": 6.689915702519358,
+      "text": "6.690",
+      "unit": "Hz",
+      "note": null,
+      "step": "dose"
+    },
+    "ic50_bottom_hz": {
+      "value": 0.45604816528092096,
+      "text": "0.456",
+      "unit": "Hz",
+      "note": null,
+      "step": "dose"
+    },
+    "ic50_in_range": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "ic50_readout": {
+      "value": "mean_hz",
+      "text": "mean_hz",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "ic50_vs_receptor_ec50": {
+      "value": 1.7351762422246597,
+      "text": "1.7",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "tornado_span_gain_coef": {
+      "value": 2.239375785860553,
+      "text": "2.239",
+      "unit": "Hz",
+      "note": null,
+      "step": "dose"
+    },
+    "tornado_span_drive_hz": {
+      "value": 0.6876931796887389,
+      "text": "0.688",
+      "unit": "Hz",
+      "note": null,
+      "step": "dose"
+    },
+    "tornado_span_weight_threshold": {
+      "value": 0.19864315539146077,
+      "text": "0.199",
+      "unit": "Hz",
+      "note": null,
+      "step": "dose"
+    },
+    "tornado_span_ec50": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": "Hz",
+      "note": null,
+      "step": "dose"
+    },
+    "tornado_span_hill_n": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": "Hz",
+      "note": null,
+      "step": "dose"
+    },
+    "tornado_top_param": {
+      "value": "gain_coef",
+      "text": "gain_coef",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "tornado_zero_span_params": {
+      "value": [
+        "ec50",
+        "hill_n"
+      ],
+      "text": "ec50, hill_n",
+      "unit": null,
+      "note": null,
+      "step": "dose"
+    },
+    "n_genotypes": {
+      "value": 15,
+      "text": "15",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_fipronil_wt_occ": {
+      "value": 0.9853400782049834,
+      "text": "0.985",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_fipronil_wt_fold": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_fipronil_rdl_A302G_dsim_occ": {
+      "value": 0.000463465245301564,
+      "text": "4.63e-04",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_fipronil_rdl_A302G_dsim_fold": {
+      "value": 20000.0,
+      "text": "20000",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_fipronil_rdl_A301S_nlug_occ": {
+      "value": 0.9835928893014986,
+      "text": "0.984",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_fipronil_rdl_A301S_nlug_fold": {
+      "value": 1.1,
+      "text": "1.100",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_fipronil_rdl_A302S_dmel_occ": {
+      "value": 0.9853400782049834,
+      "text": "0.985",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_fipronil_rdl_A302S_dmel_fold": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_imidacloprid_wt_occ": {
+      "value": 0.9909367919777582,
+      "text": "0.991",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_imidacloprid_wt_fold": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_imidacloprid_nachr_beta1_R81T_mper_occ": {
+      "value": 0.5,
+      "text": "0.500",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_imidacloprid_nachr_beta1_R81T_mper_fold": {
+      "value": 50.0,
+      "text": "50.0",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_deltamethrin_wt_occ": {
+      "value": 0.9587727708533077,
+      "text": "0.959",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_deltamethrin_wt_fold": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_deltamethrin_para_L1014F_kdr_occ": {
+      "value": 0.5376344086021505,
+      "text": "0.538",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_deltamethrin_para_L1014F_kdr_fold": {
+      "value": 20.0,
+      "text": "20.0",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_deltamethrin_para_M918T_superkdr_occ": {
+      "value": 0.18867924528301885,
+      "text": "0.189",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_deltamethrin_para_M918T_superkdr_fold": {
+      "value": 100.0,
+      "text": "100",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_ddt_wt_occ": {
+      "value": 0.015151515151515152,
+      "text": "0.015",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_ddt_wt_fold": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_ddt_para_L1014F_kdr_occ": {
+      "value": 0.0015360983102918587,
+      "text": "0.002",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_ddt_para_L1014F_kdr_fold": {
+      "value": 10.0,
+      "text": "10.0",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_ddt_para_M918T_superkdr_occ": {
+      "value": 0.015151515151515152,
+      "text": "0.015",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_ddt_para_M918T_superkdr_fold": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_gaba_wt_occ": {
+      "value": 0.002820449688343696,
+      "text": "0.003",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_gaba_wt_fold": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_gaba_rdl_A301S_nlug_occ": {
+      "value": 1.4329770098913327e-05,
+      "text": "1.43e-05",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_gaba_rdl_A301S_nlug_fold": {
+      "value": 33.9,
+      "text": "33.9",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_gaba_rdl_A302S_dmel_occ": {
+      "value": 0.002820449688343696,
+      "text": "0.003",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_gaba_rdl_A302S_dmel_fold": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_gaba_rdl_A302G_dsim_occ": {
+      "value": 0.002820449688343696,
+      "text": "0.003",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "geno_gaba_rdl_A302G_dsim_fold": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "genotype"
+    },
+    "rank_entries": {
+      "value": 12,
+      "text": "12",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_evaluated": {
+      "value": 9,
+      "text": "9",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_skipped": {
+      "value": 15,
+      "text": "15",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_mean_rho": {
+      "value": 0.824814949689265,
+      "text": "0.825",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_mean_rho_occupancy": {
+      "value": 0.8511844635310912,
+      "text": "0.851",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_mean_rho_subgraph": {
+      "value": 0.7720759220056127,
+      "text": "0.772",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_exact_occupancy": {
+      "value": 4,
+      "text": "4",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_known_discrepancies": {
+      "value": 2,
+      "text": "2",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_discrepancy_ids": {
+      "value": [
+        "nitenpyram_rank_inverted",
+        "clothianidin_vs_imidacloprid_inverted"
+      ],
+      "text": "nitenpyram_rank_inverted, clothianidin_vs_imidacloprid_inverted",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "pred_n_rep": {
+      "value": 6,
+      "text": "6",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H1_effect": {
+      "value": 0.872069354005092,
+      "text": "0.872",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H1_n": {
+      "value": 16,
+      "text": "16",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H1_dir_ok": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H2_effect": {
+      "value": -5.923968652900892,
+      "text": "-5.924",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H2_n": {
+      "value": 23,
+      "text": "23",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H2_dir_ok": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H3_effect": {
+      "value": 0.863346092315895,
+      "text": "0.863",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H3_n": {
+      "value": 16,
+      "text": "16",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H3_dir_ok": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H4_effect": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H4_n": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H4_dir_ok": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H5_effect": {
+      "value": -0.2958607006882387,
+      "text": "-0.296",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H5_n": {
+      "value": 23,
+      "text": "23",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H5_dir_ok": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H6_effect": {
+      "value": 0.4101604120277051,
+      "text": "0.410",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H6_n": {
+      "value": 16,
+      "text": "16",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H6_dir_ok": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H7_effect": {
+      "value": 0.4189723305585867,
+      "text": "0.419",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H7_n": {
+      "value": 16,
+      "text": "16",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_H7_dir_ok": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_n_hypotheses": {
+      "value": 7,
+      "text": "7",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_baseline_per": {
+      "value": null,
+      "text": "n/a",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_max_n": {
+      "value": 23,
+      "text": "23",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_live_results": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "pred_direction_mismatches": {
+      "value": [],
+      "text": "none",
+      "unit": null,
+      "note": null,
+      "step": "predictions"
+    },
+    "mix_n_targets": {
+      "value": 3,
+      "text": "3",
+      "unit": null,
+      "note": null,
+      "step": "mixtures"
+    },
+    "mix_n_matching": {
+      "value": 3,
+      "text": "3",
+      "unit": null,
+      "note": null,
+      "step": "mixtures"
+    },
+    "mix_all_match": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "mixtures"
+    },
+    "mix_n_substituted": {
+      "value": 2,
+      "text": "2",
+      "unit": null,
+      "note": null,
+      "step": "mixtures"
+    },
+    "mix_conc_M": {
+      "value": 1e-09,
+      "text": "1 nM",
+      "unit": null,
+      "note": null,
+      "step": "mixtures"
+    },
+    "mix_species": {
+      "value": "Apis mellifera",
+      "text": "Apis mellifera",
+      "unit": null,
+      "note": null,
+      "step": "mixtures"
+    },
+    "expr_coverage_overall": {
+      "value": 0.2053252443545669,
+      "text": "0.205",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_cov_named_insect_nAChR": {
+      "value": 0.458259325044405,
+      "text": "0.458",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_cov_named_insect_RDL": {
+      "value": 0.6563055062166963,
+      "text": "0.656",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_cov_named_insect_GluCl": {
+      "value": 0.0719360568383659,
+      "text": "0.072",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_cov_named_insect_OctR": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_cov_named_insect_AChE": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_rows": {
+      "value": 50,
+      "text": "50",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_motor_gap": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_motor_gap_note": {
+      "value": "motor-neuron receptor expression is a confirmed gap",
+      "text": "motor-neuron receptor expression is a confirmed gap",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_mn9_uniform_hz": {
+      "value": 39.40567922340328,
+      "text": "39.4",
+      "unit": "Hz",
+      "note": null,
+      "step": "expression"
+    },
+    "expr_mn9_weighted_hz": {
+      "value": 36.78411732719066,
+      "text": "36.8",
+      "unit": "Hz",
+      "note": null,
+      "step": "expression"
+    },
+    "expr_mn9_delta_hz": {
+      "value": -2.6215618962126257,
+      "text": "-2.622",
+      "unit": "Hz",
+      "note": null,
+      "step": "expression"
+    },
+    "expr_mean_uniform_hz": {
+      "value": 0.45846211979249263,
+      "text": "0.458",
+      "unit": "Hz",
+      "note": null,
+      "step": "expression"
+    },
+    "expr_mean_weighted_hz": {
+      "value": 0.8585976869666511,
+      "text": "0.859",
+      "unit": "Hz",
+      "note": null,
+      "step": "expression"
+    },
+    "paper_words": {
+      "value": 10836,
+      "text": "10 836",
+      "unit": null,
+      "note": null,
+      "step": "paper"
+    },
+    "paper_missing_keys": {
+      "value": [],
+      "text": "none",
+      "unit": null,
+      "note": null,
+      "step": "paper"
+    },
+    "paper_words_body": {
+      "value": 8198,
+      "text": "8 198",
+      "unit": null,
+      "note": null,
+      "step": "paper"
+    },
+    "_provenance": {
+      "value": {
+        "flylab_version": "0.5.0",
+        "git_sha": "3d1545269ac265b59dbb85801a0e75cd2762fadb",
+        "library_sha256": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
+        "library_version": "0.5",
+        "library_schema_version": 2,
+        "notebook_schema_version": "0.3",
+        "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39 python-3.11.15",
+        "map_id": "male-cns:v1.0",
+        "map_citation": "MaleCNS v1.0, HHMI Janelia FlyEM / Cambridge / MRC LMB / Google Research. CC-BY 4.0.",
+        "graphs": {
+          "named": {
+            "n_nodes": 1126,
+            "n_edges": 1360,
+            "hops": 1,
+            "min_weight": 5,
+            "closure_min_weight": null
+          },
+          "taste_motor": {
+            "n_nodes": 1841,
+            "n_edges": 19066,
+            "hops": 1,
+            "min_weight": 5,
+            "closure_min_weight": 10
+          }
+        },
+        "seeds": {
+          "global": 0
+        },
+        "fast": false
+      },
+      "text": "",
+      "unit": null,
+      "note": "",
+      "step": "provenance"
+    }
+  },
+  "figures": [],
+  "tables": [],
+  "notes": [],
+  "honesty": [
+    "Every number in this file is model_derived: it comes from the teaching EC50 library, the gain patch rules and one or two hops-limited MaleCNS cuts. Nothing here was measured in a living fly.",
+    "live_lab is null in every notebook this pipeline produced.",
+    "--fast reduces replicate and shuffle counts only; z-scores and CIs from a fast run are noisier than the paper's."
+  ]
+}

@@ -1,0 +1,13 @@
+modality,rank,types,bodyIds,transmitters,length,min_weight,signed_product
+sweet,1,LB3c -> GNG042 -> GNG015 -> MN9,72059 -> 15734 -> 523590 -> 10331,acetylcholine -> gaba -> gaba -> acetylcholine,3,87.0,2198490.0
+sweet,2,LB3c -> GNG042 -> GNG015 -> MN9,933317 -> 15321 -> 523590 -> 10331,acetylcholine -> gaba -> gaba -> acetylcholine,3,73.0,1689366.0
+sweet,3,LB3c -> GNG042 -> GNG015 -> MN9,92440 -> 15734 -> 523590 -> 10331,acetylcholine -> gaba -> gaba -> acetylcholine,3,61.0,1411662.0
+sweet,4,LB3c -> GNG232 -> GNG108 -> MN9,72059 -> 31018 -> 26764 -> 10331,acetylcholine -> acetylcholine -> acetylcholine -> acetylcholine,3,46.0,1392696.0
+sweet,5,LB3c -> GNG042 -> GNG015 -> MN9,72059 -> 15734 -> 28181 -> 10331,acetylcholine -> gaba -> gaba -> acetylcholine,3,81.0,1362015.0
+sweet,6,LB3c -> GNG042 -> GNG015 -> MN9,933317 -> 15321 -> 28181 -> 10331,acetylcholine -> gaba -> gaba -> acetylcholine,3,87.0,1355112.0
+bitter,1,LB1c -> GNG087 -> GNG120 -> MN9,522841 -> 11896 -> 10881 -> 10331,acetylcholine -> glutamate -> acetylcholine -> acetylcholine,3,90.0,-1783512.0
+bitter,2,LB1c -> GNG087 -> GNG120 -> MN9,107241 -> 11896 -> 10881 -> 10331,acetylcholine -> glutamate -> acetylcholine -> acetylcholine,3,87.0,-1724061.5999999999
+bitter,3,LB1c -> GNG087 -> GNG120 -> MN9,256844 -> 11896 -> 10881 -> 10331,acetylcholine -> glutamate -> acetylcholine -> acetylcholine,3,85.0,-1684428.0
+bitter,4,LB1c -> GNG087 -> GNG120 -> MN9,522761 -> 11896 -> 10881 -> 10331,acetylcholine -> glutamate -> acetylcholine -> acetylcholine,3,77.0,-1525893.5999999999
+bitter,5,LB1c -> GNG087 -> GNG120 -> MN9,256844 -> 12900 -> 10881 -> 10331,acetylcholine -> glutamate -> acetylcholine -> acetylcholine,3,75.0,-1421640.0
+bitter,6,LB1c -> GNG087 -> GNG108 -> MN9,256844 -> 12900 -> 26764 -> 10331,acetylcholine -> glutamate -> acetylcholine -> acetylcholine,3,75.0,-1409400.0000000002

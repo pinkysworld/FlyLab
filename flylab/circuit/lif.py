@@ -78,6 +78,19 @@ DRIVE_FANIN_DEFAULT = 20
 #: neighborhood spiking and vehicle MN9 near 30 Hz without saturating.
 BACKGROUND_FRACTION_DEFAULT = 0.65
 
+# --- WebAssembly / browser defaults ---------------------------------------
+#: Simulated window used by the static (Pyodide) build.  The integration step
+#: stays at :data:`DT_MS` = 0.1 ms -- a coarser step would be a *different*
+#: model, not the same one running faster -- so the browser shortens the
+#: window instead.  200 ms still clears the 100 ms settle cap with a 100 ms
+#: counting window.
+BROWSER_T_MS = 200.0
+#: The browser build must NOT relax the step: 0.1 ms here is the same constant
+#: the native build integrates with.
+BROWSER_DT_MS = DT_MS
+#: The browser build runs the sparse kernel (same spikes, less work per step).
+BROWSER_SPARSE = True
+
 
 @dataclass
 class SpikeResult:
@@ -116,6 +129,7 @@ class LIFNetwork:
         drive_w: float = DRIVE_W_DEFAULT,
         drive_fanin: int = DRIVE_FANIN_DEFAULT,
         sign: dict[str, float] | None = None,
+        sparse: bool = False,
     ):
         self.graph = graph
         self.seed = int(seed)
@@ -124,6 +138,8 @@ class LIFNetwork:
         self.drive_w = float(drive_w)
         self.drive_fanin = int(drive_fanin)
         self.sign = dict(sign or SIGN)
+        #: default kernel for :meth:`run` (``run(sparse=...)`` overrides it)
+        self.sparse = bool(sparse)
 
         self.nodes: list[dict[str, Any]] = graph["nodes"]
         self.body_ids: list[int] = [n["bodyId"] for n in self.nodes]
@@ -145,9 +161,43 @@ class LIFNetwork:
             C[j, i] += self.sign.get(self.nt_of_node[self.body_ids[i]], 0.0) * float(e["weight"])
         self.C_signed = C
         self._nt_vec = [self.nt_of_node[b] for b in self.body_ids]
+        #: CSR-style arrays over the *columns* of ``C_signed`` (built lazily)
+        self._csr: tuple[np.ndarray, np.ndarray, np.ndarray] | None = None
 
     def __len__(self) -> int:
         return len(self.nodes)
+
+    # -- sparse representation --------------------------------------------
+    def csr(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """``(indptr, indices, data)`` of the signed synapse matrix, by column.
+
+        One entry per non-zero ``C_signed[j, i]``; column ``i`` (the
+        *presynaptic* cell, the one that spikes) owns the slice
+        ``indices[indptr[i]:indptr[i + 1]]`` of postsynaptic rows ``j`` with
+        weights ``data[...]``.  Column-major is the useful orientation here
+        because a step touches only the columns of cells that fired.
+
+        Built once from the dense matrix and cached, so the dense and sparse
+        kernels are two readings of exactly the same numbers.  On the committed
+        1126-node neighborhood this is 1230 non-zeros against 1.27M dense
+        cells, i.e. ~0.1% fill.
+        """
+        if self._csr is None:
+            C = self.C_signed
+            rows, cols = np.nonzero(C)
+            order = np.argsort(cols, kind="stable")  # group by presynaptic column
+            rows, cols = rows[order], cols[order]
+            data = C[rows, cols].astype(np.float32, copy=True)
+            indptr = np.zeros(C.shape[1] + 1, dtype=np.int64)
+            np.add.at(indptr, cols + 1, 1)
+            indptr = np.cumsum(indptr)
+            self._csr = (indptr, rows.astype(np.int64), data)
+        return self._csr
+
+    @property
+    def nnz(self) -> int:
+        """Number of non-zero signed connections."""
+        return int(self.csr()[2].size)
 
     # -- gains -------------------------------------------------------------
     def gain_vector(self, gains: dict[str, float] | None) -> np.ndarray:
@@ -177,6 +227,7 @@ class LIFNetwork:
         gains: dict[str, float] | None = None,
         t_ms: float = 500.0,
         settle_ms: float | None = None,
+        sparse: bool | None = None,
     ) -> SpikeResult:
         """Simulate ``t_ms`` of network activity.
 
@@ -184,6 +235,13 @@ class LIFNetwork:
         driven, not just the seeds.  Deterministic for a given ``seed``.
         Rates are counted over ``[settle_ms, t_ms]`` (default: first 20% of the
         run, capped at 100 ms, is discarded as transient).
+
+        ``sparse`` selects the synaptic kernel: ``False`` sums the columns of
+        the dense effective-weight matrix (the default, bit-identical to every
+        previous release), ``True`` walks only the non-zero entries of the
+        columns that fired.  Both reduce each column in the same ascending row
+        order, so the two kernels produce identical spike trains for the same
+        seed; ``None`` means "whatever this network was built with".
         """
         g = dict(DEFAULT_GAINS)
         g.update({k: float(v) for k, v in (gains or {}).items() if k in DEFAULT_GAINS})
@@ -194,7 +252,17 @@ class LIFNetwork:
             settle_ms = min(100.0, 0.2 * float(t_ms))
         settle_step = int(round(float(settle_ms) / dt))
 
-        W = self.effective_weights(g)
+        use_sparse = self.sparse if sparse is None else bool(sparse)
+        if use_sparse:
+            indptr, indices, data = self.csr()
+            col_scale = (self.w_scale * self.gain_vector(g)).astype(np.float32)
+            # per-entry effective weight: data is C_signed, scaled by its own
+            # presynaptic column's gain -- exactly ``effective_weights()``
+            w_sparse = data * np.repeat(col_scale, np.diff(indptr))
+            contrib = np.zeros(n, dtype=np.float32)
+            W = None
+        else:
+            W = self.effective_weights(g)
         g_nav = np.float32(g["g_nav"])
 
         drive_idx = []
@@ -238,7 +306,15 @@ class LIFNetwork:
             if fired.size:
                 V[fired] = V_RESET_MV
                 ref[fired] = T_REF_MS
-                I += W[:, fired].sum(axis=1) * w_over_tau
+                if use_sparse:
+                    contrib[:] = 0.0
+                    for i in fired:
+                        lo, hi = indptr[i], indptr[i + 1]
+                        if hi > lo:
+                            contrib[indices[lo:hi]] += w_sparse[lo:hi]
+                    I += contrib * w_over_tau
+                else:
+                    I += W[:, fired].sum(axis=1) * w_over_tau
                 if step >= settle_step:
                     counts[fired] += 1
                 for i in fired:
@@ -262,12 +338,14 @@ _LIF_CACHE: dict[tuple, LIFNetwork] = {}
 
 def lif_network(graph: dict[str, Any], seed: int = 0, **kw) -> LIFNetwork:
     """Memoised LIF network (the signed synapse matrix is seed-independent)."""
+    sparse = bool(kw.pop("sparse", False))
     key = (id(graph), float(kw.get("w_scale", W_SCALE_DEFAULT)), float(kw.get("drive_w", DRIVE_W_DEFAULT)))
     net = _LIF_CACHE.get(key)
     if net is None:
         net = LIFNetwork(graph, seed=seed, **kw)
         _LIF_CACHE[key] = net
     net.seed = int(seed)
+    net.sparse = sparse
     return net
 
 
@@ -286,4 +364,7 @@ __all__ = [
     "T_REF_MS",
     "TAU_S_MS",
     "DT_MS",
+    "BROWSER_T_MS",
+    "BROWSER_DT_MS",
+    "BROWSER_SPARSE",
 ]

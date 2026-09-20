@@ -1,4 +1,11 @@
-"""Batch designs: compounds x concentrations x replicates -> table + CSV."""
+"""Batch designs: compounds x concentrations x replicates -> table + CSV.
+
+``ExperimentDesign`` is a pydantic model when pydantic is importable and an
+equivalent dataclass otherwise.  The dataclass path exists so the whole science
+core runs where pydantic is not available (WebAssembly / Pyodide, see
+``flylab/browser/bridge.py``); both paths have the same field names, defaults,
+coercion, ``ValueError`` messages and ``.model_dump()`` output.
+"""
 from __future__ import annotations
 
 import csv
@@ -7,59 +14,193 @@ from pathlib import Path
 from typing import Any, Literal, Sequence
 
 import numpy as np
-from pydantic import BaseModel, Field, field_validator
 
 from flylab.assays.ensemble import ASSAYS, READOUT_KEYS, readouts_of, run_assay, sample_library
 
-__all__ = ["ExperimentDesign", "run_experiment", "design_from_yaml", "rows_to_csv"]
+__all__ = [
+    "ExperimentDesign",
+    "run_experiment",
+    "design_from_yaml",
+    "rows_to_csv",
+    "HAVE_PYDANTIC",
+]
 
 
-class ExperimentDesign(BaseModel):
-    """Validated batch design (see ``docs/DESIGN_v0.5.md``)."""
+# --------------------------------------------------------------------------
+# field rules, shared by the pydantic model and the dataclass fallback
+# --------------------------------------------------------------------------
+def _check_compounds(v: Any) -> list[str]:
+    v = [c for c in (v or []) if c]
+    if not v:
+        raise ValueError("design needs at least one compound")
+    return [str(c) for c in v]
 
-    assay: Literal["subgraph", "spiking", "taste", "taste_map"] = "subgraph"
-    compounds: list[str] = Field(default_factory=lambda: ["imidacloprid"])
-    concs_M: list[float] = Field(default_factory=lambda: [1e-9, 1e-8, 1e-7, 1e-6, 1e-5])
-    replicates: int = 1
-    seed: int = 0
-    readouts: list[str] = Field(default_factory=lambda: list(READOUT_KEYS))
-    jitter_log10: float = 0.0
-    drive_hz: float | None = None
-    include_vehicle: bool = True
-    graph: str | None = None
-    keep_notebooks: bool = False
-    options: dict[str, Any] = Field(default_factory=dict)
 
-    @field_validator("compounds")
-    @classmethod
-    def _compounds_nonempty(cls, v):
-        v = [c for c in v if c]
-        if not v:
-            raise ValueError("design needs at least one compound")
-        return v
+def _check_concs(v: Any) -> list[float]:
+    if not v:
+        raise ValueError("design needs at least one concentration")
+    if any(float(c) < 0 for c in v):
+        raise ValueError("concentrations must be >= 0")
+    return [float(c) for c in v]
 
-    @field_validator("concs_M")
-    @classmethod
-    def _concs_ok(cls, v):
-        if not v:
-            raise ValueError("design needs at least one concentration")
-        if any(float(c) < 0 for c in v):
-            raise ValueError("concentrations must be >= 0")
-        return [float(c) for c in v]
 
-    @field_validator("replicates")
-    @classmethod
-    def _reps_ok(cls, v):
-        if int(v) < 1:
-            raise ValueError("replicates must be >= 1")
-        return int(v)
+def _check_replicates(v: Any) -> int:
+    if int(v) < 1:
+        raise ValueError("replicates must be >= 1")
+    return int(v)
 
-    @field_validator("assay")
-    @classmethod
-    def _assay_ok(cls, v):
-        if v not in ASSAYS:
-            raise ValueError(f"assay must be one of {ASSAYS}")
-        return v
+
+def _check_assay(v: Any) -> str:
+    if v not in ASSAYS:
+        raise ValueError(f"assay must be one of {ASSAYS}")
+    return str(v)
+
+
+def _default_readouts() -> list[str]:
+    return list(READOUT_KEYS)
+
+
+def _default_compounds() -> list[str]:
+    return ["imidacloprid"]
+
+
+def _default_concs() -> list[float]:
+    return [1e-9, 1e-8, 1e-7, 1e-6, 1e-5]
+
+
+try:  # pragma: no cover - exercised by both paths in tests/test_browser_bridge.py
+    from pydantic import BaseModel, Field, field_validator
+
+    HAVE_PYDANTIC = True
+except Exception:  # pragma: no cover - selected on Pyodide / minimal installs
+    HAVE_PYDANTIC = False
+
+
+if HAVE_PYDANTIC:
+
+    class ExperimentDesign(BaseModel):  # type: ignore[no-redef]
+        """Validated batch design (see ``docs/DESIGN_v0.5.md``)."""
+
+        assay: Literal["subgraph", "spiking", "taste", "taste_map"] = "subgraph"
+        compounds: list[str] = Field(default_factory=_default_compounds)
+        concs_M: list[float] = Field(default_factory=_default_concs)
+        replicates: int = 1
+        seed: int = 0
+        readouts: list[str] = Field(default_factory=_default_readouts)
+        jitter_log10: float = 0.0
+        drive_hz: float | None = None
+        include_vehicle: bool = True
+        graph: str | None = None
+        keep_notebooks: bool = False
+        options: dict[str, Any] = Field(default_factory=dict)
+
+        @field_validator("compounds")
+        @classmethod
+        def _compounds_nonempty(cls, v):
+            return _check_compounds(v)
+
+        @field_validator("concs_M")
+        @classmethod
+        def _concs_ok(cls, v):
+            return _check_concs(v)
+
+        @field_validator("replicates")
+        @classmethod
+        def _reps_ok(cls, v):
+            return _check_replicates(v)
+
+        @field_validator("assay")
+        @classmethod
+        def _assay_ok(cls, v):
+            return _check_assay(v)
+
+else:  # pragma: no cover - selected only when pydantic is absent
+
+    from dataclasses import asdict, dataclass, field
+
+    def _as_bool(v: Any) -> bool:
+        if isinstance(v, str):
+            low = v.strip().lower()
+            if low in ("true", "yes", "on", "1"):
+                return True
+            if low in ("false", "no", "off", "0", ""):
+                return False
+            raise ValueError(f"expected a boolean, got {v!r}")
+        return bool(v)
+
+    def _as_opt_float(v: Any) -> float | None:
+        return None if v is None else float(v)
+
+    def _as_opt_str(v: Any) -> str | None:
+        return None if v is None else str(v)
+
+    @dataclass
+    class ExperimentDesign:  # type: ignore[no-redef]
+        """Validated batch design (pydantic-free twin of the model above).
+
+        Same field names, defaults and error messages; extra keyword arguments
+        are ignored, as pydantic's default ``extra="ignore"`` does.
+        """
+
+        assay: str = "subgraph"
+        compounds: list[str] = field(default_factory=_default_compounds)
+        concs_M: list[float] = field(default_factory=_default_concs)
+        replicates: int = 1
+        seed: int = 0
+        readouts: list[str] = field(default_factory=_default_readouts)
+        jitter_log10: float = 0.0
+        drive_hz: float | None = None
+        include_vehicle: bool = True
+        graph: str | None = None
+        keep_notebooks: bool = False
+        options: dict[str, Any] = field(default_factory=dict)
+
+        #: field -> coercion/validation callable, applied in declaration order
+        _RULES = {
+            "assay": _check_assay,
+            "compounds": _check_compounds,
+            "concs_M": _check_concs,
+            "replicates": _check_replicates,
+            "seed": int,
+            "readouts": lambda v: [str(x) for x in (v or [])],
+            "jitter_log10": float,
+            "drive_hz": _as_opt_float,
+            "include_vehicle": _as_bool,
+            "graph": _as_opt_str,
+            "keep_notebooks": _as_bool,
+            "options": lambda v: dict(v or {}),
+        }
+
+        def __init__(self, **kw: Any) -> None:
+            defaults = {
+                "assay": "subgraph",
+                "compounds": _default_compounds(),
+                "concs_M": _default_concs(),
+                "replicates": 1,
+                "seed": 0,
+                "readouts": _default_readouts(),
+                "jitter_log10": 0.0,
+                "drive_hz": None,
+                "include_vehicle": True,
+                "graph": None,
+                "keep_notebooks": False,
+                "options": {},
+            }
+            for name, default in defaults.items():
+                if name in kw and kw[name] is not None:
+                    value = ExperimentDesign._RULES[name](kw[name])
+                elif name in kw and kw[name] is None and name in ("drive_hz", "graph"):
+                    value = None
+                else:
+                    value = default
+                object.__setattr__(self, name, value)
+
+        def model_dump(self, **_: Any) -> dict[str, Any]:
+            """pydantic-compatible dict of the validated design."""
+            return asdict(self)
+
+        def dict(self, **kw: Any) -> dict[str, Any]:  # pragma: no cover - alias
+            return self.model_dump(**kw)
 
 
 def rows_to_csv(rows: Sequence[dict[str, Any]], fields: Sequence[str] | None = None) -> str:

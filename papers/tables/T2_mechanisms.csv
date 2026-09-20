@@ -1,0 +1,16 @@
+receptor,direction,gain,formula,applies_to,rationale
+insect_nAChR,agonist,g_ach,"max(0.05, 1 + 0.4*th - 1.6*th^2)",acetylcholine synapses,"Cholinergic excitation at low occupancy, desensitisation/block at high occupancy (v0.4 rule)."
+insect_nAChR,partial_agonist,g_ach,"max(0.05, 1 + 0.4*th - 1.6*th^2)",acetylcholine synapses,Partial agonists open the same cation channel; same curve as full agonists.
+insect_nAChR,positive_modulator,g_ach,"max(0.05, 1 + 0.4*th - 1.6*th^2)",acetylcholine synapses,Allosteric activators (spinosyns) open the same channel without using the ACh site.
+insect_nAChR,antagonist,g_ach,"max(0.05, 1 - th)",acetylcholine synapses,A blocker removes that fraction of cholinergic drive (v0.4 rule).
+insect_RDL,antagonist,g_gaba,"max(0.05, 1 - th)",GABA synapses,Blocking the GABA-gated chloride channel removes inhibition (v0.4 rule).
+insect_RDL,agonist,g_gaba,"max(0.05, 1 + 0.4*th)",GABA synapses,Opening RDL adds inhibitory chloride current (v0.4 rule from subgraph.py).
+insect_RDL,positive_modulator,g_gaba,"max(0.05, 1 + 0.4*th)",GABA synapses,Allosteric potentiation of RDL is treated like partial agonism.
+insect_GluCl,agonist,g_glu,"max(0.05, 1 + 0.8*th)",glutamate synapses,"GluCl is inhibitory; avermectin opening is near-irreversible, hence the larger coefficient."
+insect_GluCl,antagonist,g_glu,"max(0.05, 1 - th)",glutamate synapses,Mirror rule: blocking GluCl removes glutamatergic chloride current.
+insect_AChE,inhibitor,ach_tone,1 + 2.0*th,ambient acetylcholine level (not a synaptic weight),"Unhydrolysed acetylcholine accumulates, raising ambient cholinergic tone."
+insect_AChE,inhibitor,g_ach,g_ach * ach_tone * (1 + 0.4*th - 1.6*th^2),acetylcholine synapses,The excess ACh first excites and then desensitises nicotinic receptors: OP excitation then block.
+insect_Nav,positive_modulator,g_nav,1 + 1.5*th,global node excitability,"Pyrethroids/DDT hold sodium channels open, raising excitability of every node."
+insect_Nav,antagonist,g_nav,"max(0.05, 1 - th)",global node excitability,Sodium-channel block lowers excitability of every node.
+insect_OctR,agonist,g_oct,1 + 0.5*th,octopamine synapses,"Formamidines mimic octopamine; modulatory amine, so a smaller coefficient than fast transmitters."
+insect_OctR,antagonist,g_oct,"max(0.05, 1 - th)",octopamine synapses,Octopamine-receptor block removes modulatory drive.
