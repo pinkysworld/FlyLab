@@ -197,7 +197,7 @@ def _auto_text(value: Any) -> str:
     if isinstance(value, bool):
         return "yes" if value else "no"
     if isinstance(value, int):
-        return f"{value:,}".replace(",", " ")
+        return str(value) if abs(value) < 10_000 else f"{value:,}".replace(",", "\u202f")
     if isinstance(value, float):
         a = abs(value)
         if a != 0 and (a < 1e-3 or a >= 1e5):
