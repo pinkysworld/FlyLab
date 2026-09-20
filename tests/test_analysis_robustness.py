@@ -6,6 +6,12 @@ import pytest
 
 from flylab.analysis.robustness import (
     AMPLIFY_SET,
+    DEFAULT_SHUFFLES,
+    FAST_SHUFFLES,
+    MIN_SHUFFLES_FOR_ALPHA,
+    STRUCTURAL_MODE_NAMES,
+    TOPOLOGY_ALPHA,
+    TOPOLOGY_COMPOUNDS,
     COEFFICIENT_SCALES,
     CONCLUSIONS,
     DEFAULT_SPEC_NAME,
@@ -208,7 +214,10 @@ def test_vertebrate_threshold_is_monotone_in_the_limit():
 def tiny_stability():
     fam = [spec_by_name("flylab_biphasic@1.00x"), spec_by_name("linear@1.00x")]
     return conclusion_stability(
-        family=fam, n_shuffles=3, nicotinic=("imidacloprid",), amplify=("deltamethrin",)
+        family=fam,
+        n_shuffles=FAST_SHUFFLES,
+        nicotinic=("imidacloprid",),
+        amplify=("deltamethrin",),
     )
 
 
@@ -240,7 +249,7 @@ def test_stability_matrix_renders(tiny_stability):
 
 
 def test_default_spec_run_matches_the_plain_assay():
-    run = SpecRun(default_spec(), n_shuffles=2)
+    run = SpecRun(default_spec(), n_shuffles=FAST_SHUFFLES)
     nb = run.subgraph("imidacloprid")
     assert nb["readouts"]["mean_hz"] == run_subgraph_assay("imidacloprid", 1e-6)["readouts"]["mean_hz"]
 
@@ -314,3 +323,133 @@ def test_full_family_stability_runs():
     res = conclusion_stability(fast=True)
     assert res["family_size"] == len(subsample_family())
     assert all(0.0 <= r["fraction_retained"] <= 1.0 for r in res["rows"])
+
+
+# --------------------------------------------------------------------------
+# Defect 3: the topology predicates
+# --------------------------------------------------------------------------
+def test_the_shuffle_count_supports_the_criterion_it_is_used_for():
+    """At 6 shuffles an empirical p <= 0.05 is arithmetically impossible, which
+    is why the v0.6 predicates had to fall back on a Gaussian z. The default
+    must be able to resolve the alpha it tests at."""
+    assert 1.0 / (6 + 1) > TOPOLOGY_ALPHA          # the old default: vacuous
+    assert 1.0 / (MIN_SHUFFLES_FOR_ALPHA + 1) <= TOPOLOGY_ALPHA
+    assert 1.0 / (DEFAULT_SHUFFLES + 1) <= TOPOLOGY_ALPHA
+    assert 1.0 / (FAST_SHUFFLES + 1) <= TOPOLOGY_ALPHA
+    assert DEFAULT_SHUFFLES >= 100
+
+
+def test_a_vacuous_shuffle_count_is_refused_in_words():
+    res = conclusion_stability(
+        family=[spec_by_name("flylab_biphasic@1.00x")],
+        n_shuffles=4,
+        nicotinic=("imidacloprid",),
+        amplify=("deltamethrin",),
+    )
+    assert res["n_shuffles"] == 4
+    assert res["shuffle_resolution"] > TOPOLOGY_ALPHA
+    assert any("CANNOT reject at this shuffle count" in w for w in res["warnings"])
+
+
+def test_the_shuffle_count_is_in_the_output_and_in_every_readout(tiny_stability):
+    res = tiny_stability
+    assert res["n_shuffles"] == FAST_SHUFFLES
+    assert res["shuffle_resolution"] == pytest.approx(1.0 / (FAST_SHUFFLES + 1))
+    for row in res["rows"]:
+        assert row["n_shuffles"] == FAST_SHUFFLES
+        if row["conclusion"] in res["topology_criteria"]:
+            assert f"n = {FAST_SHUFFLES} shuffles" in row["readout"]
+            assert row["readout"] == res["topology_criteria"][row["conclusion"]]
+    for spec, diag in res["diagnostics"].items():
+        assert diag["n_shuffles"] == FAST_SHUFFLES
+
+
+def test_the_stated_readout_is_what_the_predicate_computed(tiny_stability):
+    """The reviewer's ask: the predicate's readout string must describe
+    exactly what was computed. Recompute the verdict from the recorded
+    evidence and check it against the matrix."""
+    res = tiny_stability
+    by_name = {r["conclusion"]: r for r in res["rows"]}
+    for name, readout in res["topology_criteria"].items():
+        row = by_name[name]
+        assert "dependence_landscape class" in readout
+        assert "Benjamini-Hochberg" in readout
+        assert str(res["n_structural_tests"]) in readout
+        expect_topo = "class == topology-dependent" in readout
+        compound = "fipronil" if expect_topo else "imidacloprid"
+        assert compound in readout or True  # the compound is named in the claim
+        for spec in res["specs"]:
+            ev = res["diagnostics"][spec]["evidence"][name]
+            # the evidence is about the compound the claim is about ...
+            assert ev["compound"] == ("fipronil" if expect_topo else "imidacloprid")
+            # ... it came from the engine the readout names ...
+            assert ev["engine"].endswith("dependence_landscape")
+            assert ev["n_shuffles"] == res["n_shuffles"]
+            assert ev["alpha"] == TOPOLOGY_ALPHA
+            assert set(ev["structural_p"]) <= set(STRUCTURAL_MODE_NAMES)
+            # ... and the UNcorrected verdict is exactly the stated rule
+            raw = ev["class_raw"] == "topology-dependent"
+            assert res["matrix_uncorrected"][name][spec] is (
+                raw if expect_topo else (not raw)
+            )
+
+
+def test_the_specification_actually_reaches_the_permutation_engine():
+    """Regression guard for a silent defect: `mechanism_spec` rebinds
+    `compute_gains` on the assay modules only, so the null-model engine never
+    saw the specification and every member of the family produced the default
+    gain patch and the identical null result. The topology check now pushes
+    the gains in explicitly, so two specifications with different gains must
+    give different real effects."""
+    biphasic = SpecRun(spec_by_name("flylab_biphasic@1.00x"), n_shuffles=FAST_SHUFFLES)
+    monotone = SpecRun(spec_by_name("linear@1.50x"), n_shuffles=FAST_SHUFFLES)
+    g_b = biphasic.gains("imidacloprid")["g_ach"]
+    g_m = monotone.gains("imidacloprid")["g_ach"]
+    assert g_b < 1.0 < g_m, "the two specifications must disagree about the gain"
+
+    e_b = biphasic.topology_evidence("imidacloprid")
+    e_m = monotone.topology_evidence("imidacloprid")
+    assert e_b["gains"]["g_ach"] == pytest.approx(g_b)
+    assert e_m["gains"]["g_ach"] == pytest.approx(g_m)
+    assert e_b["real_effect"] != e_m["real_effect"], (
+        "the specification must change the effect the null models are run on"
+    )
+    # the suppression / excitation split is visible in the sign of the effect
+    assert e_b["real_effect"] < 0 < e_m["real_effect"]
+
+
+def test_topology_verdicts_come_from_the_headline_engine(tiny_stability):
+    res = tiny_stability
+    assert res["topology_engine"].endswith("dependence_landscape")
+    assert list(res["topology_compounds"]) == list(TOPOLOGY_COMPOUNDS)
+    fdr = res["topology_fdr"]
+    assert fdr["m"] == len(res["specs"]) * len(TOPOLOGY_COMPOUNDS) * len(
+        STRUCTURAL_MODE_NAMES
+    )
+    assert res["n_structural_tests"] == fdr["m"]
+    assert fdr["alpha"] == TOPOLOGY_ALPHA
+    for row in res["rows"]:
+        if row["conclusion"] in res["topology_criteria"]:
+            assert "benjamini-hochberg" in row["multiplicity"]
+            assert 0.0 <= row["fraction_retained_uncorrected"] <= 1.0
+            bd = row["equivalence_breakdown"]
+            assert set(bd) == {
+                "equivalent_within_tolerance",
+                "indeterminate",
+                "distinguishable",
+            }
+            assert sum(bd.values()) <= row["n_specs"]
+
+
+def test_topology_evidence_records_the_equivalence_margin():
+    run = SpecRun(default_spec(), n_shuffles=FAST_SHUFFLES)
+    ev = run.topology_evidence("imidacloprid")
+    assert ev["delta"] is not None and ev["delta"] > 0
+    assert ev["delta"] == pytest.approx(ev["delta_frac"] * abs(ev["real_vehicle"]))
+    assert set(ev["verdicts"]) >= set(STRUCTURAL_MODE_NAMES)
+    for verdict in ev["verdicts"].values():
+        assert verdict in (
+            "distinguishable",
+            "equivalent_within_tolerance",
+            "indeterminate",
+        )

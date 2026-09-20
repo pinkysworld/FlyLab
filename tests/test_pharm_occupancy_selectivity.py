@@ -18,20 +18,24 @@ def test_imidacloprid_still_prefers_the_insect_receptor():
     rows = by_receptor(result)
     assert rows["insect_nAChR"]["engagement"] > 0.9
     assert rows["vertebrate_nAChR_a4b2"]["engagement"] < 0.15
-    # both are functional potencies, so neither is called an occupancy
-    assert rows["insect_nAChR"]["engagement_model"] == "functional_engagement"
+    # both are functional potencies, so neither is called an occupancy - and
+    # both were measured away from the modelled target, so both say "proxy"
+    assert rows["insect_nAChR"]["engagement_model"] == "functional_engagement_proxy"
     assert rows["insect_nAChR"]["param_type"] == "EC50"
+    assert rows["insect_nAChR"]["evidence_distance"] == "E2"
+    assert rows["vertebrate_nAChR_a4b2"]["evidence_distance"] == "E3"
     # the subunit-resolved beta1 row is a genuine binding constant, but it was
     # measured in an aphid, so it is an engagement proxy, not an occupancy
     beta1 = rows["insect_nAChR_beta1"]
     assert beta1["param_type"] == "Kd"
-    assert beta1["engagement_model"] == "binding_derived_engagement"
+    assert beta1["engagement_model"] == "binding_engagement_proxy"
     assert "Myzus persicae" in beta1["provenance_warning"]
     assert beta1["engagement"] > 0.9
     # the Drosophila head-membrane Kd is the row entitled to say "occupancy"
     native = rows["insect_nAChR_native_dmel"]
     assert native["param_type"] == "Kd"
     assert native["engagement_model"] == "binding_occupancy"
+    assert native["evidence_distance"] == "E0"
     assert native["engagement"] > 0.9
     assert "provenance_warning" not in native
     pair = result["selectivity"]["nAChR"]

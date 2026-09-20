@@ -1282,6 +1282,14 @@ def _headline(occ: dict[str, Any], evidence: list[dict[str, Any]]) -> dict[str, 
             "receptor": top_insect["receptor"] if top_insect else None,
             "param_type": top_insect.get("param_type") if top_insect else None,
             "param_value_M": top_insect.get("param_value_M") if top_insect else None,
+            # v0.6.1: the tile has to say what KIND of number it is showing and
+            # how far its source is from the modelled target.
+            "engagement_model": top_insect.get("engagement_model") if top_insect else "not_modelled",
+            "evidence_distance": top_insect.get("evidence_distance") if top_insect else "E4",
+            "evidence_distance_label": (
+                top_insect.get("evidence_distance_label") if top_insect else "E4 (unsupported)"
+            ),
+            "provenance_warning": top_insect.get("provenance_warning") if top_insect else None,
             "classification": top_insect["classification"] if top_insect else "NOT MODELLED",
             "unit": "engagement 0-1",
         },
@@ -1290,6 +1298,12 @@ def _headline(occ: dict[str, Any], evidence: list[dict[str, Any]]) -> dict[str, 
             "receptor": top_vert["receptor"] if top_vert else None,
             "param_type": top_vert.get("param_type") if top_vert else None,
             "param_value_M": top_vert.get("param_value_M") if top_vert else None,
+            "engagement_model": top_vert.get("engagement_model") if top_vert else "not_modelled",
+            "evidence_distance": top_vert.get("evidence_distance") if top_vert else "E4",
+            "evidence_distance_label": (
+                top_vert.get("evidence_distance_label") if top_vert else "E4 (unsupported)"
+            ),
+            "provenance_warning": top_vert.get("provenance_warning") if top_vert else None,
             "classification": top_vert["classification"] if top_vert else "NOT MODELLED",
             "unit": "engagement 0-1",
         },

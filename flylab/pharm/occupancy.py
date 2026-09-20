@@ -17,13 +17,17 @@ Consequences, and the whole point of this module:
 
 * The quantity is called **engagement**, not occupancy, unless the row's
   ``param_type`` is a genuine binding constant (``Kd``/``Ki``) *and* its
-  ``relation`` is ``exact_compound_exact_receptor_exact_species``, in which
-  case ``engagement_model`` is ``binding_occupancy`` and the word is earned.  A
-  Kd from another species or a related preparation gives
-  ``binding_derived_engagement`` instead -- the same Hill number, labelled as
-  an engagement proxy and carrying a ``provenance_warning`` that names the gap.
-  The legal transformations live in :mod:`flylab.pharm.evidence`, which
-  *refuses* the illegal ones instead of performing them quietly.
+  evidence distance is ``E0`` (relation
+  ``exact_compound_exact_receptor_exact_species``), in which case
+  ``engagement_model`` is ``binding_occupancy`` and the word is earned.  A Kd
+  from another species (``E1``) or a related preparation (``E2``) gives
+  ``binding_engagement_proxy`` instead, and a transferred functional potency
+  gives ``functional_engagement_proxy`` -- the same Hill number in each case,
+  labelled as a proxy and carrying a ``provenance_warning`` that names what was
+  transferred.  Every row also reports its ``evidence_distance`` beside its
+  ``relation``.  The legal transformations live in
+  :mod:`flylab.pharm.evidence`, which *refuses* the illegal ones instead of
+  performing them quietly.
 * A row with no sourced value reports ``engagement: None`` -- N/A, not
   modelled -- and is excluded from every numeric aggregation (selectivity
   ratios, curves, Monte-Carlo intervals, gain patches).  ``1e-4`` is never
@@ -49,7 +53,12 @@ import yaml
 
 from flylab.pharm.evidence import (
     ALLOWED,
+    DISTANCE_LABELS,
+    DISTANCE_NOTES,
+    DISTANCE_RELATION,
+    RELATION_DISTANCE,
     EngagementModel,
+    EvidenceDistance,
     EvidenceTypeError,
     ParameterType,
     SourceRelation,
@@ -60,6 +69,7 @@ from flylab.pharm.evidence import (
     engagement_note,
     model_for,
     provenance_warning,
+    transformation_table_rows,
 )
 
 LIBRARY_PATH = Path(__file__).with_name("library.yaml")
@@ -71,12 +81,13 @@ ENGAGEMENT_IS_NOT_OCCUPANCY = (
     "engagement is a normalised Hill response computed from the sourced potency "
     "parameter named in param_type; it is physical receptor occupancy only when "
     "engagement_model is 'binding_occupancy', which needs a measured Kd/Ki AND "
-    "relation 'exact_compound_exact_receptor_exact_species'. A Kd/Ki from "
-    "another species or a related preparation gives "
-    "'binding_derived_engagement' (an engagement proxy carrying a provenance "
-    "warning, not an occupancy of the modelled receptor), a functional potency "
-    "gives 'functional_engagement', and rows with no sourced value report None "
-    "(not modelled) rather than a small number."
+    "evidence distance E0 (relation "
+    "'exact_compound_exact_receptor_exact_species'). A Kd/Ki at E1/E2 gives "
+    "'binding_engagement_proxy' and any transferred potency gives "
+    "'functional_engagement_proxy' -- proxies carry a provenance warning "
+    "naming what was transferred and are not occupancies of the modelled "
+    "receptor -- while rows with no sourced value report None (not modelled) "
+    "rather than a small number."
 )
 
 #: Row used when a compound does not list a receptor at all. No number: the
@@ -138,7 +149,7 @@ def engagement(
     not decide the label: :func:`~flylab.pharm.evidence.model_for` does.  A
     ``Kd``/``Ki`` measured on this receptor in this species gives fractional
     receptor occupancy; the same constant from another species or a related
-    preparation gives a ``binding_derived_engagement`` proxy; an
+    preparation gives a ``binding_engagement_proxy`` proxy; an
     ``EC50``/``IC50``/``Kb`` gives a normalised functional response and must
     not be called occupancy (the peer review: "A Hill response derived from
     EC50 describes normalized functional response, not physical receptor
@@ -194,7 +205,7 @@ def binding_occupancy(conc_M: float, kd_M: float, n: float = 1.0) -> float:
     result an occupancy of the modelled Drosophila target is only justified
     when the row's relation is ``exact_compound_exact_receptor_exact_species``;
     for a cross-species or related-receptor constant the library reports
-    ``binding_derived_engagement`` instead (see
+    ``binding_engagement_proxy`` instead (see
     :func:`~flylab.pharm.evidence.model_for`).
     """
     if kd_M is None:
@@ -336,6 +347,8 @@ def _row(receptor: str, spec: dict[str, Any], conc_M: float) -> dict[str, Any]:
         "param_type": param_type.value,
         "param_value_M": value,
         "relation": relation.value,
+        "evidence_distance": RELATION_DISTANCE[relation].value,
+        "evidence_distance_label": DISTANCE_LABELS[RELATION_DISTANCE[relation]],
         "species": spec.get("species"),
         # unchanged keys
         "direction": spec.get("direction", "unknown"),
@@ -348,13 +361,14 @@ def _row(receptor: str, spec: dict[str, Any], conc_M: float) -> dict[str, Any]:
     }
     warning = provenance_warning(model, relation, spec.get("species"))
     if warning:
-        # binding_derived_engagement: the reader is told about the species /
+        # binding_engagement_proxy: the reader is told about the species /
         # preparation gap in the row itself, not only in the source string.
         row["provenance_warning"] = warning
     if model is EngagementModel.not_modelled:
         row["not_modelled_reason"] = (
             "placeholder: no sourced value for this compound at this receptor "
-            f"(param_type={param_type.value}, relation={relation.value})"
+            f"(param_type={param_type.value}, relation={relation.value}, "
+            f"evidence_distance={RELATION_DISTANCE[relation].value})"
         )
     if spec.get("efficacy") is not None:
         row["efficacy"] = float(spec["efficacy"])
@@ -571,6 +585,7 @@ def library_report(library: dict[str, Any] | None = None) -> dict[str, Any]:
     by_tier: Counter[str] = Counter()
     by_relation: Counter[str] = Counter()
     by_model: Counter[str] = Counter()
+    by_distance: Counter[str] = Counter()
     by_receptor: Counter[str] = Counter()
     by_species: Counter[str] = Counter()
     n_rows = 0
@@ -585,6 +600,7 @@ def library_report(library: dict[str, Any] | None = None) -> dict[str, Any]:
             by_param[param_type.value] += 1
             by_tier[str(spec.get("evidence_tier"))] += 1
             by_relation[relation.value] += 1
+            by_distance[RELATION_DISTANCE[relation].value] += 1
             by_model[model.value] += 1
             by_receptor[receptor] += 1
             by_species[str(spec.get("species") or "Drosophila melanogaster (or not applicable)")] += 1
@@ -601,10 +617,82 @@ def library_report(library: dict[str, Any] | None = None) -> dict[str, Any]:
         "by_param_type": dict(sorted(by_param.items())),
         "by_evidence_tier": dict(sorted(by_tier.items())),
         "by_relation": dict(sorted(by_relation.items())),
+        "by_evidence_distance": dict(sorted(by_distance.items())),
         "by_engagement_model": dict(sorted(by_model.items())),
         "by_receptor": dict(sorted(by_receptor.items())),
         "by_species": dict(sorted(by_species.items())),
         "note": ENGAGEMENT_IS_NOT_OCCUPANCY,
+    }
+
+
+def evidence_distance_table(library: dict[str, Any] | None = None) -> dict[str, Any]:
+    """The library census by **evidence distance** -- the paper's methods table.
+
+    For each grade E0..E4: how many rows sit there, which parameter types they
+    carry, which engagement models they drive, and which compound/receptor rows
+    they are.  E0 is the only grade at which a binding constant may report a
+    physical occupancy, so ``n_binding_occupancy`` is the number the paper has
+    to quote when it says how much of this pharmacology was measured on the
+    modelled organism.
+    """
+    lib = library or load_library()
+    grades: dict[str, dict[str, Any]] = {
+        d.value: {
+            "distance": d.value,
+            "label": DISTANCE_LABELS[d],
+            "note": DISTANCE_NOTES[d],
+            "relation": DISTANCE_RELATION[d].value,
+            "n_rows": 0,
+            "by_param_type": Counter(),
+            "by_engagement_model": Counter(),
+            "rows": [],
+        }
+        for d in EvidenceDistance
+    }
+    for key, entry in (lib.get("compounds") or {}).items():
+        for receptor, spec in (entry.get("receptors") or {}).items():
+            param_type = as_param_type(spec.get("param_type"))
+            relation = as_relation(spec.get("relation"))
+            distance = RELATION_DISTANCE[relation]
+            value = spec_value_M(spec)
+            model = (
+                model_for(param_type, relation) if value is not None
+                else EngagementModel.not_modelled
+            )
+            grade = grades[distance.value]
+            grade["n_rows"] += 1
+            grade["by_param_type"][param_type.value] += 1
+            grade["by_engagement_model"][model.value] += 1
+            grade["rows"].append(
+                {
+                    "compound": key,
+                    "receptor": receptor,
+                    "param_type": param_type.value,
+                    "param_value_M": value,
+                    "engagement_model": model.value,
+                    "species": spec.get("species"),
+                }
+            )
+    for grade in grades.values():
+        grade["by_param_type"] = dict(sorted(grade["by_param_type"].items()))
+        grade["by_engagement_model"] = dict(sorted(grade["by_engagement_model"].items()))
+        grade["rows"].sort(key=lambda r: (r["compound"], r["receptor"]))
+    n_occupancy = grades[EvidenceDistance.E0.value]["by_engagement_model"].get(
+        EngagementModel.binding_occupancy.value, 0
+    )
+    return {
+        "schema_version": lib.get("schema_version"),
+        "library_version": lib.get("library_version"),
+        "n_rows": sum(g["n_rows"] for g in grades.values()),
+        "grades": grades,
+        "n_binding_occupancy": n_occupancy,
+        "transformation_table": transformation_table_rows(),
+        "note": (
+            "Evidence distance grades how far a row's source sits from 'this "
+            "compound, at this receptor, in Drosophila melanogaster'. Only E0 "
+            "rows carrying a Kd/Ki may report physical binding occupancy; "
+            f"the library has {n_occupancy} of those."
+        ),
     }
 
 
@@ -621,6 +709,7 @@ __all__ = [
     "compare_compound",
     "engagement",
     "engagement_curve",
+    "evidence_distance_table",
     "hill_occupancy",
     "is_placeholder",
     "library_report",

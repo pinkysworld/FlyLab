@@ -59,7 +59,7 @@ For each mode the module reports one of three verdicts, never two:
     data are consistent with a difference this study cannot resolve.  This is
     the honest home of imidacloprid's sign / weight / degree modes
     (p = 0.275 / 0.586 / 0.472 at n = 1000), which earlier versions of this
-    module reported as "reproduces the effect".
+    module reported as though the shuffle had given the same effect.
 
 ``delta`` is prespecified, not fitted.  Its default is
 ``DEFAULT_DELTA_FRAC`` (5 %) of the **vehicle readout** of the real graph --
@@ -764,7 +764,8 @@ def necessary_information_level(
             warnings.append(
                 f"{mode} is INDETERMINATE, not equivalent: the necessary "
                 "information level is bounded by what n shuffles could resolve. "
-                "Do not report it as 'this graph model reproduces the effect'."
+                "Report it as 'not distinguishable from the real graph', never "
+                "as 'this graph model gives the same effect'."
             )
         return {
             "level": info["level"],

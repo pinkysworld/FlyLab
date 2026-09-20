@@ -239,11 +239,18 @@ def _run_cell(design: ExperimentDesign, compound: str | None, conc_M: float, rep
 def run_experiment(design: dict[str, Any] | ExperimentDesign) -> dict[str, Any]:
     """Run a batch design.
 
-    Returns ``{design, rows, vehicle_rows, summary, notebooks, csv, warnings}``.
-    ``rows`` has exactly ``len(compounds) * len(concs_M) * replicates`` entries;
-    the vehicle (``compound = None``) replicate set is kept separately in
-    ``vehicle_rows`` so that row count stays a clean product, and is included in
-    the CSV and the summary.
+    Returns ``{design, rows, vehicle_rows, summary, notebooks, notebook_keys,
+    csv, warnings}``.  ``rows`` has exactly
+    ``len(compounds) * len(concs_M) * replicates`` entries; the vehicle
+    (``compound = None``) replicate set is kept separately in ``vehicle_rows``
+    so that row count stays a clean product, and is included in the CSV and the
+    summary.
+
+    When ``keep_notebooks`` is set, ``notebooks`` holds one notebook per run and
+    ``notebook_keys`` holds the matching ``{compound, conc_M, replicate,
+    condition}`` identifier at the same index, so a caller (``flylab.spec``)
+    can write each notebook to a stable filename without re-deriving the loop
+    order.
     """
     d = design if isinstance(design, ExperimentDesign) else ExperimentDesign(**dict(design))
     readouts = [r for r in d.readouts] or list(READOUT_KEYS)
@@ -251,6 +258,7 @@ def run_experiment(design: dict[str, Any] | ExperimentDesign) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     vehicle_rows: list[dict[str, Any]] = []
     notebooks: list[dict[str, Any]] = []
+    notebook_keys: list[dict[str, Any]] = []
 
     for compound in d.compounds:
         for conc in d.concs_M:
@@ -267,6 +275,14 @@ def run_experiment(design: dict[str, Any] | ExperimentDesign) -> dict[str, Any]:
                 )
                 if d.keep_notebooks:
                     notebooks.append(nb)
+                    notebook_keys.append(
+                        {
+                            "compound": compound,
+                            "conc_M": conc,
+                            "replicate": rep,
+                            "condition": "drug",
+                        }
+                    )
 
     if d.include_vehicle:
         for rep in range(d.replicates):
@@ -282,6 +298,14 @@ def run_experiment(design: dict[str, Any] | ExperimentDesign) -> dict[str, Any]:
             )
             if d.keep_notebooks:
                 notebooks.append(nb)
+                notebook_keys.append(
+                    {
+                        "compound": None,
+                        "conc_M": 0.0,
+                        "replicate": rep,
+                        "condition": "vehicle",
+                    }
+                )
 
     summary: list[dict[str, Any]] = []
     groups: dict[tuple, list[dict[str, Any]]] = {}
@@ -305,6 +329,7 @@ def run_experiment(design: dict[str, Any] | ExperimentDesign) -> dict[str, Any]:
         "vehicle_rows": vehicle_rows,
         "summary": summary,
         "notebooks": notebooks,
+        "notebook_keys": notebook_keys,
         "csv": rows_to_csv(rows + vehicle_rows, fields),
         "n_rows": len(rows),
         "label": "model_derived",

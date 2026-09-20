@@ -103,6 +103,12 @@ from flylab.analysis.robustness import SHAPES, make_spec, spec_gains
 
 __all__ = [
     "FACTORS",
+    "RESOLUTION_STATES",
+    "RESOLVED_LABEL",
+    "UNRESOLVED_LABEL",
+    "NULL_CONTROL_LABEL",
+    "NULL_FACTOR",
+    "resolution_summary",
     "FACTOR_NAMES",
     "SHAPE_ORDER",
     "RateSurrogate",
@@ -790,7 +796,7 @@ def sobol_analysis(
 
     sum_first = float(sum(r["first_order"] for r in rows))
     warnings = list(BASE_WARNINGS)
-    resolution = resolution_summary(rows)
+    resolution = resolution_summary(rows, engine=engine)
     warnings.append(resolution["statement"])
     noise = next((r for r in rows if r["factor"] == "lif_seed"), None)
     if noise is not None and engine == "rate":
@@ -841,10 +847,153 @@ def sobol_analysis(
         "resolution": resolution,
         "summary": resolution["statement"],
         "convergence": convergence,
-        "budget": uncertainty_budget({"rows": rows, "sum_first_order": sum_first, "output_variance": var}),
+        "budget": uncertainty_budget(
+            {
+                "rows": rows,
+                "sum_first_order": sum_first,
+                "output_variance": var,
+                "engine": engine,
+                "resolution": resolution,
+            }
+        ),
         "runtime_s": float(time.perf_counter() - t0),
         "label": "model_derived",
         "warnings": warnings,
+    }
+
+
+#: the three states a factor's first-order index can be in.  They are about
+#: what this SAMPLE could resolve, not about how important the factor is.
+RESOLVED_LABEL = "resolved"
+UNRESOLVED_LABEL = "unresolved at this sample size"
+NULL_CONTROL_LABEL = "null control"
+
+RESOLUTION_STATES: tuple[str, ...] = (
+    RESOLVED_LABEL,
+    UNRESOLVED_LABEL,
+    NULL_CONTROL_LABEL,
+)
+
+#: the factor that is zero by construction on the deterministic rate engine
+NULL_FACTOR = "lif_seed"
+
+
+def resolution_summary(
+    rows: Sequence[Mapping[str, Any]],
+    null_factor: str = NULL_FACTOR,
+    engine: str = "rate",
+) -> dict[str, Any]:
+    """Which factors this sample could resolve, as states rather than numbers.
+
+    A column of small signed first-order indices invites exactly the two
+    misreadings this module has already been bitten by: reading a negative
+    estimate as a negative effect, and reading "bigger than the null factor"
+    as "resolved".  Each factor is therefore given one explicit state:
+
+    ``resolved``
+        its bootstrap first-order confidence interval excludes zero.  This is
+        the *only* state that licenses quoting a share of the variance.
+    ``null control``
+        the deliberately null factor itself (the spiking RNG seed, which the
+        deterministic rate engine ignores and whose true index is exactly 0),
+        plus any factor whose estimate is no larger in magnitude than it and
+        whose interval includes zero.  Reported separately because such a
+        factor is not merely unresolved: it is indistinguishable from a
+        quantity known to be zero.
+    ``unresolved at this sample size``
+        everything else: the interval includes zero, so the sample cannot tell
+        the factor's contribution apart from nothing.
+
+    ``null control`` is a refinement *inside* the unresolved set, never an
+    escape from it: a factor in that state is also listed in ``unresolved``.
+    The null factor's own index is one draw of the estimator's error, not a
+    symmetric tolerance band, which is why nothing here is phrased as a
+    +-floor.
+    """
+    rows = list(rows)
+    by_name = {r["factor"]: r for r in rows}
+    null_row = by_name.get(null_factor) if engine == "rate" else None
+    null_mag = None if null_row is None else abs(float(null_row["first_order"]))
+
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        ci = r.get("first_order_ci")
+        excludes_zero = (
+            None if ci is None else bool(float(ci[0]) > 0.0 or float(ci[1]) < 0.0)
+        )
+        if null_row is not None and r["factor"] == null_factor:
+            state = NULL_CONTROL_LABEL
+        elif excludes_zero:
+            state = RESOLVED_LABEL
+        elif null_mag is not None and abs(float(r["first_order"])) <= null_mag:
+            state = NULL_CONTROL_LABEL
+        else:
+            state = UNRESOLVED_LABEL
+        out.append(
+            {
+                "factor": r["factor"],
+                "state": state,
+                "resolved": bool(state == RESOLVED_LABEL),
+                "first_order": float(r["first_order"]),
+                "first_order_ci": ([float(ci[0]), float(ci[1])] if ci else None),
+                "first_order_ci_excludes_zero": excludes_zero,
+                "total_order": float(r["total_order"]),
+                "comparable_to_null_control": (
+                    None
+                    if null_mag is None
+                    else bool(abs(float(r["first_order"])) <= null_mag)
+                ),
+            }
+        )
+    resolved = [r["factor"] for r in out if r["state"] == RESOLVED_LABEL]
+    nulls = [r["factor"] for r in out if r["state"] == NULL_CONTROL_LABEL]
+    unresolved = [r["factor"] for r in out if r["state"] == UNRESOLVED_LABEL]
+    ranked = sorted(
+        (r for r in out if r["state"] == RESOLVED_LABEL),
+        key=lambda r: -r["first_order"],
+    )
+    if resolved:
+        statement = (
+            "first-order confidence intervals exclude zero for "
+            + ", ".join(
+                f"{r['factor']} (S1 {r['first_order']:+.3f}, CI "
+                f"[{r['first_order_ci'][0]:+.3f}, {r['first_order_ci'][1]:+.3f}])"
+                for r in ranked
+            )
+            + "; every other effect is unresolved at this sample size"
+            + (
+                " (" + ", ".join(sorted(unresolved + nulls)) + ")"
+                if (unresolved or nulls)
+                else ""
+            )
+            + ". 'Unresolved' means the sample cannot separate the effect from "
+            "zero; it is not a claim that the effect is zero, and a negative "
+            "point estimate is estimator noise, not a negative contribution."
+        )
+    else:
+        statement = (
+            "no factor's first-order confidence interval excludes zero: every "
+            "effect is unresolved at this sample size, and no share of the "
+            "variance should be quoted. Raise n_base."
+        )
+    if nulls:
+        statement += (
+            " Indistinguishable from the deliberately null factor"
+            + (f" ({null_factor})" if null_row is not None else "")
+            + ": "
+            + ", ".join(sorted(nulls))
+            + "."
+        )
+    return {
+        "states": out,
+        "by_factor": {r["factor"]: r["state"] for r in out},
+        "resolved": resolved,
+        "unresolved": sorted(unresolved + nulls),
+        "unresolved_strict": sorted(unresolved),
+        "null_control": sorted(nulls),
+        "null_factor": (null_factor if null_row is not None else None),
+        "null_factor_magnitude": null_mag,
+        "statement": statement,
     }
 
 
@@ -858,10 +1007,16 @@ def uncertainty_budget(result: Mapping[str, Any]) -> list[dict[str, Any]]:
     """
     var = float(result.get("output_variance", 0.0))
     rows = list(result["rows"])
+    states = (
+        result.get("resolution")
+        or resolution_summary(rows, engine=str(result.get("engine", "rate")))
+    )["by_factor"]
     out = [
         {
             "source": r["factor"],
             "kind": r.get("kind"),
+            "state": states.get(r["factor"]),
+            "resolved": bool(states.get(r["factor"]) == RESOLVED_LABEL),
             "share_of_variance": r["first_order"],
             "share_with_interactions": r["total_order"],
             "variance_removed": r["first_order"] * var,
@@ -874,6 +1029,8 @@ def uncertainty_budget(result: Mapping[str, Any]) -> list[dict[str, Any]]:
         {
             "source": "interactions (higher order)",
             "kind": "residual",
+            "state": None,
+            "resolved": None,
             "share_of_variance": resid,
             "share_with_interactions": None,
             "variance_removed": resid * var,
@@ -893,8 +1050,8 @@ def to_markdown(result: Mapping[str, Any]) -> str:
         "",
         f"output mean {result.get('output_mean'):.4g}, variance {result.get('output_variance'):.4g}",
         "",
-        "| source | share of variance (S1) | 95% CI | with interactions (ST) |",
-        "|---|---|---|---|",
+        "| source | state | share of variance (S1) | 95% CI | with interactions (ST) |",
+        "|---|---|---|---|---|",
     ]
     by_name = {r["factor"]: r for r in result["rows"]}
     for row in result["budget"]:
@@ -902,9 +1059,12 @@ def to_markdown(result: Mapping[str, Any]) -> str:
         ci_s = f"[{ci[0]:+.3f}, {ci[1]:+.3f}]" if ci else "-"
         st = by_name.get(row["source"], {}).get("total_order")
         lines.append(
-            f"| {row['source']} | {row['share_of_variance']:+.3f} | {ci_s} | "
+            f"| {row['source']} | {row.get('state') or '-'} | "
+            f"{row['share_of_variance']:+.3f} | {ci_s} | "
             + (f"{st:+.3f} |" if st is not None else "- |")
         )
+    if result.get("summary"):
+        lines += ["", f"_{result['summary']}_"]
     return "\n".join(lines)
 
 

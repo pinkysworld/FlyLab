@@ -2319,6 +2319,9 @@
         provRow("engagement at this dose", r.engagement === null || r.engagement === undefined ? "not modelled" : Number(r.engagement).toFixed(4)) +
         provRow("engagement model", r.engagement_model) +
         provRow("what that means", r.engagement_model_note) +
+        provRow("evidence distance", r.evidence_distance_label || r.evidence_distance) +
+        provRow("distance means", r.evidence_distance_note) +
+        provRow("provenance warning", r.provenance_warning) +
         provRow("what the parameter is", r.param_type_note) +
         provRow("source relation", r.relation) +
         provRow("relation means", r.relation_note) +

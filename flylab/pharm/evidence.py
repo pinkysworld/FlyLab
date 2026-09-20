@@ -500,6 +500,7 @@ def describe(row: Mapping[str, Any]) -> dict[str, Any]:
     """
     param_type = as_param_type(row.get("param_type"))
     relation = as_relation(row.get("relation"))
+    distance = RELATION_DISTANCE[relation]
     value = row.get("param_value_M", row.get("value_M", row.get("ec50_M")))
     value = None if value is None else float(value)
     model = model_for(param_type, relation) if value is not None else EngagementModel.not_modelled
@@ -517,6 +518,9 @@ def describe(row: Mapping[str, Any]) -> dict[str, Any]:
         "provenance_warning": warning,
         "relation": relation.value,
         "relation_note": RELATION_NOTES[relation],
+        "evidence_distance": distance.value,
+        "evidence_distance_label": DISTANCE_LABELS[distance],
+        "evidence_distance_note": DISTANCE_NOTES[distance],
         "param_type_note": PARAM_TYPE_NOTES[param_type],
         "species": row.get("species"),
         "evidence_tier": row.get("evidence_tier", "class_placeholder"),
@@ -533,21 +537,28 @@ def engagement_note(model: EngagementModel | str) -> str:
     if m is EngagementModel.binding_occupancy:
         return (
             "fractional occupancy of the binding site, from a Kd/Ki measured on "
-            "this compound at this receptor in this species (a physical "
-            "occupancy claim about the modelled receptor)"
+            "this compound at this receptor in this species (evidence distance "
+            "E0): a physical occupancy claim about the modelled receptor"
         )
-    if m is EngagementModel.binding_derived_engagement:
+    if m is EngagementModel.binding_engagement_proxy:
         return (
-            "engagement proxy derived from a binding constant (Kd/Ki) that was "
-            "NOT measured on the modelled receptor in Drosophila: the same Hill "
-            "expression, but it is NOT fractional occupancy of this receptor, "
-            "because the constant comes from another species or a related "
-            "preparation"
+            "engagement proxy derived from a binding constant (Kd/Ki) measured "
+            "at evidence distance E1/E2 -- another species, or a related "
+            "preparation: the same Hill expression, but it is NOT fractional "
+            "receptor occupancy of the modelled target"
         )
     if m is EngagementModel.functional_engagement:
         return (
             "normalised functional engagement from a potency parameter "
-            "(EC50/IC50/Kb); it is NOT fractional receptor occupancy"
+            "(EC50/IC50/Kb) measured on this target (evidence distance E0); it "
+            "is NOT fractional receptor occupancy"
+        )
+    if m is EngagementModel.functional_engagement_proxy:
+        return (
+            "normalised functional engagement from a potency parameter "
+            "transferred from another species, a related preparation or a "
+            "chemical class (evidence distance E1-E3); it is NOT fractional "
+            "receptor occupancy and it is not a measurement on this target"
         )
     return "not modelled: the evidence does not support any number at this receptor"
 
@@ -559,35 +570,76 @@ def provenance_warning(
 ) -> str | None:
     """The warning a row must carry, or ``None`` when it needs none.
 
-    A ``binding_derived_engagement`` row always carries one, and it names the
-    gap explicitly -- the species the constant was measured in, or the fact
-    that the preparation was not this receptor.  A reader must never see such a
-    number without being told that it is not an occupancy of the *Drosophila*
-    target FlyLab is modelling.
+    Every proxy model carries one, and it names the gap explicitly -- the
+    species the number was measured in (E1), the preparation it was measured on
+    (E2), or the fact that it is a class statement (E3).  A reader must never
+    see a transferred number without being told what was transferred.
     """
     m = model if isinstance(model, EngagementModel) else EngagementModel(str(model))
-    if m is not EngagementModel.binding_derived_engagement:
+    if m not in PROXY_MODELS:
         return None
-    rel = as_relation(relation) if relation is not None else None
+    dist = as_distance(relation) if relation is not None else None
     where = str(species).strip() if species else ""
-    if rel is SourceRelation.exact_compound_related_receptor:
+    kind = ("binding constant" if m is EngagementModel.binding_engagement_proxy
+            else "potency value")
+    if dist is EvidenceDistance.E2:
         gap = (
-            "the binding constant was measured on a related, hybrid or "
-            "native-mixed preparation" + (f" ({where})" if where else "")
+            f"the {kind} was measured on a related, hybrid or native-mixed "
+            "preparation" + (f" ({where})" if where else "")
             + ", not on the receptor this key names"
         )
-    else:
+    elif dist is EvidenceDistance.E3:
         gap = (
-            "the binding constant was measured in "
+            f"the {kind} is a chemical-class statement"
+            + (f" ({where})" if where else "")
+            + ", not a measurement of this compound at this receptor"
+        )
+    else:  # E1, or an unstated distance: assume the species gap
+        gap = (
+            f"the {kind} was measured in "
             + (where or "another species")
             + ", not in Drosophila melanogaster"
         )
+    label = DISTANCE_LABELS[dist] if dist is not None else "E1-E3"
+    if m is EngagementModel.binding_engagement_proxy:
+        reported = (
+            "a binding-derived engagement proxy, not as physical receptor "
+            "occupancy of the modelled target"
+        )
+    else:
+        reported = (
+            "a functional engagement proxy, not as a measurement on the "
+            "modelled target"
+        )
     return (
-        "SPECIES/PREPARATION GAP: " + gap + ". The number is therefore reported "
-        "as a binding-derived engagement proxy, not as physical receptor "
-        "occupancy of the modelled target; cross-species transfer of an "
-        "affinity is an assumption, not a measurement."
+        f"EVIDENCE DISTANCE {label}: {gap}. The number is therefore reported as "
+        f"{reported}; transferring it here is an assumption, not a measurement."
     )
+
+
+def transformation_table_rows() -> list[dict[str, Any]]:
+    """:data:`TRANSFORMATION_TABLE` as printable rows (the methods table).
+
+    One row per (parameter type, evidence distance) pair, with the model the
+    rule permits and one sentence about what that model reports.
+    """
+    rows: list[dict[str, Any]] = []
+    for pt in ParameterType:
+        for dist in EvidenceDistance:
+            model = TRANSFORMATION_TABLE[(pt, dist)]
+            rows.append(
+                {
+                    "param_type": pt.value,
+                    "param_type_note": PARAM_TYPE_NOTES[pt],
+                    "evidence_distance": dist.value,
+                    "evidence_distance_label": DISTANCE_LABELS[dist],
+                    "relation": DISTANCE_RELATION[dist].value,
+                    "engagement_model": model.value,
+                    "engagement_model_note": engagement_note(model),
+                    "model_strength": MODEL_STRENGTH[model],
+                }
+            )
+    return rows
 
 
 def _find(source: str, *markers: str) -> str | None:

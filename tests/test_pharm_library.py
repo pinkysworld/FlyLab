@@ -176,7 +176,11 @@ def test_fipronil_vertebrate_row_is_typed_as_an_ic50():
     """[3H]EBOB displacement gives an IC50, not an EC50 and not a Kd."""
     spec = LIB["compounds"]["fipronil"]["receptors"]["vertebrate_GABA_A"]
     assert spec["param_type"] == "IC50"
-    assert model_for(spec["param_type"], spec["relation"]) is EngagementModel.functional_engagement
+    # measured in rat, not in Drosophila: E1, so it is a transferred potency
+    assert spec["relation"] == "exact_compound_exact_receptor_other_species"
+    assert model_for(spec["param_type"], spec["relation"]) is (
+        EngagementModel.functional_engagement_proxy
+    )
     assert "EBOB" in spec["source"]
     assert LIB["compounds"]["fipronil"]["receptors"]["insect_RDL"]["param_type"] == "IC50"
 
@@ -205,7 +209,7 @@ def test_the_binding_constants_are_the_verified_ones():
     assert "Myzus persicae" in aphid["species"]
     # cross-species: a real binding constant, but NOT occupancy of a fly receptor
     assert model_for(aphid["param_type"], aphid["relation"]) is (
-        EngagementModel.binding_derived_engagement
+        EngagementModel.binding_engagement_proxy
     )
 
     fly = LIB["compounds"]["imidacloprid"]["receptors"]["insect_nAChR_native_dmel"]

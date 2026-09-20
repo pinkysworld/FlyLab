@@ -548,10 +548,14 @@ def dashboard(
     typer.echo(
         f"  insect engagement {_fmt(h['insect_engagement']['value'], 6, 3)} "
         f"[{h['insect_engagement']['classification']}] at {h['insect_engagement']['receptor']}"
+        f"  ({h['insect_engagement'].get('engagement_model')}, "
+        f"{h['insect_engagement'].get('evidence_distance_label')})"
     )
     typer.echo(
         f"  vertebrate engagement {_fmt(h['vertebrate_engagement']['value'], 6, 3)} "
         f"[{h['vertebrate_engagement']['classification']}] at {h['vertebrate_engagement']['receptor']}"
+        f"  ({h['vertebrate_engagement'].get('engagement_model')}, "
+        f"{h['vertebrate_engagement'].get('evidence_distance_label')})"
     )
     rs = h["receptor_selectivity"]
     typer.echo(

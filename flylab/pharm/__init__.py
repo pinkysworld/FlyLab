@@ -6,14 +6,20 @@ from flylab.pharm.binding import (
 )
 from flylab.pharm.evidence import (
     ALLOWED,
+    DISTANCE_LABELS,
+    RELATION_DISTANCE,
+    TRANSFORMATION_TABLE,
     EngagementModel,
+    EvidenceDistance,
     EvidenceTypeError,
     ParameterType,
     SourceRelation,
+    as_distance,
     check_transformation,
     describe,
     model_for,
     provenance_warning,
+    transformation_table_rows,
 )
 from flylab.pharm.exposure import exposure_profile
 from flylab.pharm.mechanisms import MECHANISM_TABLE, gains_from_occupancy, mechanism_table_rows
@@ -22,6 +28,7 @@ from flylab.pharm.occupancy import (
     compare_compound,
     engagement,
     engagement_curve,
+    evidence_distance_table,
     hill_occupancy,
     is_placeholder,
     library_report,
@@ -49,7 +56,14 @@ __all__ = [
     "validate_library",
     "ParameterType",
     "SourceRelation",
+    "EvidenceDistance",
     "EngagementModel",
+    "RELATION_DISTANCE",
+    "DISTANCE_LABELS",
+    "TRANSFORMATION_TABLE",
+    "as_distance",
+    "transformation_table_rows",
+    "evidence_distance_table",
     "EvidenceTypeError",
     "ALLOWED",
     "model_for",

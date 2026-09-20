@@ -920,49 +920,42 @@ def _c_rdl_disinhibition(run: SpecRun) -> bool | None:
 
 
 def _c_imidacloprid_topology_not_distinguishable(run: SpecRun) -> bool | None:
-    """Imidacloprid's mean-rate effect is **not distinguishable** from a
-    degree-preserving rewiring null.
+    """Imidacloprid is **not** classified topology-dependent by the dependence
+    engine under this specification.
 
-    Computed exactly as the ``readout`` string says: the empirical two-sided
-    permutation probability ``(k+1)/(n+1)`` over ``run.n_shuffles`` rewirings,
-    compared against ``run.alpha``.  This is a failure to reject and is
-    reported as such - it is not a claim of equivalence, and the equivalence
-    evidence (the gap from the null median) is recorded beside it so that a
-    reader can see how large a difference the test leaves open.
+    Computed by :func:`flylab.analysis.dependence.dependence_landscape` -- the
+    same permutation machinery, ladder, equivalence margin and three-way
+    verdict as the paper's headline analysis -- so the per-specification
+    verdict is directly comparable with the n = 1000 result rather than being
+    a separate statistical object.  Retained when neither structural null
+    (``weight_permute``, ``rewire_degree_preserving``) is distinguishable from
+    the real cut.
+
+    This is a failure to reject, and it is reported as such.  Whether the
+    non-rejection amounts to equivalence within the prespecified margin or is
+    merely indeterminate is recorded in the evidence and summarised per
+    conclusion, never folded into the verdict.
     """
-    r = run.topology_null("imidacloprid")
-    p = r["p_two_sided"]
-    run.evidence["C3_imidacloprid_topology_not_distinguishable"] = dict(r)
-    if p is None:
+    ev = run.topology_evidence("imidacloprid")
+    run.evidence["C3_imidacloprid_topology_not_distinguishable"] = ev
+    if ev["class_raw"] is None:
         return None
-    return bool(float(p) > float(run.alpha))
+    return bool(ev["class_raw"] != "topology-dependent")
 
 
 def _c_fipronil_topology_exceeds(run: SpecRun) -> bool | None:
-    """Fipronil sits further from its rewiring null than imidacloprid does.
+    """Fipronil **is** classified topology-dependent under this specification,
+    on the same engine, the same null draws and the same criterion that
+    imidacloprid is measured against in C3.
 
-    An explicit **effect-size contrast**, not a significance test: the robust
-    standardised distance ``d = |effect - median(null)| / (1.4826 * MAD(null))``
-    is computed for both compounds against the same degree-preserving rewiring
-    null at the same shuffle count, and the conclusion is retained when
-    ``d_fipronil > d_imidacloprid``.  No threshold, no critical value and no
-    p-value enter the comparison; the per-compound permutation probabilities
-    are recorded alongside for the reader, not used by the predicate.
+    The pair (C3 False-positive-free, C4 positive) is the contrast the paper
+    rests on: same cut, same readout, same shuffles, opposite verdict.
     """
-    fip = run.topology_null("fipronil")
-    imi = run.topology_null("imidacloprid")
-    run.evidence["C4_fipronil_topology_exceeds"] = {
-        "statistic": "robust standardised distance from the rewiring null median",
-        "formula": "d = |effect_real - median(null)| / (1.4826 * MAD(null))",
-        "n_shuffles": int(run.n_shuffles),
-        "fipronil": fip,
-        "imidacloprid": imi,
-        "d_fipronil": fip["robust_distance"],
-        "d_imidacloprid": imi["robust_distance"],
-    }
-    if fip["robust_distance"] is None or imi["robust_distance"] is None:
+    ev = run.topology_evidence("fipronil")
+    run.evidence["C4_fipronil_topology_exceeds"] = ev
+    if ev["class_raw"] is None:
         return None
-    return bool(float(fip["robust_distance"]) > float(imi["robust_distance"]))
+    return bool(ev["class_raw"] == "topology-dependent")
 
 
 def _c_nicotinic_buffering(run: SpecRun) -> bool | None:
@@ -1004,27 +997,41 @@ CONCLUSIONS: dict[str, dict[str, Any]] = {
     },
     "C3_imidacloprid_topology_not_distinguishable": {
         "claim": (
-            "imidacloprid's mean-rate effect is not distinguishable from a "
-            "degree-preserving rewiring null"
+            "imidacloprid's mean-rate effect is not distinguishable from any "
+            "structure-preserving degradation of the cut (not topology-dependent)"
         ),
         "readout": (
-            "empirical two-sided permutation p > {alpha:g} against a "
-            "degree-preserving rewiring null, n = {n_shuffles} shuffles "
-            "(resolution 1/(n+1) = {resolution:.4f}); a failure to reject, "
-            "not a claim of equivalence"
+            "dependence_landscape class != topology-dependent for imidacloprid: "
+            "neither weight_permute nor rewire_degree_preserving reaches the "
+            "empirical two-sided permutation threshold, n = {n_shuffles} "
+            "shuffles per specification (resolution 1/(n+1) = {resolution:.4f}), "
+            "alpha = {alpha:g}, Benjamini-Hochberg across the {n_tests} "
+            "structural tests of this run; a failure to reject, not a claim of "
+            "equivalence"
         ),
-        "kind": "permutation test (failure to reject)",
+        "kind": "permutation classification (failure to reject), FDR-corrected",
+        "topology": True,
+        "expect_topology_dependent": False,
+        "compound": "imidacloprid",
         "evaluate": _c_imidacloprid_topology_not_distinguishable,
     },
     "C4_fipronil_topology_exceeds": {
-        "claim": "fipronil's topology dependence exceeds imidacloprid's",
-        "readout": (
-            "d_fipronil > d_imidacloprid, where d = |effect - median(null)| / "
-            "(1.4826 * MAD(null)) against the same degree-preserving rewiring "
-            "null, n = {n_shuffles} shuffles; an effect-size contrast, not a "
-            "significance test"
+        "claim": (
+            "fipronil's mean-rate effect is topology-dependent where "
+            "imidacloprid's is not, on the same cut, shuffles and criterion"
         ),
-        "kind": "effect-size contrast (no threshold)",
+        "readout": (
+            "dependence_landscape class == topology-dependent for fipronil: at "
+            "least one of weight_permute / rewire_degree_preserving is "
+            "distinguishable from the real cut, n = {n_shuffles} shuffles per "
+            "specification (resolution 1/(n+1) = {resolution:.4f}), alpha = "
+            "{alpha:g}, Benjamini-Hochberg across the {n_tests} structural "
+            "tests of this run"
+        ),
+        "kind": "permutation classification (rejection), FDR-corrected",
+        "topology": True,
+        "expect_topology_dependent": True,
+        "compound": "fipronil",
         "evaluate": _c_fipronil_topology_exceeds,
     },
     "C5_nicotinic_buffering": {
@@ -1059,8 +1066,98 @@ BASE_WARNINGS = [
 # --------------------------------------------------------------------------
 # the Conclusion Stability Matrix
 # --------------------------------------------------------------------------
+def _equivalence_breakdown(
+    diagnostics: Mapping[str, Mapping[str, Any]],
+    spec_names: Sequence[str],
+    conclusion: str,
+) -> dict[str, int]:
+    """How many specifications reached equivalence rather than non-rejection.
+
+    A topology conclusion that rests on failing to reject is only as strong as
+    the equivalence evidence behind it, so the matrix reports, per conclusion,
+    how many specifications had every structural mode
+    ``equivalent_within_tolerance`` and how many were merely
+    ``indeterminate``.
+    """
+    out = {"equivalent_within_tolerance": 0, "indeterminate": 0, "distinguishable": 0}
+    for spec in spec_names:
+        ev = ((diagnostics.get(spec) or {}).get("evidence") or {}).get(conclusion)
+        if not ev:
+            continue
+        verdicts = [
+            (ev.get("verdicts") or {}).get(m) for m in STRUCTURAL_MODE_NAMES
+        ]
+        verdicts = [v for v in verdicts if v]
+        if not verdicts:
+            continue
+        if "distinguishable" in verdicts:
+            out["distinguishable"] += 1
+        elif all(v == "equivalent_within_tolerance" for v in verdicts):
+            out["equivalent_within_tolerance"] += 1
+        else:
+            out["indeterminate"] += 1
+    return out
+
+
+def _topology_fdr(
+    diagnostics: Mapping[str, Mapping[str, Any]],
+    spec_names: Sequence[str],
+    alpha: float,
+    resolution: float,
+) -> dict[str, Any]:
+    """Benjamini-Hochberg across every structural test of a stability run.
+
+    A single specification's topology cell is a planned comparison; 25 of them
+    are not.  The family is therefore all
+    ``(specification, compound, structural mode)`` tests of the run -- the same
+    correction, at the same alpha, that
+    :func:`flylab.analysis.dependence.dependence_landscape` applies to its own
+    grid -- and each cell's topology verdict is re-decided on the adjusted
+    probabilities.
+
+    Returns the adjusted view keyed ``(spec, compound) -> bool`` plus the
+    family's own diagnostics, including whether its resolution can support a
+    rejection at all.
+    """
+    from flylab.analysis.dependence import benjamini_hochberg
+
+    index: list[tuple[str, str, str]] = []
+    pvals: list[float | None] = []
+    for spec in spec_names:
+        evidence = (diagnostics.get(spec) or {}).get("evidence") or {}
+        for ev in evidence.values():
+            compound = ev.get("compound")
+            structural = ev.get("structural_p") or {}
+            for mode, pv in sorted(structural.items()):
+                key = (spec, str(compound), str(mode))
+                if key in index:
+                    continue
+                index.append(key)
+                pvals.append(pv)
+    bh = benjamini_hochberg(pvals, alpha=alpha, resolution=resolution)
+    rejected: dict[tuple[str, str], bool] = {}
+    q_by_cell: dict[tuple[str, str], float | None] = {}
+    for (spec, compound, _mode), q, rej in zip(index, bh["adjusted"], bh["rejected"]):
+        cell = (spec, compound)
+        rejected[cell] = bool(rejected.get(cell, False) or rej)
+        if q is not None:
+            prev = q_by_cell.get(cell)
+            q_by_cell[cell] = q if prev is None else min(prev, q)
+    bh.pop("adjusted", None)
+    bh.pop("rejected", None)
+    return {
+        "topology_dependent": rejected,
+        "q_value": q_by_cell,
+        "family": [list(k) for k in index],
+        "fdr": bh,
+    }
+
+
 def _render_readout(
-    template: str | None, n_shuffles: int, resolution: float
+    template: str | None,
+    n_shuffles: int,
+    resolution: float,
+    n_tests: int = 0,
 ) -> str | None:
     """Fill a conclusion's ``readout`` template with the run's actual numbers.
 
@@ -1074,6 +1171,7 @@ def _render_readout(
         n_shuffles=int(n_shuffles),
         alpha=TOPOLOGY_ALPHA,
         resolution=float(resolution),
+        n_tests=int(n_tests),
     )
 
 
@@ -1181,6 +1279,37 @@ def conclusion_stability(
         }
         per_spec_runtime[spec["name"]] = float(time.perf_counter() - ts)
 
+    # ---- multiplicity across specifications ---------------------------
+    # every (specification, compound, structural mode) test of this run is one
+    # family; the per-specification topology verdicts are re-decided on the
+    # adjusted probabilities and the uncorrected ones are kept beside them.
+    spec_names = [sp["name"] for sp in fam]
+    topo_names = [n for n, c in concl.items() if c.get("topology")]
+    matrix_uncorrected = {n: dict(matrix[n]) for n in topo_names}
+    topo_fdr = _topology_fdr(diagnostics, spec_names, TOPOLOGY_ALPHA, resolution)
+    n_structural_tests = int(topo_fdr["fdr"]["m"])
+    for name in topo_names:
+        c = concl[name]
+        compound = str(c.get("compound") or "")
+        expect = bool(c.get("expect_topology_dependent"))
+        for spec_name in spec_names:
+            cell = (spec_name, compound)
+            if cell not in topo_fdr["topology_dependent"]:
+                continue  # not evaluated: leave the raw verdict
+            if matrix_uncorrected[name].get(spec_name) is None:
+                continue  # undecidable under this specification; stays undecidable
+            is_topo = topo_fdr["topology_dependent"][cell]
+            matrix[name][spec_name] = bool(is_topo) if expect else bool(not is_topo)
+    if topo_names and not topo_fdr["fdr"]["can_reject"]:
+        warnings.append(
+            "FDR cannot reject anything across this stability run: with "
+            f"{n_structural_tests} structural tests at permutation resolution "
+            f"{resolution:.4f}, at least {topo_fdr['fdr']['min_rejections']} of "
+            "them would have to sit at the resolution floor together. The "
+            "corrected topology fractions below are therefore an artefact of "
+            "the shuffle budget, not a result; raise n_shuffles."
+        )
+
     rows: list[dict[str, Any]] = []
     for name, c in concl.items():
         verdicts = matrix[name]
@@ -1193,7 +1322,9 @@ def conclusion_stability(
             {
                 "conclusion": name,
                 "claim": c["claim"],
-                "readout": _render_readout(c.get("readout"), shuffles, resolution),
+                "readout": _render_readout(
+                    c.get("readout"), shuffles, resolution, n_structural_tests
+                ),
                 "readout_template": c.get("readout"),
                 "kind": c.get("kind", "model readout"),
                 "n_shuffles": shuffles,
@@ -1210,8 +1341,42 @@ def conclusion_stability(
                 "fragile": bool(n_true < n),
             }
         )
+        if name in matrix_uncorrected:
+            raw = matrix_uncorrected[name]
+            n_true_raw = sum(1 for v in raw.values() if v is True)
+            rows[-1].update(
+                {
+                    "multiplicity": (
+                        "benjamini-hochberg across the "
+                        f"{n_structural_tests} structural tests of this run "
+                        f"({len(spec_names)} specifications x "
+                        f"{len(TOPOLOGY_COMPOUNDS)} compounds x "
+                        f"{len(STRUCTURAL_MODE_NAMES)} modes)"
+                    ),
+                    "n_retained_uncorrected": n_true_raw,
+                    "fraction_retained_uncorrected": float(n_true_raw) / float(n),
+                    "failing_specs_uncorrected": sorted(
+                        sp for sp, v in raw.items() if v is False
+                    ),
+                    "equivalence_breakdown": _equivalence_breakdown(
+                        diagnostics, spec_names, name
+                    ),
+                }
+            )
     rows.sort(key=lambda r: (r["fraction_retained"], r["conclusion"]))
 
+    for r in rows:
+        if (
+            r.get("n_retained_uncorrected") is not None
+            and r["n_retained_uncorrected"] != r["n_retained"]
+        ):
+            warnings.append(
+                f"{r['conclusion']}: multiplicity changes the fraction - "
+                f"{r['n_retained_uncorrected']}/{r['n_specs']} retained on the raw "
+                f"permutation p, {r['n_retained']}/{r['n_specs']} after "
+                "Benjamini-Hochberg across the run. The corrected fraction is "
+                "the one to quote."
+            )
     if any(r["fragile"] for r in rows):
         warnings.append(
             "fragile conclusions (not retained by every specification): "
@@ -1226,17 +1391,16 @@ def conclusion_stability(
         "n_shuffles": shuffles,
         "shuffle_resolution": resolution,
         "topology_alpha": TOPOLOGY_ALPHA,
+        "topology_compounds": list(TOPOLOGY_COMPOUNDS),
+        "topology_engine": "flylab.analysis.dependence.dependence_landscape",
+        "topology_fdr": topo_fdr["fdr"],
+        "n_structural_tests": n_structural_tests,
+        "matrix_uncorrected": matrix_uncorrected,
         "topology_criteria": {
-            "C3_imidacloprid_topology_not_distinguishable": _render_readout(
-                concl.get("C3_imidacloprid_topology_not_distinguishable", {}).get("readout"),
-                shuffles,
-                resolution,
-            ),
-            "C4_fipronil_topology_exceeds": _render_readout(
-                concl.get("C4_fipronil_topology_exceeds", {}).get("readout"),
-                shuffles,
-                resolution,
-            ),
+            name: _render_readout(
+                concl[name].get("readout"), shuffles, resolution, n_structural_tests
+            )
+            for name in topo_names
         },
         "conc_M": float(conc_M),
         "seed": int(seed),

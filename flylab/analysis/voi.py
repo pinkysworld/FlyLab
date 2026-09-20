@@ -61,7 +61,14 @@ from __future__ import annotations
 import time
 from typing import Any, Mapping, Sequence
 
-from flylab.analysis.uncertainty_global import FACTOR_NAMES, sobol_analysis
+from flylab.analysis.uncertainty_global import (
+    FACTOR_NAMES,
+    NULL_CONTROL_LABEL,
+    RESOLVED_LABEL,
+    UNRESOLVED_LABEL,
+    resolution_summary,
+    sobol_analysis,
+)
 
 __all__ = [
     "EXPERIMENTS",
@@ -69,14 +76,18 @@ __all__ = [
     "NEGATIVE_VOI_NOTE",
     "UNRESOLVED",
     "RESOLVED",
+    "NULL_CONTROL",
     "voi",
     "value_of_information",
     "to_markdown",
 ]
 
-#: the label a factor gets when its first-order CI includes zero
-UNRESOLVED = "unresolved at this sample size"
-RESOLVED = "resolved"
+#: the label a factor gets when its first-order CI includes zero.  These are
+#: the same three states :func:`flylab.analysis.uncertainty_global.resolution_summary`
+#: assigns, re-exported so a VOI table can be read without the Sobol' one.
+UNRESOLVED = UNRESOLVED_LABEL
+RESOLVED = RESOLVED_LABEL
+NULL_CONTROL = NULL_CONTROL_LABEL
 
 NEGATIVE_VOI_NOTE = (
     "A value of information cannot be negative, so the ranking uses "
@@ -269,6 +280,10 @@ def voi(
     var = float(res["output_variance"])
     sd = float(res.get("output_sd") or (var ** 0.5 if var > 0 else 0.0))
     wanted = set(factors) if factors is not None else set(FACTOR_NAMES)
+    states = (
+        res.get("resolution")
+        or resolution_summary(res["rows"], engine=str(res.get("engine", "rate")))
+    )["by_factor"]
 
     rows: list[dict[str, Any]] = []
     for r in res["rows"]:
@@ -282,9 +297,10 @@ def voi(
         # quantity is max(0, S_j) * Var(Y) and the raw estimate is kept beside it
         s_decision = max(0.0, s_raw)
         ci = r.get("first_order_ci")
-        unresolved = (
-            True if ci is None else bool(float(ci[0]) <= 0.0 <= float(ci[1]))
+        state = states.get(name) or (
+            UNRESOLVED if ci is None or float(ci[0]) <= 0.0 <= float(ci[1]) else RESOLVED
         )
+        unresolved = state != RESOLVED
         residual_sd = float(var * (1.0 - s_decision)) ** 0.5 if var > 0 else 0.0
         rows.append(
             {
@@ -298,7 +314,10 @@ def voi(
                 "voi_var_raw": s_raw * var,
                 "first_order_ci": ([float(ci[0]), float(ci[1])] if ci else None),
                 "voi_ci_var": ([float(ci[0]) * var, float(ci[1]) * var] if ci else None),
-                "ci_includes_zero": unresolved,
+                "ci_includes_zero": (
+                    True if ci is None else bool(float(ci[0]) <= 0.0 <= float(ci[1]))
+                ),
+                "state": state,
                 "status": (UNRESOLVED if unresolved else RESOLVED),
                 "clipped_from_negative": bool(s_raw < 0.0),
                 "voi_upper_bound_var": max(0.0, float(r["total_order"])) * var,
@@ -415,6 +434,10 @@ def voi(
         "rows": rows,
         "resolved_factors": [r["factor"] for r in resolved],
         "unresolved_factors": sorted(unresolved_names),
+        "null_control_factors": sorted(
+            r["factor"] for r in rows if r.get("state") == NULL_CONTROL
+        ),
+        "factor_states": {r["factor"]: r.get("state") for r in rows},
         "recommendation": recommendation,
         "runtime_s": float(time.perf_counter() - t0),
         "label": "model_derived",
@@ -437,7 +460,8 @@ def to_markdown(result: Mapping[str, Any]) -> str:
         lines.append(
             f"| {r['rank']} | {r['factor']} | {r['voi_fraction']:.3f} | "
             f"{r['voi_var']:.3g} | {r.get('voi_fraction_raw', r['voi_fraction']):+.3f} | "
-            f"{ci_s} | {r.get('status', '')} | {r['voi_upper_bound_fraction']:.3f} | "
+            f"{ci_s} | {r.get('state', r.get('status', ''))} | "
+            f"{r['voi_upper_bound_fraction']:.3f} | "
             f"{r['experiment']} | {r['cost']} |"
         )
     if result.get("recommendation"):

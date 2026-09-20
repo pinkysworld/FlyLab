@@ -17,6 +17,11 @@ import pytest
 from flylab.pharm.evidence import (
     ALLOWED,
     BINDING_OCCUPANCY_RELATION,
+    MODEL_STRENGTH,
+    DISTANCE_LABELS,
+    RELATION_DISTANCE,
+    TRANSFORMATION_TABLE,
+    EvidenceDistance,
     EngagementModel,
     EvidenceTypeError,
     ParameterType,
@@ -25,13 +30,16 @@ from flylab.pharm.evidence import (
     as_relation,
     check_transformation,
     describe,
+    as_distance,
     is_modelled,
     model_for,
     provenance_warning,
+    transformation_table_rows,
 )
 from flylab.pharm.occupancy import (
     compare_compound,
     engagement,
+    evidence_distance_table,
     library_report,
     load_library,
     receptor_spec,
@@ -78,14 +86,28 @@ def test_model_for_uses_the_relation_only_to_weaken_the_claim():
     assert model_for("Kd", "exact_compound_exact_receptor_exact_species") is (
         EngagementModel.binding_occupancy
     )
-    # a class-level statement cannot license a physical occupancy claim
-    assert model_for("Kd", "class_extrapolation") is EngagementModel.functional_engagement
+    # a class-level statement cannot license any binding claim
+    assert model_for("Kd", "class_extrapolation") is (
+        EngagementModel.functional_engagement_proxy
+    )
     # nothing survives an unsupported relation
     assert model_for("Kd", "unsupported") is EngagementModel.not_modelled
     assert model_for("EC50", "unsupported") is EngagementModel.not_modelled
-    assert model_for("EC50", "exact_compound_related_receptor") is (
+    # a potency measured on the modelled target is not a proxy; a transferred
+    # one is, and says so
+    assert model_for("EC50", "exact_compound_exact_receptor_exact_species") is (
         EngagementModel.functional_engagement
     )
+    assert model_for("EC50", "exact_compound_related_receptor") is (
+        EngagementModel.functional_engagement_proxy
+    )
+    # distance can only ever weaken the claim, never strengthen it
+    for pt in ParameterType:
+        previous = MODEL_STRENGTH[ALLOWED[pt]]
+        for dist in EvidenceDistance:
+            strength = MODEL_STRENGTH[model_for(pt, dist)]
+            assert strength <= previous
+            previous = strength
 
 
 # ---------------------------------------------------------------------------
@@ -100,14 +122,16 @@ def test_binding_occupancy_needs_the_exact_species_relation():
         assert model_for(pt, BINDING_OCCUPANCY_RELATION) is EngagementModel.binding_occupancy
         for far in ("exact_compound_exact_receptor_other_species",
                     "exact_compound_related_receptor"):
-            assert model_for(pt, far) is EngagementModel.binding_derived_engagement
-        # unchanged by v0.6.1: a class statement supports no binding claim at all
-        assert model_for(pt, "class_extrapolation") is EngagementModel.functional_engagement
+            assert model_for(pt, far) is EngagementModel.binding_engagement_proxy
+        # a class statement supports no binding claim at all
+        assert model_for(pt, "class_extrapolation") is (
+            EngagementModel.functional_engagement_proxy
+        )
         assert model_for(pt, "unsupported") is EngagementModel.not_modelled
 
 
 def test_a_cross_species_binding_constant_may_not_claim_occupancy():
-    check_transformation("Kd", EngagementModel.binding_derived_engagement,
+    check_transformation("Kd", EngagementModel.binding_engagement_proxy,
                          "exact_compound_exact_receptor_other_species")  # no raise
     check_transformation("Kd", EngagementModel.binding_occupancy,
                          BINDING_OCCUPANCY_RELATION)  # no raise
@@ -115,15 +139,20 @@ def test_a_cross_species_binding_constant_may_not_claim_occupancy():
         check_transformation("Kd", EngagementModel.binding_occupancy,
                              "exact_compound_exact_receptor_other_species")
     assert "exact_compound_exact_receptor_exact_species" in str(exc.value)
-    assert "binding_derived_engagement" in str(exc.value)
+    assert "binding_engagement_proxy" in str(exc.value)
     with pytest.raises(EvidenceTypeError):
         check_transformation("Ki", EngagementModel.binding_occupancy,
                              "exact_compound_related_receptor")
     # a functional potency may not claim EITHER binding model
     for model in (EngagementModel.binding_occupancy,
-                  EngagementModel.binding_derived_engagement):
+                  EngagementModel.binding_engagement_proxy):
         with pytest.raises(EvidenceTypeError):
             check_transformation("EC50", model, BINDING_OCCUPANCY_RELATION)
+    # nor may a transferred potency drop the word "proxy"
+    with pytest.raises(EvidenceTypeError) as exc:
+        check_transformation("EC50", EngagementModel.functional_engagement, "E1")
+    assert "functional_engagement_proxy" in str(exc.value)
+    check_transformation("EC50", EngagementModel.functional_engagement_proxy, "E1")
     # and nothing numeric survives an unsupported relation
     with pytest.raises(EvidenceTypeError):
         check_transformation("EC50", EngagementModel.functional_engagement, "unsupported")
@@ -131,7 +160,7 @@ def test_a_cross_species_binding_constant_may_not_claim_occupancy():
 
 def test_a_binding_derived_row_carries_a_warning_naming_the_gap():
     warning = provenance_warning(
-        EngagementModel.binding_derived_engagement,
+        EngagementModel.binding_engagement_proxy,
         "exact_compound_exact_receptor_other_species",
         "Myzus persicae",
     )
@@ -171,7 +200,8 @@ def test_describe_is_a_provenance_record():
     record = describe({"receptor": "vertebrate_GABA_A", **spec})
     assert record["param_type"] == "IC50"
     assert record["units"] == "M"
-    assert record["engagement_model"] == "functional_engagement"
+    assert record["engagement_model"] == "functional_engagement_proxy"
+    assert record["evidence_distance"] == "E1"
     assert "NOT fractional receptor occupancy" in record["engagement_model_note"] or (
         "not fractional receptor occupancy" in record["engagement_model_note"].lower()
     )
@@ -185,7 +215,9 @@ def test_describe_is_a_provenance_record():
     kd = describe({"receptor": "insect_nAChR_beta1",
                    **LIB["compounds"]["imidacloprid"]["receptors"]["insect_nAChR_beta1"]})
     assert kd["param_type"] == "Kd"
-    assert kd["engagement_model"] == "binding_derived_engagement"
+    assert kd["engagement_model"] == "binding_engagement_proxy"
+    assert kd["evidence_distance"] == "E1"
+    assert kd["evidence_distance_label"] == "E1 (cross-species)"
     assert "Myzus persicae" in kd["provenance_warning"]
     assert kd["doi"] == "10.1186/1471-2202-12-51"
 
@@ -194,6 +226,7 @@ def test_describe_is_a_provenance_record():
                      **LIB["compounds"]["imidacloprid"]["receptors"]["insect_nAChR_native_dmel"]})
     assert dmel["engagement_model"] == "binding_occupancy"
     assert dmel["provenance_warning"] is None
+    assert dmel["evidence_distance"] == "E0"
     assert dmel["relation"] == "exact_compound_exact_receptor_exact_species"
     assert dmel["doi"] == "10.1046/j.1471-4159.1996.67041669.x"
 
@@ -244,13 +277,15 @@ def test_every_row_of_every_compound_is_typed_and_none_safe():
             else:
                 assert 0.0 <= row["engagement"] <= 1.0
                 assert row["engagement_model"] in {
-                    "binding_occupancy", "binding_derived_engagement",
-                    "functional_engagement",
+                    "binding_occupancy", "binding_engagement_proxy",
+                    "functional_engagement", "functional_engagement_proxy",
                 }
-                if row["engagement_model"] == "binding_derived_engagement":
+                if row["engagement_model"].endswith("_proxy"):
                     assert row["provenance_warning"]
+                    assert row["evidence_distance"] in {"E1", "E2", "E3"}
                 else:
                     assert "provenance_warning" not in row
+                    assert row["evidence_distance"] == "E0"
 
 
 def _rows_with_model(model):
@@ -268,7 +303,7 @@ def test_only_a_drosophila_kd_row_reports_binding_occupancy():
         ("imidacloprid", "insect_nAChR_native_dmel")
     ]
     # the aphid Kd is still modelled, but it is no longer called an occupancy
-    assert _rows_with_model("binding_derived_engagement") == [
+    assert _rows_with_model("binding_engagement_proxy") == [
         ("imidacloprid", "insect_nAChR_beta1")
     ]
     beta1 = next(
@@ -285,9 +320,56 @@ def test_library_report_separates_evidence_from_missing_evidence():
     assert report["by_engagement_model"]["not_modelled"] == report["n_rows_not_modelled"]
     by_model = report["by_engagement_model"]
     assert by_model["binding_occupancy"] == 1          # the Drosophila Kd only
-    assert by_model["binding_derived_engagement"] == 1  # the aphid Kd
-    assert by_model["functional_engagement"] == report["n_rows_modelled"] - 2
-    assert by_model["binding_occupancy"] + by_model["binding_derived_engagement"] == (
+    assert by_model["binding_engagement_proxy"] == 1   # the aphid Kd
+    assert by_model["binding_occupancy"] + by_model["binding_engagement_proxy"] == (
         report["by_param_type"].get("Kd", 0) + report["by_param_type"].get("Ki", 0)
     )
+    assert sum(by_model.values()) == report["n_rows"]
+    assert by_model["not_modelled"] == report["by_evidence_distance"]["E4"]
     assert report["note"]
+
+
+# ---------------------------------------------------------------------------
+# the evidence-distance hierarchy as a reportable artefact
+# ---------------------------------------------------------------------------
+def test_the_transformation_table_is_the_whole_rule():
+    assert len(TRANSFORMATION_TABLE) == len(ParameterType) * len(EvidenceDistance)
+    for (pt, dist), model in TRANSFORMATION_TABLE.items():
+        assert model_for(pt, dist) is model
+        assert MODEL_STRENGTH[model] <= MODEL_STRENGTH[ALLOWED[pt]]
+        if dist is EvidenceDistance.E4:
+            assert model is EngagementModel.not_modelled
+        if model is EngagementModel.binding_occupancy:
+            assert pt in (ParameterType.Kd, ParameterType.Ki)
+            assert dist is EvidenceDistance.E0
+    rows = transformation_table_rows()
+    assert len(rows) == len(TRANSFORMATION_TABLE)
+    assert {r["evidence_distance"] for r in rows} == {d.value for d in EvidenceDistance}
+    assert all(r["engagement_model_note"] for r in rows)
+
+
+def test_distance_is_a_first_class_field_mapped_from_the_relation():
+    assert as_distance("exact_compound_exact_receptor_other_species") is EvidenceDistance.E1
+    assert as_distance("E2") is EvidenceDistance.E2
+    assert as_distance(None) is EvidenceDistance.E4
+    assert [d.rank for d in EvidenceDistance] == [0, 1, 2, 3, 4]
+    assert set(RELATION_DISTANCE) == set(SourceRelation)
+    assert len(set(RELATION_DISTANCE.values())) == len(EvidenceDistance)
+    assert DISTANCE_LABELS[EvidenceDistance.E1] == "E1 (cross-species)"
+
+
+def test_evidence_distance_table_is_the_paper_census():
+    table = evidence_distance_table()
+    report = library_report()
+    assert table["n_rows"] == report["n_rows"]
+    for grade, block in table["grades"].items():
+        assert block["n_rows"] == report["by_evidence_distance"].get(grade, 0)
+        assert sum(block["by_param_type"].values()) == block["n_rows"]
+        assert len(block["rows"]) == block["n_rows"]
+    # only E0 may carry a physical occupancy, and the census says how many
+    for grade, block in table["grades"].items():
+        if grade != "E0":
+            assert "binding_occupancy" not in block["by_engagement_model"]
+    assert table["n_binding_occupancy"] == report["by_engagement_model"].get(
+        "binding_occupancy", 0
+    )
