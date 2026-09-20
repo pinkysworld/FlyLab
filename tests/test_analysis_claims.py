@@ -256,7 +256,14 @@ def test_evidence_rows_carry_the_parameter_type_and_the_evidence_distance(audit)
         assert row["param_type"] in ("Kd", "Ki", "EC50", "IC50", "Kb")
         assert row["relation"] and row["relation"] != "unsupported"
         assert row["engagement"] is not None
-        assert row["engagement_model"] in ("binding_occupancy", "functional_engagement")
+        # v0.6.1: a transferred number is labelled a proxy (see
+        # flylab/pharm/evidence.py TRANSFORMATION_TABLE)
+        assert row["engagement_model"] in (
+            "binding_occupancy",
+            "binding_engagement_proxy",
+            "functional_engagement",
+            "functional_engagement_proxy",
+        )
 
 
 def test_every_source_row_explains_how_far_the_evidence_sits(audit):

@@ -13,10 +13,13 @@ Two rules shape everything below. **The evidence is typed**: what a source measu
               +-------------------+-------------------+
               |     typed engagement engine           |
               |  theta = C^n / (value^n + C^n)        |
-              |  pharm/evidence.py decides WHICH:     |
-              |    Kd/Ki  -> binding_occupancy        |
-              |    EC50.. -> functional_engagement    |
-              |    else   -> not_modelled  (N/A)      |
+              |  pharm/evidence.py decides WHICH from |
+              |  param_type AND evidence distance E0-4|
+              |   Kd/Ki + E0    -> binding_occupancy  |
+              |   Kd/Ki + E1,E2 -> binding_eng_proxy  |
+              |   EC50.. + E0   -> functional_engag.  |
+              |   transferred   -> functional_proxy   |
+              |   E4 / untyped  -> not_modelled (N/A) |
               |  library.yaml v3: param_type, value,  |
               |  n, direction, relation, species,     |
               |  efficacy, source, evidence_tier      |
