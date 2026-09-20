@@ -1,0 +1,214 @@
+# FlyLab literature dataset: what is actually published about internal dose in
+# Drosophila (and, where nothing exists for the fly, in the honeybee).
+#
+# PURPOSE: flylab/pharm/exposure.py turns a dose and a route into a free
+# concentration C(t). That conversion needs a distribution volume and an
+# elimination rate. This file records the published values, and - more
+# importantly - records that most of them DO NOT EXIST for the adult fly.
+#
+# HONEST SUMMARY: of the seven quantities the exposure model would want for
+# Drosophila (haemolymph volume, body mass, oral bioavailability, cuticular
+# penetration rate, distribution volume, elimination half-life, metabolite
+# fractions), exactly one - the metabolite identity of imidacloprid - is
+# well established. The exposure module should therefore be labelled
+# `class_placeholder` in any notebook until a real fly PK study is imported.
+
+schema_version: 1
+dataset: fly_pharmacokinetics
+dataset_version: "0.1"
+created_utc: "2026-09-19"
+
+body_and_compartment:
+
+  - id: adult_haemolymph_volume
+    quantity: "adult Drosophila melanogaster total haemolymph volume"
+    value_uL: null
+    value_nL: null
+    evidence_tier: class_placeholder
+    species: Drosophila melanogaster
+    source: null
+    notes: >-
+      NOT SOURCED. No publication giving a measured TOTAL haemolymph volume for
+      an adult D. melanogaster was found. The commonly repeated "~80 nL" figure
+      could not be traced to a primary measurement and is therefore NOT recorded
+      here. Two related, verified anchors are below. Folk DG, Han C, Bradley TJ
+      (2001) J Exp Biol 204:3323-3331 (DOI 10.1242/jeb.204.19.3323, PMID
+      11606606) measure haemolymph volume in adults and show it dominates
+      desiccation resistance, but report only relative comparisons between
+      selected and control lines, not an absolute volume.
+
+  - id: adult_haemolymph_sample_volume
+    quantity: "haemolymph volume recoverable from a single adult fly by nanoliter sampling"
+    value_nL: 25.0
+    evidence_tier: literature_value
+    species: Drosophila melanogaster
+    source: "Piyankarage SC, Featherstone DE, Shippy SA (2012) Nanoliter hemolymph sampling and analysis of individual adult Drosophila melanogaster. Anal Chem 84(10):4460-4466. DOI 10.1021/ac3002319"
+    notes: >-
+      This is a SAMPLED volume, i.e. a lower bound on the total, not the
+      distribution volume. Do not substitute it for V_d.
+
+  - id: larval_haemolymph_volume
+    quantity: "third-instar larval haemolymph volume"
+    value_nL: 174.0
+    sd_nL: 81.0
+    n: 80
+    evidence_tier: literature_value
+    species: Drosophila melanogaster
+    source: "Piyankarage SC, Augustin H, Grosjean Y, Featherstone DE, Shippy SA (2008) Hemolymph amino acid analysis of individual Drosophila larvae. Anal Chem 80(4):1201-1207. DOI 10.1021/ac701785z"
+    notes: "Larval, not adult. Recorded because it is the only directly measured Drosophila haemolymph volume found."
+
+  - id: larval_body_mass
+    quantity: "third-instar larval wet mass"
+    value_mg: 1.39
+    sd_mg: 0.15
+    evidence_tier: literature_value
+    species: Drosophila melanogaster
+    source: "Piyankarage SC et al. (2008) Anal Chem 80(4):1201-1207"
+    derived_ratio_nL_per_mg: 125.0
+    derived_ratio_note: "174 nL / 1.39 mg; derived here, not stated in the paper."
+
+  - id: adult_body_mass
+    quantity: "adult Drosophila melanogaster wet body mass"
+    value_mg: null
+    evidence_tier: class_placeholder
+    species: Drosophila melanogaster
+    source: null
+    notes: >-
+      NOT SOURCED to a citable D. melanogaster primary measurement. Adult
+      drosophilid wet masses around 1 mg are widely reported and vary strongly
+      with sex, strain, rearing temperature and nutrition, which is exactly why
+      a single number should not be pinned here without a specific citation.
+
+absorption_and_penetration:
+
+  - id: cuticular_penetration_topical
+    quantity: "cuticular penetration rate for topical application to adult Drosophila"
+    value: null
+    units: null
+    evidence_tier: class_placeholder
+    species: Drosophila melanogaster
+    source: null
+    notes: >-
+      NOT SOURCED. No Drosophila cuticular penetration rate constant was found
+      for any library compound. Topical dosing in Drosophila is usually reported
+      as dose applied and mortality, without a penetration kinetic.
+
+  - id: oral_exposure_reference_dose
+    quantity: "chronic oral imidacloprid exposure producing 50% adult mortality"
+    value: 4.0
+    units: ppm_in_food
+    time_to_50_percent_mortality_days: "20-25"
+    evidence_tier: literature_value
+    species: Drosophila melanogaster
+    source: "Martelli F, Zhongyuan Z, Wang J, et al. (2020) Low doses of the neonicotinoid insecticide imidacloprid induce ROS triggering neurological and metabolic impairments in Drosophila. Proc Natl Acad Sci USA 117(41):25840-25850. DOI 10.1073/pnas.2011828117. PMID 32989137"
+    notes: >-
+      This is a dietary concentration, not an internal concentration. It is the
+      most useful published anchor for choosing a realistic oral exposure in a
+      FlyLab notebook, but converting it to a haemolymph concentration is not
+      possible without the missing volume and bioavailability terms above.
+
+  - id: larval_acute_dose_no_effect
+    quantity: "acute imidacloprid dose with no effect on larval survival"
+    value: 2.5
+    units: ppm
+    exposure_h: 2
+    evidence_tier: literature_value
+    species: Drosophila melanogaster
+    source: "Martelli F et al. (2020) PNAS 117(41):25840-25850"
+
+elimination_and_metabolism:
+
+  - id: imidacloprid_half_life_honeybee
+    quantity: "imidacloprid elimination half-life after oral dosing"
+    value_h: "4.5-5"
+    evidence_tier: literature_value
+    species: Apis mellifera
+    dose: "20 and 50 ug/kg bee, oral"
+    detection_limit_time_h: "6 h (20 ug/kg) and 24 h (50 ug/kg) until imidacloprid was no longer detectable"
+    metabolites: ["5-hydroxyimidacloprid", "olefin"]
+    evidence_for_first_order: "half-life reported, consistent with first-order elimination over the measured range"
+    source: "Suchail S, Debrauwer L, Belzunces LP (2004) Metabolism of imidacloprid in Apis mellifera. Pest Manag Sci 60(3):291-296. DOI 10.1002/ps.772. PMID 15025241"
+    notes: >-
+      HONEYBEE, NOT FLY. This is the only verified insect elimination half-life
+      for a FlyLab library compound. If used in flylab/pharm/exposure.py it must
+      be flagged as a cross-species transfer in the notebook warnings.
+
+  - id: imidacloprid_distribution_honeybee
+    quantity: "tissue distribution of [14C]imidacloprid"
+    finding: "haemolymph was the compartment with the lowest total radioactivity throughout the study; five Phase I metabolites identified (4/5-hydroxy-imidacloprid, 4,5-dihydroxy-imidacloprid, 6-chloronicotinic acid, olefin and urea derivatives)"
+    evidence_tier: literature_value
+    species: Apis mellifera
+    source: "Suchail S, De Sousa G, Rahmani R, Belzunces LP (2004) In vivo distribution and metabolisation of 14C-imidacloprid in different compartments of Apis mellifera L. Pest Manag Sci 60(11):1056-1062. DOI 10.1002/ps.895"
+    notes: >-
+      Directly relevant caveat for FlyLab: haemolymph concentration is a POOR
+      proxy for the dose reaching the CNS for this compound class. A
+      one-compartment haemolymph model will under-estimate target exposure.
+
+  - id: imidacloprid_half_life_drosophila
+    quantity: "imidacloprid elimination half-life in Drosophila"
+    value_h: null
+    evidence_tier: class_placeholder
+    species: Drosophila melanogaster
+    source: null
+    notes: >-
+      NOT SOURCED. Fusetto et al. 2017 (below) give a full metabolite time
+      course in flies but no half-life was extracted, and the paper's focus is
+      metabolite identity and the microbial contribution, not kinetic
+      parameters.
+
+  - id: cyp6g1_resistance
+    quantity: "Cyp6g1 over-transcription as the DDT-R resistance mechanism"
+    finding: "over-transcription of Cyp6g1 alone is both necessary and sufficient for DDT resistance; the resistant allele carries an Accord transposable element insertion at the 5' end and has spread globally; the same allele confers cross-resistance to imidacloprid"
+    fold_resistance: null
+    evidence_tier: literature_value
+    species: Drosophila melanogaster
+    source: "Daborn PJ, Yen JL, Bogwitz MR, Le Goff G, Feil E, Jeffers S, Tijet N, Perry T, Heckel D, Batterham P, Feyereisen R, Wilson TG, ffrench-Constant RH (2002) A single P450 allele associated with insecticide resistance in Drosophila. Science 297(5590):2253-2256. DOI 10.1126/science.1074170. PMID 12351787"
+    notes: "Fold-resistance values were not extracted and are left null."
+
+  - id: cyp6g1_metabolism
+    quantity: "CYP6G1-catalysed metabolism of imidacloprid and DDT"
+    finding: "CYP6G1 converts imidacloprid mainly by hydroxylation to 4-hydroxyimidacloprid and 5-hydroxyimidacloprid, and converts DDT by dechlorination to DDD"
+    rate_constants: null
+    evidence_tier: literature_value
+    species: "Drosophila melanogaster CYP6G1 heterologously expressed in Nicotiana tabacum cell suspension culture"
+    source: "Joussen N, Heckel DG, Haas M, Schuphan I, Schmidt B (2008) Metabolism of imidacloprid and DDT by P450 CYP6G1 expressed in cell cultures of Nicotiana tabacum suggests detoxification of these insecticides in Cyp6g1-overexpressing strains of Drosophila melanogaster, leading to resistance. Pest Manag Sci 64(1):65-73. DOI 10.1002/ps.1472. PMID 17912692"
+    notes: "Identifies the metabolites but gives no kcat/Km usable for a clearance term in FlyLab."
+
+  - id: imidacloprid_metabolism_partitioning
+    quantity: "relative contributions of CYP6G1 and gut microbes to imidacloprid metabolism in the fly"
+    finding: "microbes living within D. melanogaster are largely responsible for production of the nitro-reduced metabolites; the metabolic pathways show functional redundancy, and transport and excretion contribute to resistance"
+    evidence_tier: literature_value
+    species: Drosophila melanogaster
+    source: "Fusetto R, Denecke S, Perry T, O'Hair RAJ, Batterham P (2017) Partitioning the roles of CYP6G1 and gut microbes in the metabolism of the insecticide imidacloprid in Drosophila melanogaster. Sci Rep 7:11339. DOI 10.1038/s41598-017-09800-2. PMID 28900131. PMCID PMC5595926"
+    notes: >-
+      Important structural warning for any FlyLab metabolism module: a
+      single-enzyme clearance term is wrong for imidacloprid in the fly, because
+      a substantial route runs through the microbiome and because excretion is
+      a separate, significant sink.
+
+  - id: ethanol_clearance_drosophila
+    quantity: "ethanol elimination rate / half-life in adult Drosophila (first-order kinetics example)"
+    value: null
+    units: null
+    evidence_tier: class_placeholder
+    species: Drosophila melanogaster
+    source: null
+    notes: >-
+      NOT SOURCED. Despite a large Drosophila ethanol literature, no
+      publication giving an elimination rate constant or half-life for internal
+      ethanol in adult flies was verified. Lee HY et al. (2014) J Exp Biol
+      (DOI 10.1242/jeb.110510) measure internal ethanol concentrations and show
+      that tropical African flies accumulate 2-3x more internal ethanol than
+      European flies under the same vapour exposure - a difference in net
+      elimination - but no rate constant was extracted. The requested
+      "first-order kinetics example" is therefore NOT provided.
+
+not_sourced:
+  - "Adult Drosophila total haemolymph volume (uL)."
+  - "Adult Drosophila body mass (mg) with a citable primary measurement."
+  - "Cuticular penetration rate for topical application in Drosophila."
+  - "Oral bioavailability of any library compound in Drosophila."
+  - "Imidacloprid or nicotine elimination half-life in Drosophila (honeybee imidacloprid half-life is recorded instead)."
+  - "Nicotine uptake or clearance kinetics in flies or bees."
+  - "Ethanol elimination rate constant or half-life in adult Drosophila."
+  - "Cyp6g1 fold-resistance values for DDT or imidacloprid."

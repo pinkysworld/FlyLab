@@ -1,0 +1,209 @@
+# FlyLab literature dataset: published baseline statistics for the two assays
+# in protocols/ (PER and negative geotaxis / climbing), for power analysis.
+#
+# WHY THIS FILE EXISTS: HANDOFF.md rule 5 forbids inventing live PER or climbing
+# numbers, and the notebook field `live_lab` must stay null until a real table
+# is imported. This file does not break that rule: it records PUBLISHED control
+# statistics from named papers so that a power calculation can be done BEFORE
+# any fly is touched. Nothing here may be written into `live_lab`.
+#
+# STATE OF THE EVIDENCE: climbing is well served (protocol parameters, control
+# and treated failure rates, n). PER is poorly served for the specific quantity
+# asked for - a control response rate to 100 mM sucrose with its variance. That
+# number was NOT found and is null.
+
+schema_version: 1
+dataset: behavioral_assays
+dataset_version: "0.1"
+created_utc: "2026-09-19"
+
+per:
+
+  - id: per_baseline_100mM_sucrose
+    quantity: "control PER rate to 100 mM sucrose, with SD across flies or groups"
+    response_rate: null
+    sd: null
+    n_per_group: null
+    evidence_tier: class_placeholder
+    species: Drosophila melanogaster
+    source: null
+    notes: >-
+      NOT SOURCED. 100 mM sucrose is a common PER stimulus and is often used as
+      a pre-screen where only flies showing 100% PER are kept, which means many
+      papers never report a baseline RATE at that concentration at all. No
+      publication giving a control PER percentage to 100 mM sucrose together
+      with its variance and n was found. Left null; do not substitute a
+      plausible value.
+
+  - id: per_baseline_600mM_sucrose_cantonS
+    quantity: "fraction of Canton-S flies NOT responding to 600 mM sucrose on the tarsi (first trial)"
+    non_responder_fraction_1h_food_deprived: 0.60
+    non_responder_fraction_2h_food_deprived: 0.32
+    responder_fraction_1h_food_deprived: 0.40
+    responder_fraction_2h_food_deprived: 0.68
+    sd: null
+    n_wildtype_total: 463
+    n_rutabaga_total: 525
+    stimulus: "600 mM sucrose, prothoracic tarsi, 20-trial habituation session"
+    evidence_tier: literature_value
+    species: Drosophila melanogaster (Canton-S)
+    source: "Cevik MO, Erden A (2012) The course of habituation of the proboscis extension reflex can be predicted by sucrose responsiveness in Drosophila. PLoS ONE 7(6):e39863. DOI 10.1371/journal.pone.0039863. PMID 22761915"
+    notes: >-
+      THE MOST USEFUL PER NUMBER FOUND, but note the stimulus is 600 mM, not
+      100 mM, and the quantity is the first-trial response probability. The
+      food-deprivation effect is large (40% -> 68% responders between 1 h and
+      2 h deprivation), which means deprivation time is a bigger nuisance
+      variable than most drug effects FlyLab would try to detect. Any power
+      analysis must treat deprivation time as a controlled factor.
+      A binomial SD at p = 0.40 and n = 30 flies per group is 0.089 (derived
+      here, not published): detecting a 15 percentage-point shift at
+      alpha 0.05, power 0.8 needs roughly n = 170 flies per group by a
+      two-proportion test. Treat that as an order-of-magnitude planning figure.
+
+  - id: per_bitter_suppression_effect_size
+    quantity: "effect size for bitter (quinine / caffeine / strychnine) suppression of sucrose-evoked PER"
+    effect_size: null
+    ic50: null
+    n_per_group: null
+    evidence_tier: class_placeholder
+    species: Drosophila melanogaster
+    source: "French AS, Sellier MJ, Ali Agha M, Guigue A, Chabaud MA, Reeb PD, Mitra A, Grau Y, Soustelle L, Marion-Poll F (2015) Dual mechanism for bitter avoidance in Drosophila. J Neurosci 35(9):3990-4004. DOI 10.1523/JNEUROSCI.1312-14.2015. PMID 25740527"
+    notes: >-
+      MECHANISM SOURCED, NUMBERS NOT. French et al. establish the key
+      qualitative result that FlyLab's reduced_taste bitter veto encodes:
+      activation of bitter-sensitive cells alone does NOT suffice to inhibit
+      PER; full inhibition additionally requires the sugar-cell signal to be
+      shut off. They further separate strychnine (activates bitter cells AND
+      inhibits sugar cells) from L-canavanine (activates bitter cells only).
+      The quantitative PER percentages, concentrations and n were behind a
+      paywall and are not recorded. This is a direct validation target for
+      flylab/circuit/reduced_taste.py once the numbers are obtained.
+
+  - id: per_nicotine_suppression
+    quantity: "PER suppression by nicotine, concentration-response"
+    effect_size: null
+    evidence_tier: class_placeholder
+    species: Drosophila melanogaster
+    source: null
+    notes: >-
+      NOT SOURCED. A reduced PER at 0.5% and 1% nicotine relative to 0.01% and
+      0.1% was seen in secondary text, but no primary paper could be pinned
+      with full citation, concentrations in molar units, n and variance.
+      Left null.
+
+  - id: per_imidacloprid_effect
+    quantity: "effect of imidacloprid exposure on PER in Drosophila"
+    effect_size: null
+    evidence_tier: class_placeholder
+    species: Drosophila melanogaster
+    source: null
+    notes: >-
+      NOT SOURCED. No Drosophila PER study of imidacloprid was found. The
+      honeybee PER literature on imidacloprid exists but was not used, because
+      transferring a bee PER effect size to a fly power calculation would be
+      misleading.
+
+climbing_negative_geotaxis:
+
+  - id: ring_method
+    quantity: "rapid iterative negative geotaxis (RING) method of record"
+    evidence_tier: literature_value
+    species: Drosophila melanogaster
+    source: "Gargano JW, Martin I, Bhandari P, Grotewiel MS (2005) Rapid iterative negative geotaxis (RING): a new method for assessing age-related locomotor decline in Drosophila. Exp Gerontol 40(5):386-395. DOI 10.1016/j.exger.2005.02.005. PMID 15919590"
+    protocol:
+      readout: "climbing distance ascended, photographed 3 s after tapping the vial to the bottom"
+      groups_simultaneous: "multiple vials photographed at once"
+    baseline_mean: null
+    baseline_sd: null
+    n_per_vial: null
+    notes: "Method paper. Baseline climbing height and its SD were not extracted and are null."
+
+  - id: ring_automated_protocol_parameters
+    quantity: "automated RING assay protocol parameters"
+    evidence_tier: literature_value
+    species: Drosophila melanogaster
+    source: "Cao W, Song L, Cheng J, Yi N, Cai L, Huang FD, Ho MS (2017) An automated rapid iterative negative geotaxis assay for analyzing adult climbing behavior in a Drosophila model of neurodegeneration. J Vis Exp (127):56507. DOI 10.3791/56507. PMID 28931001"
+    protocol:
+      flies_per_vial: 10
+      sex: "unisex per genotype"
+      vials_per_group_minimum: 3
+      flies_per_group_minimum: 30
+      independent_experiments_minimum: 3
+      scoring_time_s: 6
+      summary_statistic: "mean +/- SEM"
+      statistics: "one-way ANOVA with Bonferroni multiple comparison"
+    baseline_mean: null
+    baseline_sd: null
+    notes: >-
+      USE THIS FOR DESIGN, NOT FOR EFFECT SIZE. It fixes n and the scoring
+      window but the paper reports no standalone control mean +/- SD table.
+
+  - id: climbing_imidacloprid_dmel
+    quantity: "percentage of adult flies failing a climbing test during chronic imidacloprid exposure"
+    evidence_tier: literature_value
+    species: Drosophila melanogaster
+    source: "Martelli F, Zhongyuan Z, Wang J, et al. (2020) Proc Natl Acad Sci USA 117(41):25840-25850. DOI 10.1073/pnas.2011828117. PMID 32989137"
+    protocol:
+      flies_per_vial: 5
+      sex: female
+      rest_before_test_min: 30
+      target_height_cm: 7
+      cutoff_s: 30
+      failure_definition: "did not reach 7 cm within 30 s"
+      n_per_group_per_timepoint: 100
+      timepoints_days: [1, 10, 20]
+    results:
+      imidacloprid_4ppm_percent_failing:
+        day_1: 6
+        day_10: 44
+        day_20: 68
+      imidacloprid_4ppm_plus_NACA_percent_failing:
+        day_1: 7
+        day_10: 13
+        day_20: 31
+    sd: null
+    other_readouts:
+      electroretinogram: "amplitude reductions from day 10; on-transient reductions from day 5"
+      bang_sensitivity: "recovery time significantly different from control after 10 days, increasing substantially by day 20"
+    notes: >-
+      THE BEST QUANTITATIVE ANCHOR IN THIS FILE. It gives a protocol, an n, and
+      a large drug effect (6% -> 68% failure) for a FlyLab library compound in
+      Drosophila. Derived power note (computed here, not published): with a day-1
+      failure rate of ~6% as the control level, detecting the day-10 effect
+      (44%) needs only about n = 20 per group; detecting a 6% -> 15% shift needs
+      about n = 190 per group by a two-proportion test at alpha 0.05, power 0.8.
+      Variance across replicate vials is not reported, so these are binomial
+      estimates and will understate the true n once between-vial variance is
+      included.
+    caveat: >-
+      The control group's own failure percentages at days 10 and 20 were not
+      extracted; only the imidacloprid and imidacloprid+NACA arms are recorded.
+      A proper power calculation needs the untreated time course.
+
+  - id: climbing_nachr_knockout_dmel
+    quantity: "climbing ability in nAChR subunit knockouts"
+    effect_size: null
+    evidence_tier: literature_order
+    species: Drosophila melanogaster
+    source: "Chen W, Gu X, Yang YT, Batterham P, Perry T (2022) Dual nicotinic acetylcholine receptor subunit gene knockouts reveal limits to functional redundancy. Pestic Biochem Physiol 184:105118. DOI 10.1016/j.pestbp.2022.105118. PMID 35715057"
+    finding: "Dalpha1/Dbeta2 dual knockouts show stronger reductions in climbing ability and longevity than either single mutant"
+    notes: >-
+      Direction only, no numbers extracted. Relevant because it links the exact
+      nAChR subunits the neonicotinoids act on to the climbing readout, i.e. it
+      is the genetic control for a FlyLab neonicotinoid-on-locomotion prediction.
+
+derived_planning_notes:
+  status: derived_here_not_published
+  description: >-
+    The binomial power figures in the notes above were computed for this file
+    from the published proportions; they are arithmetic, not literature values,
+    and are labelled as such in place. They assume independent flies, which the
+    vial-based protocols violate. Treat every n as a lower bound.
+
+not_sourced:
+  - "Control PER rate to 100 mM sucrose and its SD (the specific quantity requested)."
+  - "Typical n per group for PER in a drug study."
+  - "Quantitative quinine or caffeine PER-suppression effect sizes in Drosophila."
+  - "Any PER effect of imidacloprid or nicotine in Drosophila with full citation."
+  - "Control (untreated) climbing failure percentages over the Martelli 2020 time course."
+  - "Baseline climbing index mean and SD from the RING method papers."

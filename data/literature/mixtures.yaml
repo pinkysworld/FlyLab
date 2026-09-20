@@ -1,0 +1,231 @@
+# FlyLab literature dataset: published synergy / antagonism references for the
+# compound library, plus the reference null models for combination effects.
+#
+# WHAT A SYNERGISM RATIO IS AND IS NOT
+#   Every empirical entry below is a whole-animal synergism ratio (SR), defined
+#   as LD50(insecticide alone) / LD50(insecticide + synergist), or an equivalent
+#   mortality contrast. These numbers are dominated by METABOLISM, not by
+#   receptor pharmacology: PBO inhibits cytochrome P450s, so an SR measures how
+#   much of the dose was being destroyed before it reached the target.
+#   FlyLab models receptor occupancy at a stated free concentration. An SR is
+#   therefore NOT an occupancy multiplier and must not be applied as one. Its
+#   legitimate uses are (a) to set the scale of exposure correction in
+#   fly_pharmacokinetics.yaml, and (b) as a validation target if FlyLab ever
+#   adds a metabolism compartment.
+
+schema_version: 1
+dataset: mixtures
+dataset_version: "0.1"
+created_utc: "2026-09-19"
+
+# ---------------------------------------------------------------------------
+# Reference null models for combination effects
+# ---------------------------------------------------------------------------
+reference_models:
+
+  - id: bliss_independence
+    name: Bliss independence
+    principle: "Multiplicative survival / probabilistic independence: the two agents act on independent targets, so the probability of being unaffected by the combination is the product of the probabilities of being unaffected by each agent alone."
+    equations:
+      effect_form: "E_AB = E_A + E_B - E_A * E_B"
+      survival_form: "S_AB = S_A * S_B,  where S = 1 - E"
+    variable_definitions:
+      E_A: "fractional effect (0..1) of drug A alone at its concentration in the mixture"
+      E_B: "fractional effect (0..1) of drug B alone at its concentration in the mixture"
+      E_AB: "predicted fractional effect of the combination under independence"
+      S: "fractional survival / unaffected fraction, 1 - E"
+    interpretation: "observed E_AB > predicted E_AB = synergy; < = antagonism"
+    applicability_note: >-
+      Requires both effects to be expressed as probabilities on the same scale
+      and assumes independent modes of action. Appropriate for, e.g., a
+      neonicotinoid (nAChR) with a pyrethroid (Nav). Inappropriate for two
+      agonists at the same receptor.
+    evidence_tier: literature_value
+    source: "Bliss CI (1939) The toxicity of poisons applied jointly. Ann Appl Biol 26(3):585-615. DOI 10.1111/j.1744-7348.1939.tb06990.x"
+
+  - id: loewe_additivity
+    name: Loewe additivity
+    principle: "Dose equivalence: a drug cannot interact with itself, so a fixed effect should be reachable by any combination of doses that sums to one in units of each drug's own equi-effective dose."
+    equations:
+      combination_index: "CI = d_A / D_A + d_B / D_B"
+      isobologram: "CI = 1 defines the additivity isobole"
+    variable_definitions:
+      d_A: "dose of A present in the mixture"
+      d_B: "dose of B present in the mixture"
+      D_A: "dose of A alone producing the same effect as the mixture"
+      D_B: "dose of B alone producing the same effect as the mixture"
+      CI: "combination index"
+    interpretation: "CI < 1 = synergy; CI = 1 = additivity; CI > 1 = antagonism"
+    applicability_note: >-
+      Requires both agents to have measurable, monotone concentration-response
+      curves for the same endpoint and, strictly, parallel curves. This is the
+      right null model for two compounds acting at the SAME target - e.g. two
+      neonicotinoids at insect nAChR - which is exactly the case FlyLab's
+      competitive-binding module in flylab/pharm/binding.py should reproduce.
+    evidence_tier: literature_value
+    source: "Loewe S, Muischnek H (1926) Ueber Kombinationswirkungen: Mitteilung 1. Hilfsmittel der Fragestellung. Naunyn-Schmiedebergs Arch Exp Pathol Pharmakol 114:313-326. DOI 10.1007/BF01952257; restated in Loewe S (1953) The problem of synergism and antagonism of combined drugs. Arzneimittelforschung 3(6):285-290"
+
+  - id: greco_response_surface_review
+    name: "Response-surface critical review of synergy definitions"
+    principle: "Critical comparison of Loewe additivity, Bliss independence and the derived indices, from a response-surface perspective; the standard reference for why a synergy claim must name its null model."
+    equations: null
+    evidence_tier: literature_value
+    source: "Greco WR, Bravo G, Parsons JC (1995) The search for synergy: a critical review from a response surface perspective. Pharmacol Rev 47(2):331-385. PMID 7568331"
+    notes: "No DOI is assigned to this article; PMID 7568331 is the stable identifier."
+
+  - id: flylab_recommendation
+    name: "Recommended default for FlyLab"
+    recommendation: >-
+      Use Loewe additivity as the null model when two library compounds share a
+      FlyLab receptor key (e.g. imidacloprid + nitenpyram at insect_nAChR;
+      fipronil + picrotoxin at insect_RDL), because the model already computes
+      equi-effective concentrations from the Hill parameters. Use Bliss
+      independence when the compounds have disjoint receptor keys (e.g.
+      imidacloprid at insect_nAChR with deltamethrin at insect_Nav). Report
+      which null model was used in the notebook `warnings` block, and never
+      report a combination result without it.
+    evidence_tier: null
+    source: "FlyLab design decision, not a literature value."
+
+# ---------------------------------------------------------------------------
+# Empirical synergism / antagonism references
+# ---------------------------------------------------------------------------
+empirical:
+
+  - id: imidacloprid_pbo_myzus
+    combination: "imidacloprid + piperonyl butoxide"
+    classes: [neonicotinoid, P450_inhibitor_synergist]
+    library_keys: [imidacloprid]
+    species: Myzus persicae
+    strain: "FRC (resistant, nAChR beta1 R81T + CYP6CY3 over-expression) vs 4106A (susceptible)"
+    assay: "spray bioassay; resistance ratio with and without PBO pretreatment"
+    metric: "reduction in resistance ratio"
+    resistance_ratio_without_PBO: 1679.0
+    resistance_ratio_with_PBO: 234.0
+    synergism_ratio: 7.2
+    synergism_ratio_derivation: "1679 / 234; computed here from the two published ratios, not quoted as such in the paper"
+    evidence_tier: literature_value
+    source: "Bass C, Puinean AM, Andrews M, et al. (2011) BMC Neurosci 12:51. DOI 10.1186/1471-2202-12-51. PMID 21627790"
+    notes: "The SR is the size of the P450 (metabolic) component. The residual 234x is target-site plus anything PBO does not block."
+
+  - id: thiamethoxam_pbo_myzus
+    combination: "thiamethoxam + piperonyl butoxide"
+    classes: [neonicotinoid, P450_inhibitor_synergist]
+    library_keys: [thiamethoxam]
+    species: Myzus persicae
+    strain: "FRC vs 4106A"
+    assay: "spray bioassay; resistance ratio with and without PBO pretreatment"
+    metric: "reduction in resistance ratio"
+    resistance_ratio_without_PBO: 225.0
+    resistance_ratio_with_PBO: 26.0
+    synergism_ratio: 8.7
+    synergism_ratio_derivation: "225 / 26; computed here from the two published ratios"
+    evidence_tier: literature_value
+    source: "Bass C et al. (2011) BMC Neurosci 12:51"
+
+  - id: imidacloprid_pbo_derivatives_myzus
+    combination: "imidacloprid + substituted alkynyl phenoxy derivatives of piperonyl butoxide"
+    classes: [neonicotinoid, P450_inhibitor_synergist]
+    library_keys: [imidacloprid]
+    species: Myzus persicae
+    strain: "imidacloprid-resistant"
+    assay: whole_animal_bioassay
+    metric: synergism_ratio
+    synergism_ratio: 290.0
+    synergism_ratio_qualifier: "up to"
+    evidence_tier: literature_value
+    source: "Philippou D, Borzatta V, Capparella E, Moroni L, Field L, Moores G (2016) Pest Manag Sci 72(10):1946-1950. DOI 10.1002/ps.4234. PMID 26800141"
+    notes: >-
+      CAUTION: the 290-fold figure is for SECOND-GENERATION PBO analogues, not
+      for PBO itself. Do not quote as a PBO synergism ratio. It is included
+      because it sets the upper bound on how much of neonicotinoid resistance
+      in this species is metabolic.
+
+  - id: fipronil_pbo_chilo
+    combination: "fipronil + piperonyl butoxide"
+    classes: [phenylpyrazole, P450_inhibitor_synergist]
+    library_keys: [fipronil]
+    species: Chilo suppressalis
+    strain: "Wenzhou (fipronil-resistant) and Anhui (susceptible)"
+    assay: "topical application to larvae, 6 h PBO pretreatment"
+    metric: synergism_ratio
+    synergism_ratio_resistant: "1.85-2.53"
+    synergism_ratio_susceptible: "0.27-0.44"
+    direction_susceptible: antagonistic
+    evidence_tier: literature_value
+    source: "Huang Q, Deng Y, Zhan T, He Y (2010) Synergistic and antagonistic effects of piperonyl butoxide in fipronil-susceptible and resistant rice stem borers, Chilo suppressalis. J Insect Sci 10:182. DOI 10.1673/031.010.14142. PMID 21062143"
+    notes: >-
+      SIGN REVERSAL. PBO synergises fipronil in the resistant strain but
+      ANTAGONISES it in the susceptible strain (SR < 1). The likely reason is
+      that P450s activate fipronil to fipronil sulfone as well as detoxifying
+      it. Any FlyLab metabolism module must be able to represent bioactivation,
+      not only clearance, or it will get this case backwards.
+
+  - id: imidacloprid_binary_mixtures_honeybee
+    combination: "imidacloprid + each of seven pesticides"
+    classes: [neonicotinoid, mixed]
+    library_keys: [imidacloprid, clothianidin]
+    species: Apis mellifera
+    assay: "imidacloprid applied at its LC20 (274 mg/L product = 58.6 mg a.i./L) in binary mixtures; mortality contrast"
+    metric: "change in mortality vs imidacloprid alone, with synergy classification"
+    results:
+      - {partner: "tetraconazole (fungicide)", classification: synergistic, mortality_change_percent: 20}
+      - {partner: "sulfoxaflor (sulfoximine)", classification: synergistic, mortality_change_percent: 15, library_key: sulfoxaflor}
+      - {partner: "oxamyl (carbamate, AChE inhibitor)", classification: synergistic, mortality_change_percent: 26}
+      - {partner: "acephate (organophosphate)", classification: additive, mortality_change_percent: 10}
+      - {partner: "lambda-cyhalothrin (pyrethroid)", classification: additive, mortality_change_percent: 4}
+      - {partner: "clothianidin (neonicotinoid)", classification: no_interaction, mortality_change_percent: null, library_key: clothianidin}
+      - {partner: "glyphosate (herbicide)", classification: no_interaction, mortality_change_percent: null}
+    evidence_tier: literature_value
+    source: "Zhu YC, Yao J, Adamczyk J, Luttrell R (2017) Synergistic toxicity and physiological impact of imidacloprid alone and binary mixtures with seven representative pesticides on honey bee (Apis mellifera). PLoS ONE 12(5):e0176837. DOI 10.1371/journal.pone.0176837. PMID 28467462"
+    notes: >-
+      THREE RESULTS THAT MATTER FOR FLYLAB. (1) neonicotinoid + pyrethroid was
+      only ADDITIVE here, despite the common assumption of synergy - a FlyLab
+      prediction of additivity for disjoint targets (Bliss) is consistent with
+      this. (2) neonicotinoid + organophosphate was also only additive.
+      (3) imidacloprid + clothianidin, two agonists at the SAME target, showed
+      NO INTERACTION beyond what either did alone, which is what Loewe
+      additivity predicts for same-site agonists and is a direct retrospective
+      test for flylab/pharm/binding.py. Species is honeybee, not Drosophila.
+
+  - id: ivermectin_pbo
+    combination: "ivermectin or abamectin + piperonyl butoxide"
+    classes: [avermectin, P450_inhibitor_synergist]
+    library_keys: [ivermectin]
+    species: null
+    assay: null
+    metric: synergism_ratio
+    synergism_ratio: null
+    evidence_tier: class_placeholder
+    source: null
+    notes: >-
+      NOT SOURCED. Several secondary mentions of PBO synergising macrocyclic
+      lactones were seen (in ticks and in mites) but none could be traced to a
+      primary paper whose species, strain and ratio could all be verified, so
+      no number is recorded. Left null deliberately.
+
+  - id: neonicotinoid_pyrethroid_coformulation
+    combination: "imidacloprid + beta-cyfluthrin (commercial co-formulation) and imidacloprid + lambda-cyhalothrin"
+    classes: [neonicotinoid, pyrethroid]
+    library_keys: [imidacloprid, permethrin, deltamethrin]
+    species: "Myzus persicae (imidacloprid + lambda-cyhalothrin, 2:1); various"
+    assay: null
+    metric: synergism_ratio
+    synergism_ratio: null
+    evidence_tier: class_placeholder
+    source: null
+    notes: >-
+      NOT SOURCED as a number. Commercial neonicotinoid+pyrethroid
+      co-formulations exist and a synergistic effect at a 2:1
+      imidacloprid:lambda-cyhalothrin ratio in Myzus persicae is reported in the
+      nanoencapsulation literature, but no verified SR with full citation was
+      obtained. The one verified neonicotinoid+pyrethroid result in this file
+      (imidacloprid + lambda-cyhalothrin in honeybee, Zhu 2017) was ADDITIVE.
+      Neither permethrin nor deltamethrin specifically was found in a verified
+      neonicotinoid mixture study.
+
+not_sourced:
+  - "Ivermectin/abamectin + PBO synergism ratio with a verifiable primary citation."
+  - "A neonicotinoid + pyrethroid synergism ratio (as opposed to a classification) with a verifiable primary citation."
+  - "Fipronil + PBO in Drosophila (only Chilo suppressalis was found)."
+  - "Any mixture study using Drosophila melanogaster as the test species."

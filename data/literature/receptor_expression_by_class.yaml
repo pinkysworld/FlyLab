@@ -1,0 +1,376 @@
+# FlyLab literature dataset: coarse, class-level receptor expression in the
+# adult Drosophila CNS.
+#
+# READ THIS BEFORE USING THE FILE
+#   This is a COARSE CROSS-ATLAS MAPPING, not a measurement. None of the cited
+#   single-cell studies is annotated with MaleCNS `superclass` labels. The
+#   superclass rows below are an interpretive bridge built by matching the
+#   anatomical/transmitter descriptions used in each atlas onto the MaleCNS
+#   superclass vocabulary. Every such bridge is tagged
+#   `mapping: cross_atlas_inference` and its level is `unknown` unless a cited
+#   paper states something directly about that class.
+#
+#   Consequences for FlyLab:
+#     - Do NOT use these levels to weight per-neuron drug effects in the
+#       MaleCNS graph. They are not quantitative and they are not per-cell.
+#     - They are adequate for one thing only: a sanity warning in a notebook,
+#       e.g. "the compound's target is broadly expressed across this class",
+#       and for choosing which receptors deserve a scorecard row at all.
+#     - Single-nucleus counts under-detect low-abundance transcripts. An
+#       `absent` call from snRNA-seq is weak evidence; this file therefore
+#       never records `absent` from a dropout, only `unknown`.
+#
+# level vocabulary: high | medium | low | absent | unknown
+# fraction_cells_expressing: published fraction, or null.
+
+schema_version: 1
+dataset: receptor_expression_by_class
+dataset_version: "0.1"
+created_utc: "2026-09-19"
+
+sources:
+  fly_cell_atlas:
+    citation: "Li H, Janssens J, De Waegeneer M, et al. (2022) Fly Cell Atlas: a single-nucleus transcriptomic atlas of the adult fruit fly. Science 375(6584):eabk2432. DOI 10.1126/science.abk2432. PMID 35239393. PMCID PMC8944923"
+    scale: "580,000 nuclei; 15 individually dissected sexed tissues plus whole head and body; >250 annotated cell types"
+    covers: "whole animal including head and VNC; single-nucleus"
+  davie_2018:
+    citation: "Davie K, Janssens J, Koldere D, et al. (2018) A single-cell transcriptome atlas of the aging Drosophila brain. Cell 174(4):982-998.e20. DOI 10.1016/j.cell.2018.05.057. PMID 29909982. PMCID PMC6086935"
+    scale: "~57,000 cells; 87 initial clusters, subclustered and validated by targeted cell sorting"
+    covers: "adult brain, whole, aging series"
+  allen_2020:
+    citation: "Allen AM, Neville MC, Birtles S, et al. (2020) A single-cell transcriptomic atlas of the adult Drosophila ventral nerve cord. eLife 9:e54074. DOI 10.7554/eLife.54074. PMID 32314735. PMCID PMC7173974"
+    scale: "26,768 high-quality cells; 120 clusters (110 neuronal); >100 transcriptionally distinct cell types"
+    covers: "adult VNC"
+  croset_2018:
+    citation: "Croset V, Treiber CD, Waddell S (2018) Cellular diversity in the Drosophila midbrain revealed by single-cell transcriptomics. eLife 7:e34550. DOI 10.7554/eLife.34550. PMID 29671739. PMCID PMC5927767"
+    scale: "19,260 cells sequenced, 10,286 high-quality (>=800 UMI); authors estimate ~45,000 cells in the fly midbrain"
+    covers: "adult midbrain (optic lobes removed)"
+  konstantinides_2018:
+    citation: "Konstantinides N, Kapuralin K, Fadil C, Barboza L, Satija R, Desplan C (2018) Phenotypic convergence: distinct transcription factors regulate common terminal features. Cell 174(3):622-635.e13. DOI 10.1016/j.cell.2018.05.021. PMID 29909983"
+    scale: "~55,000 optic lobe cells; 52 neuronal clusters"
+    covers: "adult optic lobe"
+  enell_2007:
+    citation: "Enell L, Hamasaka Y, Kolodziejczyk A, Nassel DR (2007) GABA signaling components in Drosophila: immunocytochemical localization of GABA-B receptors in relation to the GABA-A receptor subunit RDL and a vesicular GABA transporter. J Comp Neurol 505(1):18-31. DOI 10.1002/cne.21472. PMID 17729251"
+    scale: "immunocytochemistry, adult brain"
+    covers: "RDL protein distribution across neuropils"
+
+# ---------------------------------------------------------------------------
+# 1. Directly published, atlas-level numbers. These ARE measurements.
+# ---------------------------------------------------------------------------
+published_atlas_values:
+
+  - id: vnc_transmitter_composition
+    region: VNC
+    source_key: allen_2020
+    values:
+      cholinergic_fraction: 0.40
+      gabaergic_fraction: 0.38
+      glutamatergic_fraction: 0.18
+      unclassified_fraction: 0.04
+    evidence_tier: literature_value
+    quote: "We estimate that the VNC is 40% cholinergic, 38% GABAergic, and 18% glutamatergic."
+    notes: "Directly usable as a prior for MaleCNS vnc_intrinsic transmitter proportions."
+
+  - id: midbrain_transmitter_cotransmission
+    region: midbrain (central brain, optic lobes removed)
+    source_key: croset_2018
+    values:
+      fraction_cells_with_ACh_and_GABA_markers: 0.08
+      fraction_cells_with_ACh_and_Glu_markers: 0.07
+    evidence_tier: literature_value
+    quote: "Cells expressing these neurotransmitter-specific marker genes were largely exclusive, although 8% of cells contained markers for ACh and GABA and 7% for ACh and Glu."
+    notes: >-
+      Brain-wide cholinergic/GABAergic/glutamatergic FRACTIONS for the midbrain
+      were presented graphically in that paper and are not recorded here; only
+      the co-expression numbers were recoverable as text. MaleCNS carries its
+      own predicted transmitter labels, which should be preferred for the brain.
+
+  - id: nachr_subunit_breadth_midbrain
+    region: midbrain
+    source_key: croset_2018
+    values:
+      alpha_subunits_detected: 7
+      alpha_subunits_known: 7
+      beta_subunits_detected: 2
+      beta_subunits_known: 3
+      broadly_expressed_alphas: [nAChRalpha1, nAChRalpha5, nAChRalpha6, nAChRalpha7]
+      sparsely_expressed_alphas: [nAChRalpha2, nAChRalpha3, nAChRalpha4]
+      beta1_over_beta2_cell_count_ratio: ">2"
+    evidence_tier: literature_value
+    quote: "We detected the expression, at varying frequencies, of all seven known nAChR alpha-subunits, and two of the three known beta-subunits ... alpha1, alpha5, alpha6 and alpha7 are expressed in considerably more cells than alpha2, alpha3 and alpha4, whereas beta1 is expressed in more than twice as many cells as beta2."
+    notes: >-
+      This is the single most useful fact in this file for FlyLab. It says the
+      insect_nAChR target is not one receptor: alpha1/5/6/7 and beta1 dominate
+      the population, so a compound selective for an alpha6-containing receptor
+      (spinosad) and one acting through beta1 (neonicotinoids, sulfoximines)
+      reach different, only partly overlapping cell sets. Absolute per-subunit
+      fractions were not given as text and are null below.
+
+  - id: nachr_subunit_breadth_vnc
+    region: VNC
+    source_key: allen_2020
+    values:
+      nachr_subunits_as_cluster_markers: 8
+      nachr_subunits_total: 10
+    evidence_tier: literature_value
+    quote: "including 8 of the 10 nicotinic acetylcholine receptor subunits"
+    notes: "nAChR subunits are cluster-defining in the VNC, i.e. subunit usage varies systematically between VNC cell types."
+
+  - id: glucl_breadth_vnc
+    region: VNC
+    source_key: allen_2020
+    gene: GluClalpha
+    values:
+      level: high
+      enriched_cluster: 103
+    evidence_tier: literature_value
+    quote: "GluClalpha was broadly expressed in these data and is particularly enriched in cluster 103."
+    notes: "Supports treating insect_GluCl as a broadly distributed VNC target rather than a niche one."
+
+  - id: rdl_protein_distribution_brain
+    region: adult brain
+    source_key: enell_2007
+    gene: Rdl
+    values:
+      level: high
+      distribution: "all major neuropils; largely overlapping with GABA-B receptor immunoreactivity; dense in mushroom bodies and optic lobes"
+    evidence_tier: literature_order
+    notes: >-
+      Immunocytochemistry, not transcriptomics, and neuropil-level rather than
+      cell-class-level. Recorded as literature_order because 'high' is an
+      interpretation of a qualitative labelling pattern.
+
+# ---------------------------------------------------------------------------
+# 2. Bridge to MaleCNS superclasses. Interpretive; mostly `unknown`.
+# ---------------------------------------------------------------------------
+by_superclass:
+
+  - superclass: cb_intrinsic
+    mapping: cross_atlas_inference
+    mapped_from: "croset_2018 midbrain; davie_2018 whole brain"
+    receptors:
+      nAChRalpha1: {level: high,    fraction_cells_expressing: null, evidence_tier: literature_order, source_key: croset_2018}
+      nAChRalpha5: {level: high,    fraction_cells_expressing: null, evidence_tier: literature_order, source_key: croset_2018}
+      nAChRalpha6: {level: high,    fraction_cells_expressing: null, evidence_tier: literature_order, source_key: croset_2018}
+      nAChRalpha7: {level: high,    fraction_cells_expressing: null, evidence_tier: literature_order, source_key: croset_2018}
+      nAChRalpha2: {level: low,     fraction_cells_expressing: null, evidence_tier: literature_order, source_key: croset_2018}
+      nAChRalpha3: {level: low,     fraction_cells_expressing: null, evidence_tier: literature_order, source_key: croset_2018}
+      nAChRalpha4: {level: low,     fraction_cells_expressing: null, evidence_tier: literature_order, source_key: croset_2018}
+      nAChRbeta1:  {level: high,    fraction_cells_expressing: null, evidence_tier: literature_order, source_key: croset_2018}
+      nAChRbeta2:  {level: medium,  fraction_cells_expressing: null, evidence_tier: literature_order, source_key: croset_2018}
+      nAChRbeta3:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder, source_key: croset_2018, note: "one of the three beta subunits was not detected; which one is not stated in the text retrieved"}
+      Rdl:         {level: high,    fraction_cells_expressing: null, evidence_tier: literature_order, source_key: enell_2007}
+      GluClalpha:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder, note: "broad expression is documented for the VNC (allen_2020); no equivalent statement retrieved for the central brain"}
+      OctRs:       {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder, note: "octopaminergic cells are identified in both brain and VNC atlases, but per-class octopamine RECEPTOR fractions were not retrieved"}
+      Ace:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder, note: "Ace expression per cell class not retrieved from any cited atlas"}
+    notes: >-
+      Croset et al. sequenced the midbrain, which is dominated by central-brain
+      intrinsic neurons, so this is the superclass for which the subunit-breadth
+      statement is most defensible. The levels are ordinal restatements of
+      "considerably more cells" vs "fewer cells", not fractions.
+
+  - superclass: visual_projection
+    mapping: cross_atlas_inference
+    mapped_from: konstantinides_2018
+    receptors:
+      nAChRalpha1: {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      nAChRalpha7: {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      nAChRbeta1:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Rdl:         {level: high,    fraction_cells_expressing: null, evidence_tier: literature_order, source_key: enell_2007, note: "RDL immunoreactivity is dense in the optic lobes"}
+      GluClalpha:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      OctRs:       {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Ace:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+    notes: >-
+      Konstantinides et al. resolve 52 optic-lobe clusters and their transmitter
+      identities, but the retrieved text gives no per-cluster receptor fractions
+      for the receptors FlyLab models. Nearly all rows are therefore unknown.
+
+  - superclass: visual_centrifugal
+    mapping: cross_atlas_inference
+    mapped_from: konstantinides_2018
+    receptors:
+      nAChRalpha1: {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      nAChRbeta1:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Rdl:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      GluClalpha:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      OctRs:       {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Ace:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+    notes: "No cited atlas separates visual centrifugal neurons as a labelled population. Everything unknown."
+
+  - superclass: descending_neuron
+    mapping: cross_atlas_inference
+    mapped_from: "not covered as a labelled class by any cited atlas"
+    receptors:
+      nAChRalpha1: {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      nAChRbeta1:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Rdl:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      GluClalpha:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      OctRs:       {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Ace:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+    notes: >-
+      Relevant to FlyLab because DNp01 is a descending neuron in the modelled
+      neighbourhood. Neither the brain nor the VNC atlas isolates descending
+      neurons as an annotated population in the text retrieved, so no receptor
+      claim can be made. This is a genuine gap, not an omission.
+
+  - superclass: ascending_neuron
+    mapping: cross_atlas_inference
+    mapped_from: allen_2020
+    receptors:
+      nAChRalpha1: {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      nAChRbeta1:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Rdl:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      GluClalpha:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      OctRs:       {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Ace:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+    notes: "Ascending neurons are present in the VNC atlas material but are not resolved as a receptor-annotated class in the text retrieved."
+
+  - superclass: vnc_intrinsic
+    mapping: cross_atlas_inference
+    mapped_from: allen_2020
+    receptors:
+      nAChR_subunits_general: {level: high, fraction_cells_expressing: null, evidence_tier: literature_value, source_key: allen_2020, note: "8 of 10 subunits appear as neuronal cluster markers"}
+      Rdl:        {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder, note: "Rdl is not named in the retrieved VNC text; the brain immunocytochemistry (enell_2007) does not cover the VNC"}
+      GluClalpha: {level: high,    fraction_cells_expressing: null, evidence_tier: literature_value, source_key: allen_2020}
+      OctRs:      {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Ace:        {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+    transmitter_composition:
+      cholinergic: 0.40
+      gabaergic: 0.38
+      glutamatergic: 0.18
+      unclassified: 0.04
+      evidence_tier: literature_value
+      source_key: allen_2020
+
+  - superclass: cb_sensory
+    includes: "gustatory receptor neurons (labellar and tarsal), other cephalic sensory afferents"
+    mapping: cross_atlas_inference
+    mapped_from: "not resolved by any cited atlas"
+    receptors:
+      nAChRalpha1: {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      nAChRbeta1:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Rdl:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      GluClalpha:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      OctRs:       {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Ace:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+    notes: >-
+      GRN somata sit in the periphery (labellum, tarsi) and are largely absent
+      from brain dissections; the Fly Cell Atlas head sample contains labellar
+      tissue but no per-GRN receptor fractions for these genes were retrieved.
+      This matters for FlyLab: the reduced taste model drives GRNs directly, and
+      there is currently no literature basis for applying an nAChR or RDL
+      occupancy patch at the GRN itself.
+
+  - superclass: cb_motor
+    mapping: cross_atlas_inference
+    mapped_from: "not resolved by any cited atlas"
+    receptors:
+      nAChRalpha1: {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      nAChRbeta1:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Rdl:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      GluClalpha:  {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      OctRs:       {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Ace:         {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+    notes: >-
+      Includes MN9, the proboscis motor neuron FlyLab uses as its readout. See
+      `motor_neuron_gap` below - no cited source gives Rdl or nAChR expression
+      for labellar/proboscis motor neurons.
+
+  - superclass: vnc_motor
+    mapping: cross_atlas_inference
+    mapped_from: allen_2020
+    receptors:
+      nAChR_subunits_general: {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Rdl:        {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      GluClalpha: {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      OctRs:      {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Ace:        {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+    notes: >-
+      Allen et al. relate leg motor neuron lineages to glial lineages but the
+      retrieved text does not isolate motor-neuron clusters with receptor
+      expression. See `motor_neuron_gap`.
+
+  - superclass: vnc_efferent
+    mapping: cross_atlas_inference
+    mapped_from: allen_2020
+    receptors:
+      nAChR_subunits_general: {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Rdl:        {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      GluClalpha: {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      OctRs:      {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+      Ace:        {level: unknown, fraction_cells_expressing: null, evidence_tier: class_placeholder}
+    notes: >-
+      Octopaminergic/tyraminergic efferents are identified in the VNC atlas
+      (clusters 72 and 84 by subclustering), which is relevant to the FlyLab
+      OctR target, but those are the TRANSMITTER cells, not cells typed by
+      octopamine receptor expression.
+
+by_transmitter_class:
+  - class: cholinergic
+    mapping: cross_atlas_inference
+    receptors:
+      nAChR_subunits_general: {level: unknown, evidence_tier: class_placeholder, note: "no cited source reports whether cholinergic neurons express more or fewer nAChR subunits than other classes"}
+      Ace: {level: unknown, evidence_tier: class_placeholder, note: "Ace is expected in cholinergic neurons on biochemical grounds; no per-class fraction was retrieved, so it stays unknown rather than being asserted"}
+      Rdl: {level: unknown, evidence_tier: class_placeholder}
+    population_share:
+      vnc: 0.40
+      source_key: allen_2020
+      evidence_tier: literature_value
+  - class: GABAergic
+    mapping: cross_atlas_inference
+    receptors:
+      Rdl: {level: unknown, evidence_tier: class_placeholder}
+      nAChR_subunits_general: {level: unknown, evidence_tier: class_placeholder}
+    population_share:
+      vnc: 0.38
+      source_key: allen_2020
+      evidence_tier: literature_value
+  - class: glutamatergic
+    mapping: cross_atlas_inference
+    receptors:
+      GluClalpha: {level: unknown, evidence_tier: class_placeholder}
+      nAChR_subunits_general: {level: unknown, evidence_tier: class_placeholder}
+    population_share:
+      vnc: 0.18
+      source_key: allen_2020
+      evidence_tier: literature_value
+  - class: monoaminergic
+    mapping: cross_atlas_inference
+    receptors:
+      OctRs: {level: unknown, evidence_tier: class_placeholder}
+      nAChR_subunits_general: {level: unknown, evidence_tier: class_placeholder}
+    population_share:
+      vnc: null
+      brain: null
+      evidence_tier: class_placeholder
+      note: "Croset et al. subdivide monoaminergic cells into dopaminergic, serotonergic, octopaminergic and tyraminergic populations but the retrieved text gives no percentage of total cells."
+
+motor_neuron_gap:
+  status: not_sourced
+  description: >-
+    The task asked specifically for Rdl and nAChR expression in leg and labellar
+    motor neurons. No source among Fly Cell Atlas, Davie 2018, Allen 2020,
+    Croset 2018 or Konstantinides 2018 was found that reports receptor
+    expression for an identified motor neuron population in the adult. Allen et
+    al. 2020 is the closest (adult VNC, contains leg motor neurons) but the
+    retrieved text names no motor-neuron cluster with receptor expression.
+  consequence_for_flylab: >-
+    FlyLab currently patches g_ACh and g_GABA at MN9 as part of a whole-graph
+    gain. There is no published per-cell receptor evidence justifying a
+    motor-neuron-specific patch strength, so the uniform-gain assumption should
+    stay, and any notebook that patches motor neurons should keep a warning
+    saying the receptor complement of those cells is unmeasured.
+  suggested_next_step: >-
+    Query the Fly Cell Atlas VNC/head snRNA-seq directly (SCope or cellxgene)
+    for nAChRalpha1-7, nAChRbeta1-3, Rdl, GluClalpha, Ace and Oct receptor genes
+    restricted to annotated motor neuron cell types, and record the resulting
+    fractions here as literature_value with the atlas version pinned.
+
+not_sourced:
+  - "Per-subunit fractions of cells expressing each nAChR alpha/beta subunit (only ordinal statements retrieved)."
+  - "Rdl fraction of cells expressing, in any atlas."
+  - "GluClalpha fraction of cells expressing, in any atlas (breadth stated, fraction not)."
+  - "Octopamine receptor (OAMB, Octbeta1R-3R, Oct-TyrR) expression by cell class."
+  - "Ace expression by cell class."
+  - "Brain cholinergic/GABAergic/glutamatergic fractions from Croset 2018 (figure-only)."
+  - "Any receptor expression for descending neurons, ascending neurons, visual centrifugal neurons, gustatory receptor neurons or motor neurons."
