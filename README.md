@@ -70,7 +70,9 @@ A plain label permutation is also run, but it moves the weighted excitation/inhi
 
 This makes it possible to separate effects that are sensitive to detailed wiring from effects that are already explained by much coarser network information. Failing to distinguish an effect from a null is reported as exactly that: each mode carries a three-way verdict against a prespecified equivalence margin, and "not distinguishable" is never rendered as "the degraded graph reproduces the effect".
 
-The ladder itself is validated rather than assumed to work. A recurrent loop of known strength is planted in a synthetic graph of the same size, density and transmitter composition as a real cut, and the analysis is asked to find it; the unplanted control gives an empirical false-positive rate, and a power surface maps detection against effect size and permutation count. **The verdict this analysis returns is substrate-dependent**, and the repository's two committed cuts disagree: the same landscape classifies most cells as composition-dominated on the sparse 1-hop `named` cut and none of them on the denser `taste_motor` cut. A dependence result is therefore only quotable together with the structure of the graph it was measured on.
+The ladder itself is validated rather than assumed to work. A recurrent loop of known strength is planted in a synthetic graph of the same size, density and transmitter composition as a real cut, and the analysis is asked to find it; the unplanted control gives an empirical false-positive rate, and a power surface maps detection against effect size and permutation count.
+
+**The verdict this analysis returns depends on the extract it is measured on, and recurrence — not size — predicts which way.** The repository's two committed cuts disagree: the same landscape classifies most cells composition-dominated on the sparse 1-hop `named` cut and none of them on the denser `taste_motor` cut. Run across a ladder of nested cuts of 1k to 50k cells (`flylab.analysis.scale`), the composition-dominated verdict survives on exactly one extract — the in-star — while a cut with *fewer* nodes but twenty times the mean degree is already topology-dependent. A dependence result is therefore only quotable together with the structure of the graph it was measured on.
 
 ### 3. Model conclusions are stress-tested
 
@@ -84,6 +86,7 @@ FlyLab includes:
 | **Global uncertainty** | Which assumptions dominate variance in a model output? |
 | **Value of information** | Which measurement or re-analysis would reduce the most model uncertainty? |
 | **Claim provenance** | Which links in a result are observations, literature-derived inputs, modelling assumptions, or computations? |
+| **Scale ladder** | Does the dependence verdict settle as the extract grows, and what structural property predicts it? |
 
 Negative results are first-class outputs. If a conclusion depends on an asserted gain rule, or a connectome-specific interpretation is not supported by the null analysis, FlyLab is designed to show that rather than hide it.
 

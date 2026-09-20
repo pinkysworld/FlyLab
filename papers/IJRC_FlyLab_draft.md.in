@@ -57,8 +57,8 @@ The answers are: yes, by grading the evidence, refusing invalid transformations 
 | Compound **and free concentration** as the input | yes (organ level) | no | no | partly (receptor-map scaling) | yes |
 | Typed evidence with per-row provenance and distance | no | no | no | no | yes |
 | Two species scored at the same dose | no | no | no | no | yes |
-| Dependence of each prediction on the wiring, tested | no | rarely | no | partly [69] | yes, routinely |
-| The dependence test itself validated against ground truth | n/a | no | no | no | yes (§3.2, F16) |
+| Dependence of each prediction on its inputs, tested | no | rarely | no | partly [69] | yes, routinely |
+| The dependence test itself validated against ground truth | n/a | no | no | no | yes (§3.1, F16) |
 | Specification robustness of the stated conclusions | no | no | no | no | yes |
 | Whole analysis re-runs in a browser | some | no | no | no | endpoint parity verified |
 

@@ -1,6 +1,6 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-20T15:06:32+00:00",
+  "generated_utc": "2026-09-20T15:09:38+00:00",
   "fast": false,
   "seed": 0,
   "jobs": 4,
@@ -7469,8 +7469,8 @@
       "step": "paper"
     },
     "supplement_words": {
-      "value": 6382,
-      "text": "6382",
+      "value": 6385,
+      "text": "6385",
       "unit": "words",
       "note": null,
       "step": "paper"

@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "FlyLab: typed pharmacological evidence and connectome-dependence testing on the Drosophila MaleCNS connectome"
+title: "FlyLab: typed evidence propagation and input-dependence testing for network simulations, demonstrated on the Drosophila MaleCNS connectome"
 message: >-
   Cite the connectome papers first (MaleCNS v1.0, FlyWire), then this software.
   Nothing in FlyLab is a measurement from a living animal.
@@ -12,7 +12,18 @@ license: MIT
 repository-code: https://github.com/pinkysworld/FlyLab
 url: https://github.com/pinkysworld/FlyLab
 abstract: >-
-  FlyLab maps a compound and a free concentration onto a typed engagement
+  FlyLab is a method and an implementation for making a network simulation
+  say which of its inputs its predictions depend on. Its four instruments --
+  typed evidence propagation under a checked soundness invariant,
+  input-dependence testing against an ordered ladder of degraded inputs with a
+  prespecified equivalence margin and multiplicity control, an ablation ladder
+  scored against a matched reference distribution, and specification-family
+  robustness with variance attribution -- are not specific to any domain. They
+  are demonstrated on cuts of the public MaleCNS v1.0 connectome, where the
+  headline result is methodological: a dependence verdict obtained on one
+  extract of a network can invert on another extract of the same network, and
+  the extract's recurrence rather than its size predicts which way.
+  Concretely, FlyLab maps a compound and a free concentration onto a typed engagement
   panel for insect receptors and their vertebrate counterparts at the same
   dose, converts the insect side through a fixed mechanism table into gain
   multipliers on transmitter classes of a named MaleCNS v1.0 connectome cut,
@@ -36,6 +47,9 @@ abstract: >-
   regulatory toxicology and not a source of live-animal data.
 
 keywords:
+  - scientific software
+  - provenance
+  - network simulation
   - connectomics
   - Drosophila melanogaster
   - in-silico pharmacology
