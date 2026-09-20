@@ -1,6 +1,6 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-19T18:13:35+00:00",
+  "generated_utc": "2026-09-19T18:15:53+00:00",
   "fast": false,
   "seed": 0,
   "runtime_s": 0.0,
@@ -42,7 +42,7 @@
       "description": "render the draft from its template",
       "figures": 0,
       "tables": 0,
-      "values": 1
+      "values": 0
     }
   },
   "values": {
@@ -1768,8 +1768,8 @@
       "step": "expression"
     },
     "paper_words": {
-      "value": 10836,
-      "text": "10 836",
+      "value": 10559,
+      "text": "10 559",
       "unit": null,
       "note": null,
       "step": "paper"
@@ -1782,8 +1782,8 @@
       "step": "paper"
     },
     "paper_words_body": {
-      "value": 8198,
-      "text": "8 198",
+      "value": 7921,
+      "text": "7 921",
       "unit": null,
       "note": null,
       "step": "paper"
