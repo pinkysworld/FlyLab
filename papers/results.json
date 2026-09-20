@@ -1,12 +1,12 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-19T18:15:53+00:00",
+  "generated_utc": "2026-09-19T18:24:29+00:00",
   "fast": false,
   "seed": 0,
   "runtime_s": 0.0,
   "provenance": {
     "flylab_version": "0.5.0",
-    "git_sha": "3d1545269ac265b59dbb85801a0e75cd2762fadb",
+    "git_sha": "fb8ba93d5d7902d92cfe5696525dbfe73837530a",
     "library_sha256": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
     "library_version": "0.5",
     "library_schema_version": 2,
@@ -54,8 +54,8 @@
       "step": "provenance"
     },
     "git_sha": {
-      "value": "3d1545269ac265b59dbb85801a0e75cd2762fadb",
-      "text": "3d1545269ac2",
+      "value": "fb8ba93d5d7902d92cfe5696525dbfe73837530a",
+      "text": "fb8ba93d5d79",
       "unit": null,
       "note": null,
       "step": "provenance"
@@ -1768,8 +1768,15 @@
       "step": "expression"
     },
     "paper_words": {
-      "value": 10559,
-      "text": "10 559",
+      "value": 10672,
+      "text": "10 672",
+      "unit": null,
+      "note": null,
+      "step": "paper"
+    },
+    "paper_words_body": {
+      "value": 8034,
+      "text": "8 034",
       "unit": null,
       "note": null,
       "step": "paper"
@@ -1781,17 +1788,10 @@
       "note": null,
       "step": "paper"
     },
-    "paper_words_body": {
-      "value": 7921,
-      "text": "7 921",
-      "unit": null,
-      "note": null,
-      "step": "paper"
-    },
     "_provenance": {
       "value": {
         "flylab_version": "0.5.0",
-        "git_sha": "3d1545269ac265b59dbb85801a0e75cd2762fadb",
+        "git_sha": "fb8ba93d5d7902d92cfe5696525dbfe73837530a",
         "library_sha256": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
         "library_version": "0.5",
         "library_schema_version": 2,

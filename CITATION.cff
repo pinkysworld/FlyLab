@@ -1,13 +1,57 @@
 cff-version: 1.2.0
-title: FlyLab
-message: Cite the connectome papers first, then this software.
+title: "FlyLab: a dual-scorecard virtual pharmacology bench on the Drosophila MaleCNS connectome"
+message: >-
+  Cite the connectome papers first (MaleCNS v1.0, FlyWire), then this software.
+  Nothing in FlyLab is a measurement from a living animal.
 type: software
 authors:
-  - name: FlyLab contributors
-repository-code: https://github.com/pinkysworld/FlyLab
+  - name: "FlyLab contributors"
+version: 0.5.0
+date-released: "2026-09-19"
 license: MIT
+repository-code: https://github.com/pinkysworld/FlyLab
+url: https://github.com/pinkysworld/FlyLab
+abstract: >-
+  FlyLab maps a compound and a free concentration onto Hill occupancy of an
+  insect receptor panel and its vertebrate counterpart panel at the same dose,
+  converts the insect side through a fixed mechanism table into gain
+  multipliers on transmitter classes of a named MaleCNS v1.0 connectome cut,
+  runs a deterministic rate model or a Shiu-style leaky integrate-and-fire
+  model over that cut, and exports one notebook JSON with a provenance block
+  (version, git SHA, compound-library SHA-256, map identifiers, seeds). It adds
+  connectome null models, a receptor-versus-circuit selectivity landscape,
+  retrospective rank validation against published orderings, published
+  resistance alleles as per-compound EC50 shifts, combination-effect null
+  models and a set of pre-registered predictions. It is not a new connectome,
+  not regulatory toxicology and not a source of live-animal data.
+keywords:
+  - connectomics
+  - Drosophila melanogaster
+  - in-silico pharmacology
+  - receptor occupancy
+  - insecticide selectivity
+  - null models
+  - reproducible research
+  - 3Rs
+identifiers:
+  - type: other
+    value: "Zenodo DOI to be minted on release"
+    description: Archived release DOI (placeholder until the deposit exists)
 references:
-  - title: Neuronal wiring diagram of an adult brain (FlyWire)
+  - title: MaleCNS v1.0 whole adult male Drosophila CNS connectome
     type: article
-  - title: MaleCNS v1.0 whole male Drosophila CNS connectome
+    year: 2026
+    notes: >-
+      HHMI Janelia FlyEM, University of Cambridge, MRC LMB and Google Research.
+      CC-BY 4.0. The netlist FlyLab patches; downloaded, never redistributed.
+  - title: "Neuronal wiring diagram of an adult brain (FlyWire)"
     type: article
+    year: 2024
+    doi: 10.1038/s41586-024-07558-y
+  - title: >-
+      A leaky integrate-and-fire computational model based on the connectome of
+      the entire adult Drosophila brain reveals insights into sensorimotor
+      processing
+    type: article
+    year: 2024
+    notes: Shiu, Sterne, Spiller et al., Nature 634. Source of the LIF parameters and the bitter-veto direction used as a control.

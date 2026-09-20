@@ -7,15 +7,22 @@ Goal: one lab that feels like software on Windows and macOS (Linux comes free), 
 | Layer | Choice | Why |
 |---|---|---|
 | Science core | Python 3.11+ | Connectome loaders, occupancy, pytest, every fly sim already lives here |
-| Circuit kernel | numpy LIF first, Brian2 optional | flypoke / Shiu models are Python; do not rewrite spikes in JS |
-| API | FastAPI | local server, OpenAPI, easy to hang a UI or a script on |
-| UI | Vite + React + TypeScript | comfortable research chrome: two panes, sliders, tables, export |
-| Plots | Plotly.js (UI) / matplotlib (tests) | dose–response and occupancy traces |
-| Circuit view v1 | SVG / 2D canvas of named cells | 166k WebGL dots are a later vanity feature |
-| Packaging | `flylab serve` opens the browser; optional Tauri shell later | no Electron |
-| Data | user-downloaded Feather in `data/raw/` | CC-BY maps stay off git |
+| Numerics | numpy only (no scipy) | Spearman, Kendall, Nelder–Mead and the bootstrap are ~200 lines each; scipy has no WebAssembly guarantee and the browser build has to import the same package |
+| Circuit kernel | numpy rate model + numpy LIF | the rate model is deterministic and ~50 ms per run, which is what makes 400 null-model shuffles affordable; Brian2 stays optional and unused |
+| API | FastAPI + pydantic, 34 routes | local server, OpenAPI, one place to hang the UI and the browser bridge |
+| Browser | Pyodide + `flylab/browser/bridge.py` | the *same wheel* answers the same routes in a tab; no second implementation (`docs/PAGES.md`) |
+| UI | plain HTML + `app.js`, CDN libs, no build step | one file serves both the local server and the static site |
+| Plots | Plotly.js + cytoscape.js (UI) / matplotlib (paper figures) | the paper needs 300 dpi PNG+SVG from the same numbers the UI shows |
+| Packaging | `flylab serve` opens the browser; GitHub Pages for the zero-install bench | no Electron, no Tauri yet |
+| Data | user-downloaded Feather; only small derived JSON in git | CC-BY maps stay off git; the 1.1 GB matrix is never needed to reproduce the paper |
+| Reproduction | `scripts/reproduce_paper.py` (argparse, named steps, `--fast`, `--only`, `--outdir`) | one command regenerates every figure, table and number; `papers/results.json` is the machine-readable record |
+| CI | GitHub Actions: `tests.yml`, `pages.yml`, `malecns-subgraph.yml` | tests on push, static bench on `main`, the 1.1 GB cut on demand |
 
-Ship Gate 3 as **localhost in the default browser**. That is already cross-platform. Wrap in [Tauri](https://tauri.app/) only when someone asks for a Dock / Start-menu icon.
+Ship Gate 3 as **localhost in the default browser**. That is already cross-platform, and since v0.5 there is a second, zero-install route: the same wheel on Pyodide, published from GitHub Pages. Wrap in [Tauri](https://tauri.app/) only when someone asks for a Dock / Start-menu icon.
+
+### Two constraints the browser build imposed on the core
+
+Worth knowing before adding a dependency: `pyarrow` has no WebAssembly build and `pydantic`, `fastapi`, `typer` and `pandas` are not installed in the tab. The science core therefore may not import any of them at module scope. `flylab/assays/experiment.py` imports pydantic inside a `try` and falls back to a dataclass with identical behaviour; `flylab/maps/malecns.py` imports pandas only inside `load_census`. Keep it that way: `python -c "import flylab.browser.bridge"` must work with all five hidden.
 
 ## What researchers actually click
 
@@ -48,18 +55,26 @@ If the window needs a tutorial, the lab is not ready.
 
 Streamlit is allowed as a *throwaway* Gate-3 spike if FastAPI+React slips. It must not become the architecture.
 
-## Local run (target)
+## Local run
 
 ```bash
-python -m pip install -e ".[dev,ui]"
-flylab serve          # http://127.0.0.1:8765
+python -m pip install -e ".[dev,viz]"
+python -m pytest -q                  # fast suite; `-m slow` adds the end-to-end checks
+flylab serve                         # http://127.0.0.1:8765
+python scripts/reproduce_paper.py    # ~3.5 min: 10 figures, 10 tables, results.json
 ```
 
 Same command on Windows PowerShell and macOS Terminal. Python from python.org or conda-forge, not the Windows Store stub.
+
+## Extras
+
+`pip install -e ".[dev]"` for pytest and httpx, `".[viz]"` for matplotlib (needed by `scripts/reproduce_paper.py`), `".[browser]"` for the Pyodide-safe subset.
+
+BLAS threading: the matrices here are small (1126 and 1841 nodes) and an unpinned thread pool costs roughly 10× on a contended machine. `scripts/reproduce_paper.py` pins the thread-count environment variables before importing numpy and re-execs once if numpy is already loaded. If you write another long-running driver, do the same.
 
 ## Optional later
 
 - Tauri 2: `FlyLab.app` / `FlyLab.exe` wrapping localhost
 - neuPrint only as a browser link for cell lookup, not as a runtime dependency
-- WebGL instancing of somata after Gate 4
+- WebGL instancing of somata
 - Linux: already works if the two supported platforms work
