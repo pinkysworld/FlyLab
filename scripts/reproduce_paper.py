@@ -4740,6 +4740,84 @@ def step_scale(ctx: Ctx) -> None:
         for comp, b in (clean.get("by_compound") or {}).items():
             seqs.append(f"{comp}: " + " -> ".join(f"{c} ({v})" for c, v in zip(b["cuts"], b["sequence"])))
         ctx.put("scale_study_sequences", seqs, text="; ".join(seqs) or "n/a")
+
+        # --- the paper-quotable shape of the result -------------------
+        # Rows, smallest cut first.  The key methodological point is that the
+        # inversion does NOT track node count: `scale_1k` has fewer nodes than
+        # `named` and a mean degree twenty times higher, and it already comes
+        # out topology-dependent.  What separates them is recurrence.
+        rows_by_size = sorted(study["rows"], key=lambda r: (int(r["n_nodes"]), int(r["n_edges"])))
+        ns = [int(r["n"]) for r in rows_by_size]
+        ctx.put("scale_study_n_range", [min(ns), max(ns)], text=f"{min(ns)}-{max(ns)}")
+        res = [float(r["p_resolution"]) for r in rows_by_size if r.get("p_resolution")]
+        ctx.put("scale_study_resolution_range", [min(res), max(res)], text=f"{min(res):.4f}-{max(res):.4f}")
+        comp_cuts = sorted({r["cut"] for r in rows_by_size if r.get("class") == "composition-dominated"})
+        ctx.put("scale_study_composition_dominated_cuts", comp_cuts, text=", ".join(comp_cuts) or "none")
+        ctx.put("scale_study_n_composition_dominated", len(comp_cuts))
+        every_null = sorted({r["cut"] for r in rows_by_size if r.get("necessary_information_level") == "real_connectome"})
+        ctx.put("scale_study_every_null_cuts", every_null, text=", ".join(every_null) or "none")
+        # Rungs whose permutation budget is so small that the smallest
+        # attainable probability is within a factor of two of alpha: a
+        # rejection there is the smallest the test can express, not a strong
+        # one, and every such rejection sits exactly at the floor.
+        alpha = float(study.get("alpha") or 0.05)
+        coarse = [
+            r for r in rows_by_size
+            if r.get("p_resolution") and float(r["p_resolution"]) >= alpha / 2.0
+        ]
+        coarse_cuts = sorted({r["cut"] for r in coarse}, key=lambda c: next(int(x["n_nodes"]) for x in rows_by_size if x["cut"] == c))
+        ctx.put("scale_study_coarse_cuts", coarse_cuts, text=", ".join(coarse_cuts) or "none")
+        ctx.put(
+            "scale_study_coarse_note",
+            {"cuts": coarse_cuts, "alpha": alpha},
+            text=(
+                (
+                    "at " + ", ".join(coarse_cuts) + " the permutation budget falls to n = "
+                    + str(min(int(r["n"]) for r in coarse))
+                    + ", where the smallest attainable probability is "
+                    + f"{max(float(r['p_resolution']) for r in coarse):.3f}"
+                    + f" against alpha = {alpha:g}: a rejection there is the smallest the test can express"
+                )
+                if coarse
+                else "every rung was run at a resolution comfortably finer than alpha"
+            ),
+        )
+        for comp in (study.get("compounds") or []):
+            rs = [r for r in rows_by_size if r["compound"] == comp]
+            if not rs:
+                continue
+            ctx.put(
+                f"scale_study_{comp}_sequence",
+                [{"cut": r["cut"], "n_nodes": r["n_nodes"], "class": r["class"]} for r in rs],
+                text="; ".join(f"{r['cut']} ({r['n_nodes']} nodes, mean degree {float(r.get('mean_degree') or 0):.1f}): {r['class']}" for r in rs),
+            )
+            rel = [abs(float(r["relative_effect"])) for r in rs if r.get("relative_effect") is not None]
+            ctx.put(
+                f"scale_study_{comp}_relative_range",
+                [min(rel), max(rel)] if rel else None,
+                text=(f"{min(rel):.2f}-{max(rel):.2f}" if rel else "n/a"),
+            )
+        # the density-not-size sentence, generated rather than asserted
+        instar = [r for r in rows_by_size if r.get("in_star")]
+        dense_small = [
+            r for r in rows_by_size
+            if not r.get("in_star") and r.get("class") == "topology-dependent"
+            and instar and int(r["n_nodes"]) <= min(int(x["n_nodes"]) for x in instar)
+        ]
+        if instar and dense_small:
+            a, b = instar[0], dense_small[0]
+            ctx.put(
+                "scale_study_density_not_size",
+                {"in_star": a["cut"], "dense": b["cut"]},
+                text=(
+                    f"the inversion does not track the number of cells: `{b['cut']}` has "
+                    f"{int(b['n_nodes'])} nodes against `{a['cut']}`'s {int(a['n_nodes'])} and a mean "
+                    f"degree of {float(b.get('mean_degree') or 0):.1f} against {float(a.get('mean_degree') or 0):.2f}, "
+                    f"and it is already {b['class']}"
+                ),
+            )
+        else:
+            ctx.put("scale_study_density_not_size", None, text="n/a")
         save_table(
             ctx,
             "T27_scale_study",
@@ -4760,8 +4838,23 @@ def step_scale(ctx: Ctx) -> None:
     else:
         ctx.put("scale_study_status", "not yet run")
         ctx.put("scale_study_source", None, text="none")
-        for key in ("scale_study_cuts", "scale_study_compounds", "scale_study_sequences"):
+        for key in (
+            "scale_study_cuts",
+            "scale_study_compounds",
+            "scale_study_sequences",
+            "scale_study_n_range",
+            "scale_study_resolution_range",
+            "scale_study_composition_dominated_cuts",
+            "scale_study_every_null_cuts",
+            "scale_study_coarse_cuts",
+            "scale_study_coarse_note",
+            "scale_study_density_not_size",
+        ):
             ctx.put(key, None, text="n/a")
+        ctx.put("scale_study_n_composition_dominated", 0)
+        for comp in ("imidacloprid", "fipronil"):
+            ctx.put(f"scale_study_{comp}_sequence", None, text="n/a")
+            ctx.put(f"scale_study_{comp}_relative_range", None, text="n/a")
         ctx.put("scale_study_n_cuts", 0)
         ctx.put("scale_study_settled", None, text="not measured")
         ctx.put("scale_study_settled_clean_ladder", None, text="not measured")

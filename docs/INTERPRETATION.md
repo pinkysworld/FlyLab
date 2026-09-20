@@ -238,29 +238,20 @@ Two further things the output tells you and you should not drop:
 
 ## 4. The verdict belongs to the substrate
 
+> **This is the sharpest trap in the tool.** A dependence verdict is not a
+> property of a compound. It is a property of the compound **and the cut it was
+> measured on** — and it inverts, on the same connectome, with the same
+> compound, the same concentration, the same engine and the same statistics,
+> when the extract gets bigger. A verdict quoted without naming the cut and its
+> size is not a weak claim. It is meaningless.
+
 **Where you see it.** The `--graph` flag; the `graph` field of every dependence
-result; the Graph selector in the bench sidebar.
+result; the Graph selector in the bench sidebar; `flylab/analysis/scale.py`.
 
-**What it means.** FlyLab ships two committed MaleCNS-derived cuts and they are
-**not interchangeable**. `flylab/analysis/dependence.py::cut_census()` reports
-why:
+### Two cuts, opposite answers
 
-| | `named` | `taste_motor` |
-|---|---|---|
-| nodes | 1126 | 1841 |
-| edges | 1360 | 19066 |
-| mean degree | 1.21 | 10.36 |
-| seed cells | 4 | 76 |
-| share of edges landing on seeds | **84.9%** | 9.6% |
-| nodes with any input at all | **184 (16.3%)** | 1643 (89.2%) |
-| `in_star` | **true** | false |
-
-The `named` cut is an in-star. Eighty-five per cent of its edges terminate on
-four cells, and five sixths of its nodes have no input whatsoever. A
-degree-preserving rewire of such a graph is close to the identity, so "not
-distinguishable from the rewiring null" there is an almost structural result.
-
-And the answer changes. Same compound, same dose, same readout:
+FlyLab ships two committed MaleCNS-derived cuts and they are **not
+interchangeable**. Same compound, same dose, same readout:
 
 ```
 $ flylab dependence imidacloprid --conc 1e-6 --n 200 --graph named
@@ -271,17 +262,94 @@ imidacloprid @ 1.00e-06 M  -  specific wiring evidence: present (topology-depend
 ```
 
 On `taste_motor`, `rewire_degree_preserving` reaches the resolution floor
-(p = 0.0050 at n = 200) and the cell is topology-dependent.
+(p = 0.0050 at n = 200) and the cell is topology-dependent. On `named`, no
+structure-preserving null can be told apart at all.
+
+### And again with size
+
+The repository now carries a scale ladder — the same connectome, cut at 1000,
+5000, 10 000, 25 000 and 50 000 cells (`flylab/maps/ladder.py`,
+`flylab.analysis.scale.available_cuts()`). Walking a dependence profile up that
+ladder moves the verdict again:
+
+> At about 1100 cells imidacloprid is composition-dominated. At about 5000 cells
+> the same compound, at the same concentration, on the same engine, is
+> distinguishable from **every** null — including the weight-matched transmitter
+> null, the hardest rung on the ladder.
+
+At the time of writing, that is an in-flight measurement, not a committed
+number. `papers/results.json` records `scale_study_status: "not yet run"`, and
+its `scale_study_statement` says so in words:
+
+> Where the verdict settles with the size of the cut has not been measured at
+> this commit: the scale ladder's rungs on disk are scale_1k, scale_5k,
+> scale_10k, scale_25k, scale_50k and the study over the full ladder had not
+> been run.
+
+**Where the verdict settles — whether it settles at all before the whole CNS —
+is an open question currently being measured.** When the study lands, the
+per-rung verdicts come from `flylab.analysis.scale.dependence_vs_scale()` and
+`verdict_stability()`, and the shipped numbers from
+`papers/results.json` (`scale_study_settled`,
+`scale_study_settled_clean_ladder`, `scale_study_statement`). Quote those, not
+this paragraph.
+
+A related limit is already committed: `papers/tables/T26_scale_frontier.md` puts
+the largest feasible dependence profile at `scale_50k`, and a profile on the
+whole 165 122-cell CNS at about 59 hours on one core — outside the feasible
+envelope. So "run it on the whole connectome and settle it" is not currently an
+option, which is exactly why the caveat has to travel with the verdict.
+
+### The structural statistics to check first
+
+Before trusting any dependence verdict, look at the substrate it was measured
+on. `flylab/analysis/dependence.py::cut_census()` gives you the numbers, and
+these are the ones that matter:
+
+| cut | nodes | edges | mean degree | edges onto seeds | nodes with any input | recurrence budget | `in_star` |
+|---|---|---|---|---|---|---|---|
+| `named` | 1126 | 1 360 | **1.21** | **84.9%** | **16.3%** | **24.9%** | **true** |
+| `taste_motor` | 1841 | 19 066 | 10.36 | 9.6% | 89.2% | 97.3% | false |
+| `scale_1k` | 1000 | 22 857 | 22.86 | 6.5% | 99.0% | 99.7% | false |
+| `scale_5k` | 5000 | 279 845 | 55.97 | 0.6% | 99.8% | 100.0% | false |
+| `scale_10k` | 10 000 | 621 600 | 62.16 | 0.3% | 99.8% | 99.9% | false |
+| `scale_25k` | 25 000 | 1 364 375 | 54.58 | 0.1% | 98.6% | 99.7% | false |
+| `scale_50k` | 50 000 | 2 216 881 | 44.34 | 0.1% | 97.8% | 99.3% | false |
+
+(*recurrence budget* = the share of edges whose source itself receives input:
+the only edges that can carry a path longer than one hop.)
+
+Read that table top to bottom and the reason for the inversion is visible
+without running anything. `named` has **a mean degree of 1.2**. Eighty-five per
+cent of its edges terminate on four seed cells, five sixths of its nodes have no
+input whatsoever, and only a quarter of its edges can be part of a path at all.
+A degree-preserving rewire of that graph is close to the identity — there is
+almost nothing for the shuffle to destroy.
+
+**So: a cut where most edges land on a handful of cells cannot support a
+negative topology result.** "Not distinguishable from the rewiring null" on an
+in-star is very nearly an arithmetic property of the extract, not a finding
+about the pharmacology. `cut_census()` prints exactly this warning:
+
+```
+A cut where most edges terminate on a few seed cells and most nodes have no
+input is an in-star: a degree-preserving rewire of it is nearly the identity, so
+'not distinguishable from the rewiring null' carries little information there.
+Repeat any negative topology result on a denser cut before generalising it.
+```
 
 **What it does not mean.** Neither verdict is "the truth about imidacloprid".
-Both are true statements about a readout on a substrate.
+Both are true statements about a readout on a substrate, and the interesting
+question is not which one is right — it is *where the verdict settles as the cut
+grows*, which is the thing the scale study is measuring.
 
 **The misreading to avoid.** Referee item **B3**: the paper generalised from the
 `named` cut anyway. Never write "imidacloprid's effect does not need the
-connectome". Write "on the `named` MaleCNS cut, at 1 µM, on `mean_hz`, the real
-graph effect was not distinguishable from the degree-preserving null ensemble at
-n = 1000" — and if you are making a negative claim, repeat it on `taste_motor`
-first.
+connectome". Write "on the `named` MaleCNS cut (1126 cells, 1360 edges, mean
+degree 1.2, an in-star), at 1 µM, on `mean_hz`, the real graph effect was not
+distinguishable from the degree-preserving null ensemble at n = 1000" — and if
+you are making a negative claim, repeat it on a denser cut before you believe
+it.
 
 NOVELTY.md now treats this reversal as the result rather than a caveat ("The
 verdict is substrate-dependent, and that is now the result"), and withdraws
@@ -292,8 +360,10 @@ matched size, density and composition, check that the ladder recovers it and
 that the unplanted control is not called, and map detection rate against effect
 size and permutation count. The reversal is about the graphs.
 
-**Always name four things with a dependence verdict**: the compound, the
-concentration, the readout, and the cut.
+**Always name four things with a dependence verdict** — the compound, the
+concentration, the readout and the cut — **and two numbers about the cut**: its
+size and its mean degree. The four identify the measurement. The two say whether
+it could have come out the other way.
 
 ---
 
@@ -693,9 +763,13 @@ particular:
   represented. The rate engine is deterministic; running it with a different
   seed changes nothing. The ensemble panel's spread is Monte-Carlo over declared
   library uncertainty, not measured variation.
-- **No whole fly.** The cuts are hops-limited neighbourhoods of MaleCNS v1.0
-  with a synapse-count floor: 1126 or 1841 cells, against a reconstruction with
-  tens of millions of edges.
+- **No whole fly.** The committed cuts are hops-limited neighbourhoods of
+  MaleCNS v1.0 with a synapse-count floor: 1126 or 1841 cells, against a
+  reconstruction of 165 122 cells and up to 25.5 million edges. The scale ladder
+  reaches 50 000 cells; a dependence profile on the whole CNS is currently
+  outside the feasible envelope (`papers/tables/T26_scale_frontier.md`). Which
+  cut you are on is not a detail — see section
+  [4](#4-the-verdict-belongs-to-the-substrate).
 - **No measured transmitter identities.** Every edge sign comes from MaleCNS
   *predicted* consensus transmitters. A wrong prediction flips a synapse, and
   the drug patch follows the label rather than the biology.
@@ -719,6 +793,8 @@ differ, NOVELTY.md wins.
 | "not distinguishable from the degree-preserving null ensemble at n = 1000" | "the degree-preserving graph reproduces the effect" |
 | "equivalent within the prespecified margin (δ = 5% of vehicle) for `weight_permute`" | "equivalent" for any non-rejection that did not meet the margin |
 | "on the `named` cut, at 1 µM, on `mean_hz`" | "the connectome matters for imidacloprid" |
+| "composition-dominated on a 1126-cell in-star of mean degree 1.2" | "composition-dominated", with no cut, size or mean degree named |
+| "the verdict moves with the size of the cut, and where it settles is being measured" | a verdict from one cut generalised to the connectome |
 | "functional engagement, from an EC50 transferred from a hybrid receptor" | "97% receptor occupancy" |
 | "binding-derived occupancy" only when parameter type is Kd/Ki **and** distance is E0 | "occupancy" for any proxy row |
 | "no sourced value; the row is not modelled" | "no effect at this receptor" |

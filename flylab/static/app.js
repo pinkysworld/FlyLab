@@ -4050,7 +4050,7 @@
       title: "Is the effect wiring-dependent?",
       what: "Permutation nulls destroy one kind of network structure at a time, and the verdict names the weakest one the test cannot tell apart from the real cut.",
       caveat:
-        "A large permutation probability licenses only “not distinguishable at n shuffles”. And the verdict belongs to the cut it was run on: imidacloprid is composition-dominated on `named` and topology-dependent on `taste_motor`.",
+        "A large permutation probability licenses only “not distinguishable at n shuffles”. And the verdict belongs to the cut, and to its size: imidacloprid is composition-dominated on the 1126-cell `named` in-star and topology-dependent on `taste_motor`, and it moves again on larger cuts of the same connectome. Never quote a verdict without naming the cut and its size.",
     },
     {
       sel: "#card-trust",

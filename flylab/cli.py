@@ -1413,7 +1413,10 @@ TUTORIAL_LESSONS: tuple[dict[str, Any], ...] = (
             "A large permutation probability licenses 'not distinguishable from this "
             "null ensemble at n shuffles' and nothing else. Equivalence needs the gap "
             "from the null median to fall below the prespecified margin, and the "
-            "result says when it does."
+            "result says when it does. And neither verdict below is the truth about "
+            "the compound: the answer moves with the cut AND with its size, so the "
+            "real question is where it settles - which is still being measured. "
+            "Never quote a verdict without the cut, its size and its mean degree."
         ),
         "steps": [
             {
@@ -1429,9 +1432,11 @@ TUTORIAL_LESSONS: tuple[dict[str, Any], ...] = (
                 "argv": ["dependence", "imidacloprid", "--conc", "1e-6", "--n", "40",
                          "--graph", "taste_motor"],
                 "note": (
-                    "Same compound, same dose, same readout, opposite verdict. Never "
-                    "quote a dependence verdict without naming the cut. The paper-scale "
-                    "command is the same line with --n 1000."
+                    "Same compound, same dose, same readout, opposite verdict. The "
+                    "paper-scale command is the same line with --n 1000. The scale "
+                    "ladder (flylab.analysis.scale.available_cuts) moves it again with "
+                    "size alone: composition-dominated at ~1100 cells, distinguishable "
+                    "from every null at ~5000. See docs/INTERPRETATION.md section 4."
                 ),
             },
         ],

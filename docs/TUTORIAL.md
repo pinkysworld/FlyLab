@@ -501,22 +501,62 @@ imidacloprid @ 1.00e-06 M  -  specific wiring evidence: present (topology-depend
 
 Same compound. Same dose. Same readout. **Opposite verdict.**
 
-Why: the `named` cut is an *in-star*. Run
-`python -c "from flylab.analysis.dependence import cut_census; print(cut_census('named'))"`
-and it tells you that 84.9% of its 1360 edges terminate on four seed cells and
-only 184 of its 1126 nodes have any input at all. A degree-preserving rewire of
-such a graph is close to the identity, so a negative topology result there is
-weak evidence. `taste_motor` has 19066 edges, mean degree 10.4, and 89% of nodes
+Why: the `named` cut is an *in-star*.
+
+```bash
+python -c "from flylab.analysis.dependence import cut_census; print(cut_census('named'))"
+```
+
+It has **mean degree 1.21**: 84.9% of its 1360 edges terminate on four seed
+cells, only 184 of its 1126 nodes have any input at all, and only 24.9% of its
+edges can be part of a path longer than one hop. A degree-preserving rewire of
+such a graph is close to the identity — there is almost nothing for the shuffle
+to destroy. `taste_motor` has 19 066 edges, mean degree 10.4, and 89% of nodes
 with input.
+
+### And it moves again with size
+
+The repository also carries a scale ladder — the same connectome cut at 1000,
+5000, 10 000, 25 000 and 50 000 cells:
+
+```bash
+python -c "from flylab.analysis.scale import available_cuts; [print(c['name'], c['n_nodes'], c['n_edges']) for c in available_cuts()]"
+```
+
+```
+scale_1k 1000 22857
+named 1126 1360
+taste_motor 1841 19066
+scale_5k 5000 279845
+scale_10k 10000 621600
+scale_25k 25000 1364375
+scale_50k 50000 2216881
+```
+
+Walking a dependence profile up that ladder moves the verdict a second time: at
+about 1100 cells imidacloprid is composition-dominated, and at about 5000 cells
+the same compound at the same concentration is distinguishable from *every*
+null, including the weight-matched transmitter null. That measurement is in
+flight at the time of writing — `papers/results.json` still records
+`scale_study_status: "not yet run"` — so take the number from the shipped record
+rather than from this page.
 
 ### What this tells you, and what it does not
 
 **Tells you:** whether *this* readout, for *this* compound, at *this* dose, on
-*this* cut, can be told apart from each degraded graph model at the permutation
-effort you paid for.
+*this* cut, of *this size*, can be told apart from each degraded graph model at
+the permutation effort you paid for.
 
 **Does not tell you:**
 
+- **Neither verdict is the truth about imidacloprid.** They are two true
+  statements about a readout on two different substrates, and a third substrate
+  gives a third answer. The interesting question is not which cut is right; it
+  is *where the verdict settles as the cut grows* — and that is an open question
+  currently being measured, not something either of these runs answers.
+- Nothing about the connectome, unless you name the cut *and* its size and mean
+  degree. A cut where most edges land on a handful of cells cannot support a
+  negative topology result at all.
 - A large `p` licenses "not distinguishable from this null ensemble at n
   shuffles" and nothing stronger. Equivalence needs the prespecified margin, and
   the result says when it was met.
