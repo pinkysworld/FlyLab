@@ -1,10 +1,10 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-19T23:14:04+00:00",
+  "generated_utc": "2026-09-19T23:42:46+00:00",
   "fast": false,
   "seed": 0,
   "jobs": 4,
-  "runtime_s": 778.05,
+  "runtime_s": 451.1,
   "provenance": {
     "flylab_version": "0.5.0",
     "git_sha": "c4a0011d9562bf52de559f5a2105f30c78860b71",
@@ -39,7 +39,7 @@
   "steps": {
     "provenance": {
       "status": "ok",
-      "runtime_s": 0.18,
+      "runtime_s": 0.19,
       "description": "versions, hashes, map ids, graph sizes",
       "figures": 0,
       "tables": 0,
@@ -55,7 +55,7 @@
     },
     "scorecard": {
       "status": "ok",
-      "runtime_s": 0.69,
+      "runtime_s": 0.77,
       "description": "insect vs vertebrate panel + library table (F2, T1)",
       "figures": 1,
       "tables": 2,
@@ -63,7 +63,7 @@
     },
     "evidence": {
       "status": "ok",
-      "runtime_s": 0.43,
+      "runtime_s": 0.45,
       "description": "typed evidence census, schema v3 (F11, T10)",
       "figures": 1,
       "tables": 2,
@@ -71,7 +71,7 @@
     },
     "curves": {
       "status": "ok",
-      "runtime_s": 1.25,
+      "runtime_s": 1.35,
       "description": "engagement curves and selectivity windows (F3)",
       "figures": 1,
       "tables": 0,
@@ -87,7 +87,7 @@
     },
     "graph": {
       "status": "ok",
-      "runtime_s": 1.41,
+      "runtime_s": 1.54,
       "description": "taste-motor graph and GRN->MN9 paths (F4, T7)",
       "figures": 1,
       "tables": 2,
@@ -95,7 +95,7 @@
     },
     "veto": {
       "status": "ok",
-      "runtime_s": 6.1,
+      "runtime_s": 7.22,
       "description": "map-based bitter veto, rate vs LIF (F5)",
       "figures": 1,
       "tables": 0,
@@ -103,7 +103,7 @@
     },
     "dependence": {
       "status": "ok",
-      "runtime_s": 475.5,
+      "runtime_s": 223.73,
       "description": "connectome dependence + landscape (F6, F12, T6, T11, T12)",
       "figures": 2,
       "tables": 6,
@@ -111,7 +111,7 @@
     },
     "ablation": {
       "status": "ok",
-      "runtime_s": 1.42,
+      "runtime_s": 1.4,
       "description": "ablation ladder over the library (F13, T13, T13b)",
       "figures": 1,
       "tables": 4,
@@ -119,7 +119,7 @@
     },
     "landscape": {
       "status": "ok",
-      "runtime_s": 113.41,
+      "runtime_s": 73.07,
       "description": "receptor vs circuit selectivity (F7, T8)",
       "figures": 1,
       "tables": 2,
@@ -127,7 +127,7 @@
     },
     "dose": {
       "status": "ok",
-      "runtime_s": 9.66,
+      "runtime_s": 6.94,
       "description": "model dose-response + sensitivity tornado (F8)",
       "figures": 1,
       "tables": 0,
@@ -135,7 +135,7 @@
     },
     "genotype": {
       "status": "ok",
-      "runtime_s": 0.69,
+      "runtime_s": 0.52,
       "description": "resistance-allele panels (F9, T9)",
       "figures": 1,
       "tables": 2,
@@ -143,7 +143,7 @@
     },
     "validation": {
       "status": "ok",
-      "runtime_s": 1.28,
+      "runtime_s": 0.88,
       "description": "rank comparison vs published orders (F10, T4)",
       "figures": 1,
       "tables": 2,
@@ -151,7 +151,7 @@
     },
     "predictions": {
       "status": "ok",
-      "runtime_s": 27.68,
+      "runtime_s": 17.18,
       "description": "prospective predictions (T3)",
       "figures": 0,
       "tables": 2,
@@ -159,7 +159,7 @@
     },
     "mixtures": {
       "status": "ok",
-      "runtime_s": 0.52,
+      "runtime_s": 0.35,
       "description": "binary mixtures vs published verdicts (T5)",
       "figures": 0,
       "tables": 2,
@@ -167,7 +167,7 @@
     },
     "expression": {
       "status": "ok",
-      "runtime_s": 0.28,
+      "runtime_s": 0.19,
       "description": "expression-weighted sensitivity coverage",
       "figures": 0,
       "tables": 0,
@@ -175,7 +175,7 @@
     },
     "stability": {
       "status": "ok",
-      "runtime_s": 0.96,
+      "runtime_s": 0.66,
       "description": "specification robustness + threshold grid (F14, T14, T14b, T15)",
       "figures": 1,
       "tables": 6,
@@ -183,15 +183,23 @@
     },
     "uncertainty": {
       "status": "ok",
-      "runtime_s": 136.12,
+      "runtime_s": 114.21,
       "description": "global uncertainty budget + VOI (F15, T16, T17)",
       "figures": 1,
       "tables": 4,
       "values": 52
     },
+    "claims": {
+      "status": "ok",
+      "runtime_s": 0.01,
+      "description": "claim provenance chain (T18)",
+      "figures": 0,
+      "tables": 2,
+      "values": 11
+    },
     "architecture": {
       "status": "ok",
-      "runtime_s": 0.46,
+      "runtime_s": 0.43,
       "description": "architecture schematic (F1)",
       "figures": 2,
       "tables": 0,
@@ -2012,14 +2020,14 @@
       "note": null,
       "step": "ablation"
     },
-    "abl_rho_full flylab_min": {
+    "abl_rho_full_flylab_min": {
       "value": 1.0,
       "text": "1.000",
       "unit": null,
       "note": null,
       "step": "ablation"
     },
-    "abl_rho_full flylab_max": {
+    "abl_rho_full_flylab_max": {
       "value": 1.0,
       "text": "1.000",
       "unit": null,
@@ -3949,16 +3957,95 @@
       "note": null,
       "step": "uncertainty"
     },
+    "claims_version": {
+      "value": "1.0",
+      "text": "1.0",
+      "unit": null,
+      "note": null,
+      "step": "claims"
+    },
+    "claims_chain_links": {
+      "value": 9,
+      "text": "9",
+      "unit": null,
+      "note": null,
+      "step": "claims"
+    },
+    "claims_observed": {
+      "value": 1,
+      "text": "1",
+      "unit": null,
+      "note": null,
+      "step": "claims"
+    },
+    "claims_literature_derived": {
+      "value": 1,
+      "text": "1",
+      "unit": null,
+      "note": null,
+      "step": "claims"
+    },
+    "claims_model_assumption": {
+      "value": 4,
+      "text": "4",
+      "unit": null,
+      "note": null,
+      "step": "claims"
+    },
+    "claims_computed": {
+      "value": 3,
+      "text": "3",
+      "unit": null,
+      "note": null,
+      "step": "claims"
+    },
+    "claims_unknown": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "claims"
+    },
+    "claims_n_facts": {
+      "value": 4,
+      "text": "4",
+      "unit": null,
+      "note": null,
+      "step": "claims"
+    },
+    "claims_n_inference": {
+      "value": 1,
+      "text": "1",
+      "unit": null,
+      "note": null,
+      "step": "claims"
+    },
+    "claims_n_unknown": {
+      "value": 5,
+      "text": "5",
+      "unit": null,
+      "note": null,
+      "step": "claims"
+    },
+    "claims_observed_steps": {
+      "value": [
+        "malecns_edges"
+      ],
+      "text": "malecns_edges",
+      "unit": null,
+      "note": null,
+      "step": "claims"
+    },
     "paper_words_body": {
-      "value": 6555,
-      "text": "6555",
+      "value": 6648,
+      "text": "6648",
       "unit": "words",
       "note": null,
       "step": "paper"
     },
     "paper_words": {
-      "value": 9829,
-      "text": "9829",
+      "value": 9929,
+      "text": "9929",
       "unit": null,
       "note": null,
       "step": "paper"
@@ -4018,7 +4105,7 @@
       },
       "text": "",
       "unit": null,
-      "note": "carried over from the previous run in this outdir",
+      "note": "provenance block, not a paper scalar",
       "step": "provenance"
     }
   },
@@ -4226,7 +4313,7 @@
     {
       "name": "T6_dependence_profile.csv",
       "path": "tables/T6_dependence_profile.csv",
-      "bytes": 3048,
+      "bytes": 3044,
       "rows": 12,
       "step": "dependence"
     },
@@ -4366,14 +4453,14 @@
     {
       "name": "T14b_specification_diagnostics.csv",
       "path": "tables/T14b_specification_diagnostics.csv",
-      "bytes": 2183,
+      "bytes": 2173,
       "rows": 25,
       "step": "stability"
     },
     {
       "name": "T14b_specification_diagnostics.md",
       "path": "tables/T14b_specification_diagnostics.md",
-      "bytes": 2074,
+      "bytes": 2084,
       "rows": 25,
       "step": "stability"
     },
@@ -4432,6 +4519,20 @@
       "bytes": 1495,
       "rows": 9,
       "step": "uncertainty"
+    },
+    {
+      "name": "T18_claim_provenance.csv",
+      "path": "tables/T18_claim_provenance.csv",
+      "bytes": 3132,
+      "rows": 9,
+      "step": "claims"
+    },
+    {
+      "name": "T18_claim_provenance.md",
+      "path": "tables/T18_claim_provenance.md",
+      "bytes": 2668,
+      "rows": 9,
+      "step": "claims"
     }
   ],
   "notes": [
@@ -4442,7 +4543,8 @@
     "[landscape] no circuit selectivity index exists for chlordimeform, dieldrin, fipronil, gaba, ivermectin, picrotoxin, spinosad, sulfoxaflor, thiamethoxam: on this neighbourhood their largest relative change in the mean rate never reaches the 50% threshold (RDL/GluCl blockers are bounded by the GABA/glutamate share of the cut and by the 0.05 gain floor).",
     "[dose] at 1 uM imidacloprid the model is exactly insensitive to a 2x change in the insect_nAChR EC50 and in the Hill coefficient (span 0 Hz): occupancy is saturated, so the gain-rule coefficient is the only parameter that still moves the readout. A dose-response experiment, not a single high dose, is what constrains the EC50.",
     "[stability] the suppression conclusion is specification-dependent: 10 of 25 prespecified specifications reverse it. Under linear@1.00x the same compound at the same engagement EXCITES the network (10.1 Hz treated vs 6.631 Hz vehicle) instead of suppressing it. Suppression is a property of the biphasic desensitisation term, not of the pharmacology-connectome integration.",
-    "[stability] the amplify/buffer split is NOT stable across the 3x3 threshold grid: nav_ache fails at circuit_frac=0.50,vert_limit=0.10. The paper quotes the range over the grid, never the point estimate."
+    "[stability] the amplify/buffer split is NOT stable across the 3x3 threshold grid: nav_ache fails at circuit_frac=0.50,vert_limit=0.10. The paper quotes the range over the grid, never the point estimate.",
+    "[claims] the provenance chain behind a circuit readout has 9 links and exactly 1 of them (malecns_edges) is a measurement of the system being simulated; the rest are literature reuse, asserted modelling choices and computation."
   ],
   "partial": false,
   "honesty": [
