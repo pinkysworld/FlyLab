@@ -52,7 +52,12 @@ from flylab.pharm.occupancy import (
 )
 from flylab.pharm.uncertainty import occupancy_ci
 
-VERSION = "0.5.0"
+from flylab import __version__ as __flylab_version__
+
+#: Single source of truth: the installed package version. Hardcoding this
+#: drifted once already (the bench footer showed 0.5.0 while the package was
+#: 0.6.0), so derive it and let a release bump one file.
+VERSION = __flylab_version__
 STATIC = Path(__file__).parent / "static"
 
 #: bounds shared with the pydantic models and documented in /api/meta

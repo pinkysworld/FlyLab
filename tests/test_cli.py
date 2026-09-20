@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 
 import pytest
+
+from flylab import __version__ as flylab_version
 from typer.testing import CliRunner
 
 from flylab.cli import app
@@ -230,7 +232,9 @@ def test_list_drugs():
 def test_meta_prints_graphs_and_library_hash():
     result = runner.invoke(app, ["meta"])
     assert result.exit_code == 0
-    assert "FlyLab 0.5.0" in result.output
+    # Never assert a literal version: three surfaces had drifted to 0.5.0
+    # while the package was 0.6.0, and hardcoded tests hid it.
+    assert f"FlyLab {flylab_version}" in result.output
     assert "taste_motor" in result.output
     assert "sha256" in result.output
 

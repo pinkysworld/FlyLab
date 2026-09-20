@@ -13,6 +13,8 @@ from __future__ import annotations
 import json
 
 import pytest
+
+from flylab import __version__ as flylab_version
 from fastapi.testclient import TestClient
 
 from flylab.server import MAX_EXPERIMENT_ROWS, VERSION, app
@@ -72,7 +74,9 @@ def test_meta_has_everything_the_ui_needs(client):
     r = client.get("/api/meta")
     assert r.status_code == 200
     m = r.json()
-    assert m["version"] == "0.5.0"
+    # Compare against the package, never a literal: a hardcoded version here
+    # is how the bench footer came to advertise a release behind the code.
+    assert m["version"] == flylab_version
     assert m["map"]["id"] and m["map"]["citation"]
 
     # library identity
@@ -956,3 +960,20 @@ def test_isobologram_needs_two_compounds(client):
         client.post("/api/mixture/isobologram", json={"compound_a": "", "compound_b": ""}).status_code
         == 400
     )
+
+
+def test_the_reported_version_cannot_drift_from_the_package():
+    """The bench footer once showed 0.5.0 while the package was 0.6.0.
+
+    Both transports must derive the version, never restate it, so a release
+    bumps one file and every surface follows.
+    """
+    import flylab
+    from flylab.browser import bridge as _bridge
+    from flylab import server as _server
+
+    assert _server.VERSION == flylab.__version__
+    assert _bridge.VERSION == flylab.__version__
+
+    meta = _bridge.call("/api/meta")
+    assert meta["version"] == flylab.__version__

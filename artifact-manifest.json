@@ -8,8 +8,8 @@
   ],
   "flylab_manifest_version": "1.0",
   "flylab_version": "0.6.0",
-  "generated_utc": "2026-09-20T16:13:12+00:00",
-  "git_sha": "f665e822f187eb6c8d80a0082e9fd3d780b76768",
+  "generated_utc": "2026-09-20T16:42:40+00:00",
+  "git_sha": "b82b8edaaabbab7be1f2b6aec639dd8a076feb27",
   "git_tracked": true,
   "kind": "flylab-artifact-manifest",
   "note": "Hashes of the inputs the committed results depend on. Regenerate with `flylab manifest --write` whenever code or data changes, and before tagging a release: `flylab manifest --check` is what the release workflow gates on.",
@@ -42,7 +42,7 @@
         "flylab/assays/taste_map.py": "189bb330536a4a706a4fec665c01b9c569b42f22cf1391dff825eb14095d34be",
         "flylab/assays/wholens.py": "9d771857e6780f2b6f5d17de8cff3111b39e4106bcbce0decbb46db289be4657",
         "flylab/browser/__init__.py": "8a2e74bb1b286e5277745ce1bff2f82b40c673f20025a521d8207c3d3025fa26",
-        "flylab/browser/bridge.py": "cddb045843d95d2a2896fa5446120fb53f6d83c209ad37ec62a67da3cf28e197",
+        "flylab/browser/bridge.py": "fa8dc01c2b97282fe2c3f9c28d7cfb63751d5d77e19c428fa19640cc24bb3f0d",
         "flylab/circuit/__init__.py": "0b5f006f027f8caa671f34334a898d9ff640e8607f9814a606b735cfa423028d",
         "flylab/circuit/lif.py": "13bab4a5156d79537147acea5d893d069faf802a6526d5f95ff3d1fd400db9bd",
         "flylab/circuit/rate.py": "3f47664856d6fa56146dfab6c900082ea847ce81cad8d88f5317c47f2e2dd3f3",
@@ -66,7 +66,7 @@
         "flylab/pharm/uncertainty.py": "152ef77de95913439dafd30decf7a09e9cd8fd82035bc9715f3476459f85b4b1",
         "flylab/report/__init__.py": "a5f6a5cc0e3b79bb5787c2eb4172640193b64ec2e7b8243783a7c79fbacba04d",
         "flylab/report/card.py": "6c9b9ddeecd56b87c525cd5457ef3e772e74a67032e5218649c7699f44e60820",
-        "flylab/server.py": "996fecc6c707ce51d8e7c632b124e81cae809b759bedf64e11679692625b9f18",
+        "flylab/server.py": "6387387e50cde7849719cc8056d4ec9ddb8ef430b03fae03078082384ee17076",
         "flylab/spec.py": "afc47fce898a540a3613d69b32397566d37d8b3f5b41997f211a09a6c24a5f2c",
         "flylab/validation/__init__.py": "659306ad6673645a0874ad31b4472f4c2d7ef184fd393ec70e55c99017305d1a",
         "flylab/validation/rank.py": "d82c9590d10943de082d12dab91ccbea5cad8742c9a7fb5376ebf67bb24d5292",
@@ -86,7 +86,7 @@
         "scripts/*.py",
         "pyproject.toml"
       ],
-      "sha256": "9603b0855652dfd14dd528c94227a224f2783573ad58666c0cc3cc385e8d22aa"
+      "sha256": "4a40094ca024eede4b8d5cdf540459c7ec1f9381218411ec9f82d44488c9535f"
     },
     "dependencies": {
       "description": "resolved versions of the project's dependency closure",
@@ -308,5 +308,5 @@
       "sha256": "90db07af3e8418052c470b06c8cdd57bd19fb9081b571c7a39090aeed15b0b74"
     }
   },
-  "sha256": "93759b33931ae57508661a8da3bdf73b8404a46dfc4717c2ee110b23b7f1f870"
+  "sha256": "011a7800b53b5fde49eae1ae4111245b9d2597dce6a00c97a9da0c4443e180fb"
 }

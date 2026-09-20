@@ -4,20 +4,25 @@ This file keeps the short public descriptions of FlyLab in one place so the repo
 
 ## Recommended GitHub About description
 
-**Provenance-first computational pharmacology on the Drosophila MaleCNS connectome, with typed evidence, circuit simulation and connectome-dependence testing.**
+**Which inputs does a network simulation actually depend on? Typed evidence propagation and input-dependence testing, demonstrated on pharmacology over the Drosophila MaleCNS connectome.**
 
 Shorter alternative:
 
-**Typed pharmacology + Drosophila connectomics + model-dependence testing.**
+**Testing which inputs a network simulation depends on, demonstrated on fly connectome pharmacology.**
+
+The emphasis is deliberate. The transferable contribution is the method — typed evidence that refuses inadmissible transformations, dependence testing against a ladder of degraded inputs, specification-family robustness and variance attribution. The fly pharmacology is the domain it is demonstrated and evaluated on, not the claim.
 
 ## Recommended homepage
 
-https://pinkysworld.github.io/FlyLab/
+https://minh.systems/FlyLab/ (the GitHub Pages URL https://pinkysworld.github.io/FlyLab/ redirects here)
 
 ## Recommended repository topics
 
 - drosophila
 - connectomics
+- network-analysis
+- provenance
+- model-validation
 - computational-neuroscience
 - computational-pharmacology
 - scientific-software

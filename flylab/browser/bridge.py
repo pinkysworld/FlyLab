@@ -36,7 +36,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 #: must match ``flylab.server.VERSION`` (tests/test_browser_bridge.py asserts it)
-VERSION = "0.5.0"
+from flylab import __version__ as __flylab_version__
+
+#: Single source of truth: the installed package version. Hardcoding this
+#: drifted once already (the bench footer showed 0.5.0 while the package was
+#: 0.6.0), so derive it and let a release bump one file.
+VERSION = __flylab_version__
 
 #: bounds shared with the server's pydantic models and documented in /api/meta
 MAX_N_REP = 64
