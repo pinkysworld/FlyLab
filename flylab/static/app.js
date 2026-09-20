@@ -857,6 +857,42 @@
     return viewer.runtime_ms;
   }
 
+  /* The server lays the graph out in layers: one x per hop distance, every cell
+     in that hop stacked on one y line. A 1000-cell layer is then 26,000 px tall
+     and 0 px wide, which fits the viewport as a vertical sliver. Packing each
+     layer into a block keeps the left-to-right hop order and the server's
+     within-layer ordering (transmitter, then degree) while giving the viewer a
+     shape it can actually draw. */
+  function packLayers(nodes) {
+    const SPACING = 26;
+    const LAYER_GAP = 110;
+    const byColumn = new Map();
+    nodes.forEach((n) => {
+      const key = Math.round(n.x);
+      if (!byColumn.has(key)) byColumn.set(key, []);
+      byColumn.get(key).push(n);
+    });
+    const columns = Array.from(byColumn.keys()).sort((a, b) => a - b);
+    const pos = {};
+    let cursor = 0;
+    columns.forEach((key) => {
+      const members = byColumn.get(key);
+      // a small layer (the seed cells) gets one roomy line so its labels fit
+      const small = members.length <= 8;
+      const step = small ? 70 : SPACING;
+      const wide = small ? 1 : Math.max(1, Math.ceil(Math.sqrt(members.length * 0.55)));
+      const tall = Math.ceil(members.length / wide);
+      members.forEach((n, i) => {
+        pos[n.id] = {
+          x: cursor + (i % wide) * step,
+          y: (Math.floor(i / wide) - (tall - 1) / 2) * step,
+        };
+      });
+      cursor += (wide - 1) * step + LAYER_GAP;
+    });
+    return pos;
+  }
+
   function renderCircuit() {
     const data = state.cache.circuit;
     if (!data) return;
@@ -880,6 +916,7 @@
       viewer.edges.map((e) => Math.abs(e.eff_weight_delta || 0)).concat([1e-6])
     );
 
+    const positions = packLayers(viewer.nodes);
     const cyHost = document.getElementById("cy");
     if (!HAS_CYTOSCAPE) {
       cyHost.innerHTML =
@@ -897,7 +934,7 @@
             seed: n.is_seed ? 1 : 0,
             title: `${n.type || n.id} · ${n.nt} · ${rate.toFixed(2)} Hz`,
           },
-          position: { x: n.x, y: n.y },
+          position: positions[n.id] || { x: n.x, y: n.y },
         });
       });
       const present = new Set(viewer.nodes.map((n) => "n" + n.id));
@@ -928,7 +965,6 @@
           pixelRatio: 1,
           textureOnViewport: true,
           hideEdgesOnViewport: true,
-          wheelSensitivity: 0.2,
           style: [
             {
               selector: "node",

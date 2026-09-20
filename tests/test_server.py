@@ -235,14 +235,15 @@ def test_analysis_ic50_is_labelled_model_derived(client):
             "assay": "subgraph",
             "compound": "imidacloprid",
             "readout": "mean_hz",
-            "concs_M": [1e-9, 1e-7, 1e-5],
+            # a 4-parameter Hill fit needs more points than parameters
+            "concs_M": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5],
             "n_boot": 10,
             "n_rep": 1,
         },
     ).json()
     assert body["label"] == "model_derived"
     assert body["fit"]["ic50"] > 0
-    assert len(body["points"]) == 3
+    assert len(body["points"]) == 5
     assert any("not an animal IC50" in w for w in body["warnings"])
 
 

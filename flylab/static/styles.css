@@ -335,6 +335,8 @@ kbd {
 }
 .panel-head h1 { font-size: 17px; margin: 0; }
 .panel-head p { margin: 0; color: var(--muted); font-size: 12px; flex: 1 1 200px; }
+.panel-head .row, .panel-head > button { align-self: center; }
+.panel-head select[multiple] { max-height: 52px; }
 
 .grid { display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
 .grid.two { grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
