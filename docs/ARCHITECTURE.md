@@ -1,116 +1,310 @@
 # Architecture
 
-The connectome is a **netlist**. Pharmacology is a **patch** on that netlist. They live in separate files so a reviewer can always see which number came from Janelia and which came from a paper.
+FlyLab is built around a strict separation:
 
-Two rules shape everything below. **The evidence is typed**: what a source measured (`Kd`/`Ki` vs `EC50`/`IC50`/`Kb` vs nothing) and how far it sits from this compound/receptor/species jointly decide whether FlyLab may compute a binding occupancy, a functional *engagement*, or nothing at all — a row with no sourced value returns `None`, never a small number, and asking anyway raises `EvidenceTypeError`. **Every prediction carries its dependence**: the analysis layer can say, for any prediction, the weakest degraded graph model that still reproduces it.
+- **pharmacological evidence** is a sourced input,
+- **connectome structure** is measured upstream data,
+- **gain rules and runtime settings** are modelling assumptions,
+- **readouts and analyses** are computed outputs.
 
-## Dataflow
+That separation is what makes provenance and model auditing possible.
 
-```
-                       compound + concentration
-                    (CLI · FastAPI · browser bridge)
-                                  |
-              +-------------------+-------------------+
-              |     typed engagement engine           |
-              |  theta = C^n / (value^n + C^n)        |
-              |  pharm/evidence.py decides WHICH from |
-              |  param_type AND evidence distance E0-4|
-              |   Kd/Ki + E0    -> binding_occupancy  |
-              |   Kd/Ki + E1,E2 -> binding_eng_proxy  |
-              |   EC50.. + E0   -> functional_engag.  |
-              |   transferred   -> functional_proxy   |
-              |   E4 / untyped  -> not_modelled (N/A) |
-              |  library.yaml v3: param_type, value,  |
-              |  n, direction, relation, species,     |
-              |  efficacy, source, evidence_tier      |
-              |  modifiers: genotype · mixture ·      |
-              |             exposure C(t) · MC jitter |
-              +---------+-------------------+---------+
-                        |                   |
-            insect panel|                   |vertebrate panel
-   nAChR RDL GluCl AChE |                   | a4b2 a7 GABA-A GlyR
-        Nav OctR        |                   | AChE Nav1.x
-                        v                   v
-        +-------------------------+   +--------------------------+
-        | mechanism table         |   | scored at the same dose. |
-        | (pharm/mechanisms.py)   |   | NEVER patches a circuit. |
-        | receptor+direction ->   |   | no vertebrate connectome |
-        | g_ach g_gaba g_glu      |   | exists at this quality.  |
-        | g_oct g_nav ach_tone    |   +--------------------------+
-        +------------+------------+                |
-                     |                             |
-     optional: expression weighting                |
-     (per-node gains, sensitivity only)            |
-                     v                             |
-   +-------------------------------------+         |
-   |  MaleCNS v1.0 netlist (CC-BY 4.0)   |         |
-   |  named      1126 nodes / 1360 edges |         |
-   |  taste_motor 1841 / 19066 (+closure)|         |
-   |  census     165122 traced cells     |         |
-   +------------------+------------------+         |
-                      v                            |
-   +-------------------------------------+         |
-   |  circuit runtime                    |         |
-   |  rate: clipped leaky iteration      |         |
-   |        (deterministic, ~50 ms)      |         |
-   |  LIF : Shiu-style, dt 0.1 ms,       |         |
-   |        + background Poisson drive   |         |
-   +------------------+------------------+         |
-                      v                            |
-   +-------------------------------------+         |
-   |  readouts: MN9 Hz, DNp01 Hz,        |         |
-   |  mean Hz, bitter veto ratio,        |         |
-   |  per-node / per-edge impact         |         |
-   +------------------+------------------+         |
-                      |                            |
-                      v                            v
-   +----------------------------------------------------------+
-   |  analysis + validation                                   |
-   |  dependence.py  permutation p vs 4 degraded graphs ->    |
-   |                 class + necessary information level      |
-   |  baselines.py   ablation ladder A/B/C/D                  |
-   |  robustness.py  25 gain specifications x 7 conclusions,  |
-   |                 plus the amplify/buffer threshold grid   |
-   |  uncertainty_global.py  Sobol' budget (Ishigami-checked) |
-   |  voi.py         VOI_j = S_j Var(Y) -> ranked experiments |
-   |  selectivity.py receptor SI vs circuit SI landscape      |
-   |  fit/impact/layout  ·  mixtures  ·  prospective H1-H7    |
-   |  validation/rank.py  concordance + source-overlap flag   |
-   +----------------------------+-----------------------------+
-                                v
-   +----------------------------------------------------------+
-   |  notebook JSON (schema 0.3)                              |
-   |  engagement (+ model and reason) · gains · readouts ·    |
-   |  uncertainty · warnings                                  |
-   |  live_lab: null   (only a human may fill it)             |
-   |  provenance: flylab version · git sha · library sha256   |
-   |              map id + citation · rng seed · platform     |
-   +----------------------------------------------------------+
-```
+## Scientific dataflow
 
-## Layers and who owns what
+~~~text
+compound + free concentration
+        |
+        v
+typed receptor evidence
+        |
+        |  parameter type
+        |  source relation
+        |  species
+        |  evidence tier
+        v
+receptor engagement representation
+        |
+        +-------------------------> vertebrate receptor scorecard
+        |                           scored only
+        |                           never patches a circuit
+        v
+mechanism -> gain transformation
+        |
+        v
+MaleCNS-derived circuit
+        |
+        +--> deterministic rate runtime
+        +--> LIF runtime
+        |
+        v
+named-cell and network readouts
+        |
+        +--> dependence analysis
+        +--> ablation
+        +--> specification robustness
+        +--> global uncertainty
+        +--> value of information
+        +--> provenance audit
+        |
+        v
+notebook + generated research artifacts
+~~~
 
-| Layer | Package | Rule |
+## Evidence layer
+
+The pharmacology library is schema v3.
+
+Each receptor row records:
+
+- parameter type,
+- parameter value when supported,
+- Hill coefficient,
+- direction,
+- species or preparation,
+- source relation,
+- source text,
+- evidence tier.
+
+The central rule is simple:
+
+> Missing evidence remains missing.
+
+Unsupported rows return no numeric engagement and are excluded from numeric aggregation paths that require a sourced value.
+
+The evidence layer also distinguishes a binding parameter such as Kd/Ki from functional potency such as EC50/IC50. Source relation remains visible because a strong parameter measured in another species or preparation is still not a direct measurement of the modelled Drosophila system.
+
+Parameter type is only half of the rule. Each source relation is also graded as an *evidence distance*, E0 to E4, where E0 is this compound at this receptor in this species and E4 is a row nothing supports. The pair (parameter type, evidence distance) decides which engagement representation may be computed, and the representation is carried in the result rather than inferred by the reader:
+
+- binding occupancy, for a binding parameter measured on target,
+- binding engagement proxy, for a binding parameter transferred across species or onto a related preparation,
+- functional engagement, for a functional potency measured on target,
+- functional engagement proxy, for a functional potency transferred, or for a binding parameter carried as far as a class statement,
+- not modelled, for anything at E4 and for row types that carry no potency at all.
+
+A proxy is a labelled extrapolation, not a measurement, and the label travels with the number into the notebook.
+
+Primary files:
+
+- flylab/pharm/library.yaml
+- flylab/pharm/evidence.py
+- flylab/pharm/occupancy.py
+
+## Mechanism layer
+
+The mechanism layer transforms receptor engagement into a gain patch.
+
+The circuit runtime does not compute pharmacology itself.
+
+Primary source of mechanism rules:
+
+- flylab/pharm/mechanisms.py
+
+Typical outputs include:
+
+- g_ach
+- g_gaba
+- g_glu
+- g_oct
+- g_nav
+- ach_tone
+
+These transforms are model assumptions. Some are intentionally stress-tested by the robustness layer because their functional form is not measured directly.
+
+## Connectome layer
+
+FlyLab uses small committed circuit cuts derived from MaleCNS v1.0 rather than requiring the full source matrix for routine reproduction.
+
+Current research artifacts include:
+
+- named neighbourhood cut,
+- taste-motor cut,
+- compact cell census fallback.
+
+These derived files are research inputs and must not be hand-edited.
+
+Primary locations:
+
+- data/derived/
+- flylab/maps/
+
+## Circuit runtimes
+
+### Rate model
+
+The deterministic rate runtime is the workhorse for large permutation and uncertainty analyses.
+
+It is designed to make repeated graph perturbation computationally practical.
+
+### LIF model
+
+The LIF runtime provides a spiking implementation with explicit stochastic drive.
+
+Absolute rate agreement between the rate and LIF engines should not be assumed. Where the engines agree only on direction, documentation must say so.
+
+Primary files:
+
+- flylab/circuit/rate.py
+- flylab/circuit/lif.py
+
+## Assays
+
+Assays combine:
+
+1. typed pharmacology,
+2. a circuit or reduced model,
+3. a runtime,
+4. readouts,
+5. warnings,
+6. notebook provenance.
+
+Primary package:
+
+- flylab/assays/
+
+The assay layer should not duplicate mechanism rules.
+
+## Analysis layer
+
+The analysis package is deliberately allowed to produce results that weaken the model's own claims.
+
+### Connectome dependence
+
+flylab/analysis/dependence.py compares a real-graph drug contrast with degraded-graph null ensembles.
+
+The key statistical distinction is:
+
+- **distinguishable from a null ensemble**
+- **not distinguishable from a null ensemble**
+
+A non-significant comparison does not, by itself, establish equivalence. Durable documentation should therefore avoid treating "not distinguishable" as identical to "reproduced" unless an explicit tolerance or equivalence rule is added.
+
+### Null models
+
+flylab/analysis/nullmodels.py generates graph degradations that preserve different information.
+
+Current families include models that alter:
+
+- edge placement,
+- degree-preserving wiring,
+- weight placement,
+- transmitter identity.
+
+### Ablation
+
+flylab/analysis/baselines.py removes layers of information to determine which layer carries ordering information across compounds.
+
+### Specification robustness
+
+flylab/analysis/robustness.py re-runs qualitative claims across alternative engagement-to-gain specifications.
+
+This is a robustness analysis over a declared model family, not a probability distribution over models.
+
+### Global uncertainty
+
+flylab/analysis/uncertainty_global.py attributes model-output variance to declared uncertain factors.
+
+Interpretation is conditional on the chosen ranges.
+
+### Value of information
+
+flylab/analysis/voi.py translates first-order model-variance contributions into a prioritization aid for measurements or re-analysis.
+
+This is value with respect to model uncertainty, not biological or clinical value.
+
+### Claim provenance
+
+The claims layer classifies dependency links behind a result so a reader can distinguish:
+
+- observed structure,
+- literature-derived input,
+- model assumption,
+- computed transformation,
+- remaining unknowns.
+
+## Validation layer
+
+The validation package should use the word **validation** narrowly.
+
+Published compound rankings or qualitative mixture outcomes are useful concordance checks, but they are not independent circuit-level validation when they share sources with the library or evaluate a different organism or endpoint.
+
+Primary package:
+
+- flylab/validation/
+
+## Interfaces
+
+FlyLab exposes the science core through three front ends:
+
+| Interface | Implementation |
+|---|---|
+| CLI | flylab/cli.py |
+| local web API | flylab/server.py |
+| browser bridge | flylab/browser/bridge.py |
+
+The interfaces should delegate to the same scientific implementation rather than carrying duplicate model logic.
+
+See [PAGES.md](PAGES.md) for browser-specific constraints.
+
+## Reproduction pipeline
+
+scripts/reproduce_paper.py is the native publication pipeline.
+
+It generates:
+
+- paper figures,
+- paper tables,
+- papers/results.json,
+- rendered manuscript text,
+- rendered supplement text.
+
+Generated numerical paper content should not be hand-edited.
+
+The manuscript templates are the editable sources for prose containing generated values.
+
+## Notebook provenance
+
+A FlyLab notebook records enough context to identify the computational environment that produced it.
+
+Typical provenance includes:
+
+- FlyLab version,
+- source revision where available,
+- pharmacology library hash,
+- map identity,
+- RNG seed,
+- platform,
+- warnings.
+
+The browser may not have a git SHA available inside Python. Static build metadata can record the build revision separately.
+
+## Layer ownership
+
+| Layer | Package or path | Responsibility |
 |---|---|---|
-| Pharmacology | `flylab/pharm/` | no circuit knowledge; every constant sourced, tiered **and typed**; unsupported rows return N/A |
-| Netlist | `data/derived/`, `flylab/maps/` | CI products, never hand-edited; feathers never committed |
-| Runtime | `flylab/circuit/` | numerics only; gains arrive as a dict, never computed here |
-| Assays | `flylab/assays/` | compose pharm + netlist + runtime into a notebook with warnings |
-| Analysis | `flylab/analysis/` | **tests the instrument, and is allowed to fail it**: dependence, ablation, robustness, global uncertainty, VOI, nulls, selectivity, fits, impact, layout, predictions |
-| Validation | `flylab/validation/` | compares the model with published orderings; records discrepancies; flags which comparisons share a source with the library and therefore are not out-of-sample |
-| Interfaces | `flylab/cli.py`, `server.py`, `browser/`, `static/` | three transports, one implementation |
-| Reproduction | `scripts/reproduce_paper.py` | the only writer of `papers/figures`, `papers/tables`, `papers/results.json` |
+| evidence | flylab/pharm/ | sourced receptor evidence and transformations |
+| maps | flylab/maps/, data/derived/ | MaleCNS-derived inputs |
+| runtime | flylab/circuit/ | numerical circuit execution |
+| assays | flylab/assays/ | compose evidence, circuit and runtime |
+| analysis | flylab/analysis/ | model auditing and inference about model dependence |
+| validation | flylab/validation/ | literature comparisons and independence checks |
+| interfaces | CLI, server, browser, static | transport and presentation |
+| reproduction | scripts/reproduce_paper.py | publication artifact generation |
 
-Every assay obtains its gains from `flylab.pharm.mechanisms.gains_from_occupancy`. There is no second copy of a patch rule anywhere in the tree — that is what makes the mechanism table (T2) a truthful description of the software.
+## Non-goals
 
-## Three transports, one program
+The architecture intentionally does not provide:
 
-`flylab/cli.py` (typer), `flylab/server.py` (FastAPI) and `flylab/browser/bridge.py` (Pyodide, the same routes) all call the same functions. `tests/test_browser_bridge.py` asserts the HTTP and in-browser transports return equal JSON. See `docs/PAGES.md`.
+- a vertebrate neural circuit,
+- fly pharmacokinetics that predict receptor concentration from a dose,
+- automatically generated live-animal observations,
+- regulatory safety conclusions,
+- a second JavaScript implementation of the scientific model,
+- silent numeric defaults for unsupported receptor evidence.
 
-## What is deliberately absent
+## Design principle
 
-- No vertebrate circuit. The vertebrate side is a receptor panel only, by design: no vertebrate connectome of comparable completeness exists.
-- No fitted parameter. Nothing is fitted to animal data; the only fits are of the model's own curves, labelled `model_derived`. When one parameter is eventually fitted, the uncertainty budget says which: the engagement→gain transformation.
-- No write path to `live_lab` from code.
-- No second implementation of the pharmacology in JavaScript.
-- No number produced from a receptor row that has no sourced value. This is enforced by the type system in `pharm/evidence.py`, not by reviewer vigilance.
+The most important architectural principle is:
+
+> A result should be inspectable as a chain from source evidence and measured structure, through explicit modelling assumptions, to computed output.
+
+A feature that makes the UI richer but makes that chain harder to audit is usually a regression for FlyLab.
