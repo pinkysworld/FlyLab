@@ -89,6 +89,21 @@ Read these before writing any new claim into the paper, the README or a PR descr
 - **Open (new): docstrings in `flylab/` still say "occupancy" in places where the value is a functional engagement** (e.g. `flylab/pharm/occupancy.py` module name and several assay docstrings, `hill_occupancy` kept as a deprecated alias). The behaviour is correct and typed; the naming lags the paper.
 - **Open (new): `flylab/analysis/predictions.py` still labels H1–H7 "pre-registered"** in its docstring and output fields. The paper now says *prospective*. Rename when convenient.
 
+## Commit attribution policy
+
+AI-assisted work is allowed, but **AI system identities must not appear as Git authors, committers or co-authors**. Commits created on the owner's behalf must use the owner's configured Git identity.
+
+Forbidden attribution metadata includes:
+
+- author or committer name `Claude`
+- author or committer email ending in `@anthropic.com`
+- `Co-Authored-By: Claude ...` trailers
+- `Claude-Session: ...` trailers
+
+Do not remove or alter substantive AI-assisted work to satisfy this rule. The policy is attribution-only.
+
+CI enforces it with `python scripts/check_commit_attribution.py`. See `AGENTS.md` for the repository-wide agent instructions.
+
 ## Hard constraints (do not break)
 
 - Organism is **fly** (*Drosophila*); map is **MaleCNS v1.0** (MN9/DNp01 need the cord, so not FlyWire-only).
