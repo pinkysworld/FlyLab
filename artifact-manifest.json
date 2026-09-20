@@ -8,8 +8,8 @@
   ],
   "flylab_manifest_version": "1.0",
   "flylab_version": "0.6.0",
-  "generated_utc": "2026-09-20T08:17:43+00:00",
-  "git_sha": "f565715a33d4a02f1a0f72fd7a468af1cd703b80",
+  "generated_utc": "2026-09-20T10:11:30+00:00",
+  "git_sha": "ac4686043566e40b28ca46cb32909b74b8bcaaec",
   "git_tracked": true,
   "kind": "flylab-artifact-manifest",
   "note": "Hashes of the inputs the committed results depend on. Regenerate with `flylab manifest --write` whenever code or data changes, and before tagging a release: `flylab manifest --check` is what the release workflow gates on.",
@@ -18,18 +18,18 @@
       "description": "tracked Python sources and the build metadata",
       "entries": {
         "flylab/__init__.py": "7080f58cb9c2fef8f8f0680c37a61bd4503726c43de73366087991604f131616",
-        "flylab/analysis/__init__.py": "c570bcf1b5f52b4930b22c2f9bb7377e3df9842ace3f230972ad408a76e35a23",
-        "flylab/analysis/baselines.py": "1539b2bcc75b70f0a3ecd64c3eb353d19e9fa996e5b36af631ba3f148b6c341a",
-        "flylab/analysis/claims.py": "f5ac19d40fdbf1546895f1687b13059bbd51683c7c480c1a6c3a37d8f9782db7",
-        "flylab/analysis/dependence.py": "d9bd49e0da972beee4c11a11d2ddabccad60e18d39764cf892c11a7a952ef480",
+        "flylab/analysis/__init__.py": "eb00da7517038d4b4082405fe0738e6fadfa99d822ddad536b40c586b5ffea5c",
+        "flylab/analysis/baselines.py": "6fc5ee8c4811aafe95b402a468a36a0cd693a5c2678a4c340322fb56edf8a9e8",
+        "flylab/analysis/claims.py": "d657444619f3c4218b8224ad09df140494a504b50b25fabc8aa118d3a3e6e391",
+        "flylab/analysis/dependence.py": "6b6a98ea8e008318509e68e6a513d3bd162d7e7f173d13bcd41b8968043ce9d7",
         "flylab/analysis/fit.py": "b6946fffa209c7444a054198e462a1f43cdf0dd0d12c084803579e2ef48f0ddf",
         "flylab/analysis/impact.py": "72f68e33369c92f3e47e957e7d50294941ba931441e56d1486f59a80f167dcd6",
         "flylab/analysis/layout.py": "771f168fac412e6747e98ae0f8bf0a39221a07694a41fa641e4b84a226f9a773",
         "flylab/analysis/nullmodels.py": "5779e6e8d941a04c645a163b6895a552752aa391d1a6014237839fd5881a1171",
         "flylab/analysis/predictions.py": "3382c24628274db35d60199a0be428b89a890efce250e944e2651245c1105e83",
-        "flylab/analysis/robustness.py": "a655871071b75d3529db305f696fad80e781d36f802884d2325470b0744790e7",
+        "flylab/analysis/robustness.py": "31978a1371fb0863793bd0c4e6191ff201b1582b901de6c334f838b30857ec8e",
         "flylab/analysis/selectivity.py": "622c881f58d50806a2f344a1c721a2a07dacc896e6718210fedbfc01250f2ef6",
-        "flylab/analysis/uncertainty_global.py": "7e2effe796d45e602cad298df1426d038bb748b1ba665e5c5fbc3e029022e234",
+        "flylab/analysis/uncertainty_global.py": "6adab31073fa0b7f933c2054af9e70f070abc0a69e641626f48421c6e0ae2d02",
         "flylab/analysis/voi.py": "866fdf95787d61fd96abda825418a1b78633894bb506a0c90f691653c04cbab8",
         "flylab/assays/__init__.py": "346601e27b26c9ba00aef4d695da02ef504315a7ffbb40c07df2e5ae837b0c17",
         "flylab/assays/ensemble.py": "664b12ff7e0f7864e90d167b899573727d5aec9c729bb70f49cbef795cbb725e",
@@ -45,7 +45,7 @@
         "flylab/circuit/lif.py": "13bab4a5156d79537147acea5d893d069faf802a6526d5f95ff3d1fd400db9bd",
         "flylab/circuit/rate.py": "78bc3698e802964ec0fb43051083511dbf425b727eac8387aec59b6da4c08942",
         "flylab/circuit/reduced_taste.py": "2db7d2fa0b9d2413ca6593fcbd3d6e837a7ba33b84ca593bb98da2e39d277ca8",
-        "flylab/cli.py": "9fe38d292211444e513050fb399c97025370cf7d3f196a4244ea08aa9ddc79cc",
+        "flylab/cli.py": "6f5b9a4e81b77dc768b1a6d51376cc233ad38cd1a796c2659f6c3c4ad445f083",
         "flylab/maps/__init__.py": "01b46035d1cf4ca1e60115200fe04e4dc44d4f5a86c67a5d80c85ebd1b92d37c",
         "flylab/maps/extract.py": "69b72f3067c5b177d6c005b9859bce33ab7f368b9784787b3d7ee04e29a43de1",
         "flylab/maps/malecns.py": "706379e57a152e90a473411ea2fea06e6760115e86f1f6c14bd2140cbba18421",
@@ -53,7 +53,7 @@
         "flylab/notebook/schema.py": "0ef15d56f49c730cb30b00ed8c359058da9eac77c40976f89a46bcb1b4db7f00",
         "flylab/pharm/__init__.py": "2c8935e4d1c42a376c8c16cade4f80766b2991adbc807ca6a2c8b3638cfe70f8",
         "flylab/pharm/binding.py": "61a05b32a4939ff747794d4e68083e5192cf49aff9f6784380439efc0253cd82",
-        "flylab/pharm/evidence.py": "7522b21831d273e8a0bce6830d6d940f22459d6f00afaf4c6c4dfd9d04c33d12",
+        "flylab/pharm/evidence.py": "d566d0cc95c5fb4a522bf1c9c16e70f998d4be44f6d15abc7602d355dd797a50",
         "flylab/pharm/exposure.py": "03b8b217375d918099318d934f2e356440e4bf39d26938571829b760d811f156",
         "flylab/pharm/expression.py": "b855ad8277af09d75a35f13f6d418d5d4c2d0f71dbdea0f683f8f87abcef692c",
         "flylab/pharm/genotype.py": "69d93db35db9c8f352e538d8f8b365de4712b36dc96a3cd5444760fa4ddb46ae",
@@ -64,7 +64,7 @@
         "flylab/report/__init__.py": "a5f6a5cc0e3b79bb5787c2eb4172640193b64ec2e7b8243783a7c79fbacba04d",
         "flylab/report/card.py": "1c03bb6ff2e4bd6cdcc51f9e4202577bea051d2d5aa9bdf7dd9b9656221a7d7e",
         "flylab/server.py": "996fecc6c707ce51d8e7c632b124e81cae809b759bedf64e11679692625b9f18",
-        "flylab/spec.py": "7cd076e9b9bcf1c202fcfd4eb89fd6ce111967cc66593ba04974e1a224e18515",
+        "flylab/spec.py": "afc47fce898a540a3613d69b32397566d37d8b3f5b41997f211a09a6c24a5f2c",
         "flylab/validation/__init__.py": "659306ad6673645a0874ad31b4472f4c2d7ef184fd393ec70e55c99017305d1a",
         "flylab/validation/rank.py": "d82c9590d10943de082d12dab91ccbea5cad8742c9a7fb5376ebf67bb24d5292",
         "flylab/viz/__init__.py": "eabed1cfef125f0af50befc1e046e1270ad3339cb3aa0e1936aa3fd31c137a6d",
@@ -72,7 +72,7 @@
         "pyproject.toml": "eab14bbee64da107f20259927bd9325c29e376286fef569423c50cc02b127140",
         "scripts/__init__.py": "8e742cba903af8699473573f6c8253b581f30fe9d14e6162e7f74c5ac1b6c5fa",
         "scripts/build_pages.py": "56185a50fd8d69736d6433f0eb4b0d26b032e0da0b88b3ceee3a5240c7311e34",
-        "scripts/manifest.py": "35429bc773e8959dd102dfeade71c0773e4be9af25c5a351ece1da078a23c553",
+        "scripts/manifest.py": "b73a4954d86d3b49c4cc2033bf2c9d0dcba31420a2a36fe77b8743a7f6927fc6",
         "scripts/reproduce_paper.py": "d6f6a0b07d0c42a61ca1f245313d3d869d890f93bf942c302639a3b33e61130a"
       },
       "fatal": true,
@@ -83,7 +83,7 @@
         "scripts/*.py",
         "pyproject.toml"
       ],
-      "sha256": "22cb938711f48f70a3c82d596fc1b1130173eb13916aef15180967735deb7cb1"
+      "sha256": "0fcf7b324c74c28dd7a498b37bceae0ee46b3ca28cb8aae45e2363693932cc5f"
     },
     "dependencies": {
       "description": "resolved versions of the project's dependency closure",
@@ -174,7 +174,7 @@
     "library": {
       "description": "the typed compound library (schema v3)",
       "entries": {
-        "flylab/pharm/library.yaml": "960018b11c627f53e8f29c7e7436ac8343f43aeaa044c9477c6ac07c7f10d570"
+        "flylab/pharm/library.yaml": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8"
       },
       "fatal": true,
       "kind": "files",
@@ -182,7 +182,7 @@
       "patterns": [
         "flylab/pharm/library.yaml"
       ],
-      "sha256": "7ef241fc306ef9c2f5a13bd5ac32f1eea25dca709fff730199a336d01e036504"
+      "sha256": "7cc562e777234a683cb77c203dc13b4e58240cbdb52eaeb98f06a9c4a6c2e4e7"
     },
     "literature": {
       "description": "the sourced literature datasets",
@@ -283,5 +283,5 @@
       "sha256": "4bcf7d7475424b30570fbe7a92107982e4ebd2866e7084c86cad4f64b67814ef"
     }
   },
-  "sha256": "de80c65d8e5ed8c80ff95e8e9c8e9c67cb5d8e82177a2bb536d840e2c6a927eb"
+  "sha256": "49fd9697d3e5bc84a08894bff22c89080b0f7e818e892a27142f0986160c7b20"
 }

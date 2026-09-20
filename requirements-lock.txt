@@ -13,7 +13,7 @@
 #                supply-chain attestation.
 #
 # python 3.11.15
-# generated 2026-09-20T08:17:43+00:00
+# generated 2026-09-20T10:11:30+00:00
 
 annotated-doc==0.0.5
 annotated-types==0.8.0

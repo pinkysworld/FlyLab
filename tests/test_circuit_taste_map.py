@@ -8,7 +8,10 @@ import pytest
 from flylab.assays.taste_map import ASSAY, BITTER_TYPES, SWEET_TYPES, run_taste_map_assay
 
 
-@pytest.mark.parametrize("engine,budget", [("rate", 3.0), ("lif", 8.0)])
+# Wall-clock budgets guard against an accidentally quadratic implementation;
+# they are not benchmarks. CI runners and parallel test runs are slow and
+# highly variable, so the bounds are deliberately loose.
+@pytest.mark.parametrize("engine,budget", [("rate", 60.0), ("lif", 120.0)])
 def test_assay_runs_and_mn9_responds_to_sugar(engine, budget):
     t0 = time.perf_counter()
     nb = run_taste_map_assay(None, 0.0, engine=engine)
