@@ -39,6 +39,15 @@ REPO = Path(__file__).resolve().parents[1]
 STATIC = REPO / "flylab" / "static"
 DEFAULT_OUT = REPO / "dist" / "pages"
 
+#: chart libraries the UI loads from a CDN when served by FastAPI.  The
+#: published site vendors them instead: a visitor behind a proxy that blocks or
+#: throttles third-party CDNs would otherwise get a bench whose Python works
+#: but whose plots and circuit graph never render.
+JS_VENDOR = {
+    "plotly.min.js": "https://cdn.plot.ly/plotly-2.35.2.min.js",
+    "cytoscape.min.js": "https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js",
+}
+
 #: pinned Pyodide release (jsDelivr mirrors the official pyodide CDN paths)
 PYODIDE_VERSION = "0.28.3"
 PYODIDE_CDN = "https://cdn.jsdelivr.net/pyodide/v{version}/full/"
@@ -119,7 +128,21 @@ def _human(n: int) -> str:
 # --------------------------------------------------------------------------
 # steps
 # --------------------------------------------------------------------------
-def copy_ui(out: Path) -> list[str]:
+def vendor_js(out: Path) -> list[str]:
+    """Download the chart libraries into ``vendor/`` so the site needs no CDN."""
+    import urllib.request
+
+    dest = out / "vendor"
+    dest.mkdir(parents=True, exist_ok=True)
+    written = []
+    for name, url in JS_VENDOR.items():
+        with urllib.request.urlopen(url, timeout=120) as r:
+            (dest / name).write_bytes(r.read())
+        written.append(f"vendor/{name}")
+    return written
+
+
+def copy_ui(out: Path, vendor_js_assets: bool = True) -> list[str]:
     """Copy the three static files, making the two asset paths relative.
 
     GitHub Pages serves a project site from ``/<repo>/``, so the served page
@@ -139,6 +162,12 @@ def copy_ui(out: Path) -> list[str]:
     html = html.replace("/static/styles.css", "styles.css")
     if 'src="app.js"' not in html:
         raise SystemExit("index.html no longer references /static/app.js; update build_pages.py")
+    if vendor_js_assets:
+        # Point the two chart libraries at the local copies.  app.js keeps its
+        # own fallback loader, so a missing vendored file still degrades to the
+        # table views rather than breaking the page.
+        for name, url in JS_VENDOR.items():
+            html = html.replace(url, f"vendor/{name}")
     html = html.replace('<script src="app.js">', '<script src="flylab-boot.js"></script>\n<script src="app.js">')
     (out / "index.html").write_text(html)
     written.append("index.html")
@@ -502,6 +531,7 @@ def build(
     max_mb: float = MAX_TOTAL_MB,
     clean: bool = True,
     wheel_path: Path | None = None,
+    vendor_js_assets: bool = True,
 ) -> dict:
     """Build the static site and return its manifest."""
     if clean and out.exists() and not skip_wheel:
@@ -509,8 +539,11 @@ def build(
     out.mkdir(parents=True, exist_ok=True)
 
     print(f"FlyLab static build -> {out}")
-    ui = copy_ui(out)
+    ui = copy_ui(out, vendor_js_assets=vendor_js_assets)
     print(f"  ui: {', '.join(ui)}")
+    if vendor_js_assets:
+        ui += vendor_js(out)
+        print(f"  vendored chart libraries: {', '.join(JS_VENDOR)}")
     wheel = build_wheel(out, skip=skip_wheel, prebuilt=wheel_path)
     print(f"  wheel: {wheel.name} ({_human(wheel.stat().st_size)})")
     data = copy_data(out, wheel)
@@ -534,6 +567,7 @@ def build(
         "git_dirty": _git_dirty(),
         "pyodide_version": pyodide_version,
         "pyodide_url": pyodide_url,
+        "js_vendored": vendor_js_assets,
         "pyodide_vendored": bool(vendor),
         "wheel": f"wheels/{wheel.name}",
         "wheel_sha256": _sha256(wheel),
@@ -583,6 +617,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pyodide-version", default=PYODIDE_VERSION)
     ap.add_argument("--vendor-pyodide", action="store_true",
                     help="download the Pyodide runtime into the build instead of using the CDN")
+    ap.add_argument("--no-vendor-js", action="store_true",
+                    help="load Plotly and cytoscape from their CDNs instead of vendoring them")
     ap.add_argument("--max-mb", type=float, default=MAX_TOTAL_MB)
     ap.add_argument("--serve", action="store_true", help="preview the build over python -m http.server")
     ap.add_argument("--port", type=int, default=8000)
@@ -595,6 +631,7 @@ def main(argv: list[str] | None = None) -> int:
         vendor=args.vendor_pyodide,
         max_mb=args.max_mb,
         wheel_path=args.wheel,
+        vendor_js_assets=not args.no_vendor_js,
     )
     print(f"\n  git sha      {manifest['git_sha']}")
     print(f"  library      {manifest['library_sha256'][:16]}…")

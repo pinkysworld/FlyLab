@@ -220,3 +220,14 @@ notebooks (there is no git in WebAssembly — the build's SHA is in
 `manifest.json` instead), and the browser's Spikes panel defaults to a 200 ms
 window rather than 500 ms. The step size, the parameters, the map, the library
 and the patch rules are identical.
+
+## No network at load time
+
+The published site is fully self-contained. The Pyodide runtime, the NumPy and
+PyYAML wheels, the FlyLab wheel, the connectome cuts, and both chart libraries
+(Plotly and cytoscape) are served from the site's own origin. A build verified
+with every off-origin request blocked boots in under a second and runs an assay
+with no console errors, so a reviewer behind a proxy that blocks or throttles
+third-party CDNs still gets a working bench. Pass `--no-vendor-js` to build
+against the CDNs instead; the FastAPI bench keeps using them either way.
+
