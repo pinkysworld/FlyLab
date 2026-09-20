@@ -952,7 +952,7 @@ def _human_time(seconds: float) -> str:
 _JSONISH = {".json"}
 
 
-def artifact_entry(path: Path, root: Path) -> dict[str, Any]:
+def artifact_entry(path: Path) -> dict[str, Any]:
     """``{bytes, sha256, content_sha256, volatile_fields_removed}`` for one file.
 
     ``sha256`` is over the bytes on disk; ``content_sha256`` is over the same
@@ -1002,7 +1002,7 @@ def collect_artifacts(run_dir: Path, skip: Sequence[str] = ("manifest.json",)) -
         rel = path.relative_to(root).as_posix()
         if rel in set(skip):
             continue
-        out[rel] = artifact_entry(path, root)
+        out[rel] = artifact_entry(path)
     return out
 
 

@@ -327,7 +327,7 @@ compounds:
         efficacy: 0.6
         relation: exact_compound_exact_receptor_other_species
         species: mammalian alpha1beta2gamma2 GABA-A
-        source: 'Sigel and Ernst 2018, Trends Pharmacol Sci 39:659 (benzodiazepine site of alpha1beta2gamma2 GABA-A; diazepam potentiation in the 10 nM order). Value kept unchanged from FlyLab v0.4. TYPING NOTE (v0.6): a genuine benzodiazepine-site Kd exists in the radioligand literature ([3H]flunitrazepam displacement), but the value used here comes from a POTENTIATION measurement, so the row is typed EC50 and, being a rat measurement (evidence distance E1), reports functional_engagement_proxy, not binding occupancy. Upgrading it to Kd would require citing the binding study instead.'
+        source: 'Sigel and Ernst 2018, Trends Pharmacol Sci 39:659 (benzodiazepine site of alpha1beta2gamma2 GABA-A; diazepam potentiation in the 10 nM order). Value kept unchanged from FlyLab v0.4. TYPING NOTE (v0.6): a genuine benzodiazepine-site Kd exists in the radioligand literature ([3H]flunitrazepam displacement), but the value used here comes from a POTENTIATION measurement, so the row is typed EC50 and, the preparation being a mammalian (non-Drosophila) receptor at evidence distance E1, reports functional_engagement_proxy, not binding occupancy. Upgrading it to Kd would require citing the binding study instead.'
         evidence_tier: literature_order
       insect_RDL:
         param_type: unknown
