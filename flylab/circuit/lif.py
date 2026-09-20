@@ -30,7 +30,11 @@ decays).  ``W_eff[j, i] = w_scale * synapse_count * SIGN[nt_i] * gain(nt_i)``
 with the same signs and gain keys as :mod:`flylab.circuit.rate`.
 
 External drive is an independent Poisson process per driven cell at
-``drive_hz``; each external event injects ``drive_w`` mV.
+``drive_fanin * drive_hz``; each external event injects ``drive_w`` mV.  Cells
+that are not seeds still get a uniform background Poisson drive
+(``BACKGROUND_FRACTION_DEFAULT * drive_hz``) standing in for the inputs that
+were cut away when the neighborhood was excised from the full CNS - without it
+the 942 input-only cells are silent and the drug cannot act on them at all.
 
 Calibration (``W_SCALE_DEFAULT`` / ``DRIVE_W_DEFAULT``): chosen once so that
 the *vehicle* MN9 cells fire in a plausible 5-60 Hz band under the standard
@@ -57,12 +61,22 @@ TAU_S_MS = 5.0
 DT_MS = 0.1
 
 # --- FlyLab calibration constants (see module docstring) ------------------
-#: mV of injected charge per presynaptic *synapse* (per spike)
-W_SCALE_DEFAULT = 0.0125
+#: mV of injected charge per presynaptic *synapse* (per spike).
+#: 0.05 mV/synapse: a 140-synapse connection then carries ~7 mV, i.e. one
+#: presynaptic spike is about threshold-sized, and the strongest edge in the
+#: committed neighborhood (739 synapses) is reliably suprathreshold.
+W_SCALE_DEFAULT = 0.05
 #: mV of injected charge per external Poisson drive event
-DRIVE_W_DEFAULT = 0.75
-#: number of independent external synapses per driven cell (drive "bundle")
+DRIVE_W_DEFAULT = 0.5
+#: number of independent external synapses per driven cell (drive "bundle").
+#: fanin x drive_w = 10 mV.s, so a cell driven at f Hz sits at
+#: v_rest + 0.2*f mV; 35 Hz is the rheobase of an isolated cell.
 DRIVE_FANIN_DEFAULT = 20
+#: background Poisson rate, as a fraction of ``drive_hz``, applied to every
+#: cell to stand in for the inputs lost when the neighborhood was cut out of
+#: the 25M-edge CNS.  0.65 x 40 Hz = 26 Hz keeps ~60% of the named
+#: neighborhood spiking and vehicle MN9 near 30 Hz without saturating.
+BACKGROUND_FRACTION_DEFAULT = 0.65
 
 
 @dataclass
@@ -263,6 +277,8 @@ __all__ = [
     "lif_network",
     "W_SCALE_DEFAULT",
     "DRIVE_W_DEFAULT",
+    "DRIVE_FANIN_DEFAULT",
+    "BACKGROUND_FRACTION_DEFAULT",
     "TAU_M_MS",
     "V_REST_MV",
     "V_TH_MV",

@@ -1,41 +1,547 @@
+# FlyLab compound library - schema v2 (see docs/DESIGN_v0.5.md).
+#
+# Every receptor row carries a `source` string and an `evidence_tier`.
+# Nothing here is fitted to animal data: values are literature-order teaching
+# defaults chosen so that the *ordering* between insect and vertebrate targets
+# matches published pharmacology. Do not quote them as measured constants.
+schema_version: 2
+library_version: "0.5"
+notes:
+  evidence_tiers:
+    literature_order: >-
+      Order of magnitude taken from a named publication for this compound (or,
+      where stated in the source string, an explicit order-of-magnitude
+      contrast derived from a named publication on a related preparation).
+      Not a refit, not a measured constant for this exact receptor/species.
+    class_placeholder: >-
+      No usable number exists for this compound at this receptor. The row is a
+      deliberate inert placeholder (ec50_M 0.01, direction none) so the target
+      appears in the scorecard without implying affinity.
+    measured_fit: >-
+      Reserved. Only for values fitted to data imported by the user. Nothing in
+      the shipped library uses this tier.
+  hill_n: >-
+    Hill coefficients are teaching defaults in the 1.0-1.5 range unless the
+    source reports steeper cooperativity.
+  efficacy: >-
+    Optional relative efficacy (0..1), used as the tau-like term of the
+    operational model in flylab.pharm.binding. Absent means "assume full".
+  v04_continuity: >-
+    imidacloprid, nitenpyram, nicotine, diazepam and fipronil keep the exact
+    ec50_M / n / direction values shipped in v0.4; only sources and tiers were
+    added. Tests depend on those numbers.
+
+receptors:
+  insect_nAChR:          {organism: insect,     transmitter: acetylcholine, family: pLGIC-cation, note: "Drosophila Dalpha/Dbeta nicotinic receptors (Dalpha1-Dalpha7, Dbeta1-3)."}
+  insect_RDL:            {organism: insect,     transmitter: gaba,          family: pLGIC-anion,  note: "Resistance-to-dieldrin GABA-gated chloride channel."}
+  insect_GluCl:          {organism: insect,     transmitter: glutamate,     family: pLGIC-anion,  note: "Glutamate-gated chloride channel, avermectin target."}
+  insect_AChE:           {organism: insect,     transmitter: acetylcholine, family: enzyme,       note: "Ace / acetylcholinesterase; inhibition raises synaptic ACh tone."}
+  insect_Nav:            {organism: insect,     transmitter: null,          family: channel,      note: "para voltage-gated sodium channel, pyrethroid/DDT target."}
+  insect_OctR:           {organism: insect,     transmitter: octopamine,    family: GPCR,         note: "Octopamine receptors (OAMB / Octbeta), formamidine target."}
+  vertebrate_nAChR_a4b2: {organism: vertebrate, transmitter: acetylcholine, family: pLGIC-cation, note: "High-affinity neuronal nicotinic receptor."}
+  vertebrate_nAChR_a7:   {organism: vertebrate, transmitter: acetylcholine, family: pLGIC-cation, note: "Homomeric alpha7 nicotinic receptor."}
+  vertebrate_GABA_A:     {organism: vertebrate, transmitter: gaba,          family: pLGIC-anion,  note: "Mammalian GABA-A receptor (e.g. alpha1beta2gamma2)."}
+  vertebrate_GlyR:       {organism: vertebrate, transmitter: glycine,       family: pLGIC-anion,  note: "Mammalian glycine receptor."}
+  vertebrate_AChE:       {organism: vertebrate, transmitter: acetylcholine, family: enzyme,       note: "Mammalian acetylcholinesterase."}
+  vertebrate_Nav1_x:     {organism: vertebrate, transmitter: null,          family: channel,      note: "Mammalian voltage-gated sodium channels (Nav1.2 / Nav1.6)."}
+
+# Which insect target is paired with which vertebrate target for the
+# selectivity scorecard. Used by occupancy.compare_compound.
+selectivity_pairs:
+  nAChR:  {insect: insect_nAChR, vertebrate: vertebrate_nAChR_a4b2}
+  GABA_A: {insect: insect_RDL,   vertebrate: vertebrate_GABA_A}
+  GluCl:  {insect: insect_GluCl, vertebrate: vertebrate_GlyR}
+  AChE:   {insect: insect_AChE,  vertebrate: vertebrate_AChE}
+  Nav:    {insect: insect_Nav,   vertebrate: vertebrate_Nav1_x}
+
 compounds:
   imidacloprid:
     name: Imidacloprid
     class: neonicotinoid
+    cas: "138261-41-3"
     receptors:
-      insect_nAChR: {ec50_M: 2.0e-08, n: 1.2, direction: agonist, source: Dederer 2011 order}
-      vertebrate_nAChR_a4b2: {ec50_M: 1.0e-05, n: 1.0, direction: agonist, source: selectivity contrast}
-      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
-      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+      insect_nAChR:
+        ec50_M: 2.0e-08
+        n: 1.2
+        direction: agonist
+        efficacy: 1.0
+        source: "Dederer et al. 2011, Insect Biochem Mol Biol 41:51 (Drosophila/Ctenocephalides alpha1-beta1 nAChR; neonicotinoid agonist potency in the 10-100 nM order). Value kept unchanged from FlyLab v0.4."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a4b2:
+        ec50_M: 1.0e-05
+        n: 1.0
+        direction: agonist
+        efficacy: 0.3
+        source: "Tomizawa and Casida 2005, Annu Rev Pharmacol Toxicol 45:247 (imidacloprid selectivity for insect over vertebrate nAChR is >1000-fold; vertebrate potency in the micromolar order). Order-of-magnitude selectivity contrast, kept from FlyLab v0.4."
+        evidence_tier: literature_order
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder: no neonicotinoid action at GABA-A assumed", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder: no neonicotinoid action at RDL assumed", evidence_tier: class_placeholder}
   nitenpyram:
     name: Nitenpyram
     class: neonicotinoid
+    cas: "150824-47-8"
     receptors:
-      insect_nAChR: {ec50_M: 5.0e-08, n: 1.2, direction: agonist, source: class order}
-      vertebrate_nAChR_a4b2: {ec50_M: 2.0e-05, n: 1.0, direction: agonist, source: selectivity contrast}
-      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
-      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+      insect_nAChR:
+        ec50_M: 5.0e-08
+        n: 1.2
+        direction: agonist
+        efficacy: 1.0
+        source: "Tomizawa and Casida 2005, Annu Rev Pharmacol Toxicol 45:247 (nitrocontaining neonicotinoids bind insect nAChR with low-nM to tens-of-nM affinity). Class-order value kept unchanged from FlyLab v0.4."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a4b2:
+        ec50_M: 2.0e-05
+        n: 1.0
+        direction: agonist
+        efficacy: 0.3
+        source: "Tomizawa and Casida 2005, Annu Rev Pharmacol Toxicol 45:247 (vertebrate nAChR potency of nitro-neonicotinoids is micromolar or weaker). Order-of-magnitude selectivity contrast, kept from FlyLab v0.4."
+        evidence_tier: literature_order
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
   nicotine:
     name: Nicotine
     class: alkaloid
+    cas: "54-11-5"
     receptors:
-      insect_nAChR: {ec50_M: 2.0e-07, n: 1.1, direction: agonist, source: shared ligand}
-      vertebrate_nAChR_a4b2: {ec50_M: 1.0e-06, n: 1.2, direction: agonist, source: mammalian order}
-      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
-      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+      insect_nAChR:
+        ec50_M: 2.0e-07
+        n: 1.1
+        direction: agonist
+        efficacy: 1.0
+        source: "Ihara et al. 2018, Br J Pharmacol 175:1999 (Drosophila Dalpha1/chicken beta2 hybrid nAChR; nicotine active in the sub-micromolar order). Value kept unchanged from FlyLab v0.4."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a4b2:
+        ec50_M: 1.0e-06
+        n: 1.2
+        direction: agonist
+        efficacy: 1.0
+        source: "Chavez-Noriega et al. 1997, J Pharmacol Exp Ther 280:346 (human alpha4beta2 expressed in oocytes; nicotine EC50 in the low-micromolar order). Value kept unchanged from FlyLab v0.4."
+        evidence_tier: literature_order
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
   diazepam:
     name: Diazepam
     class: benzodiazepine
+    cas: "439-14-5"
     receptors:
-      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
-      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
-      vertebrate_GABA_A: {ec50_M: 1.0e-08, n: 1.3, direction: positive_modulator, source: GABA-A BZD site}
-      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A:
+        ec50_M: 1.0e-08
+        n: 1.3
+        direction: positive_modulator
+        efficacy: 0.6
+        source: "Sigel and Ernst 2018, Trends Pharmacol Sci 39:659 (benzodiazepine site of alpha1beta2gamma2 GABA-A; diazepam potentiation in the 10 nM order). Value kept unchanged from FlyLab v0.4."
+        evidence_tier: literature_order
+      insect_RDL:
+        ec50_M: 0.01
+        n: 1.0
+        direction: none
+        efficacy: 0.0
+        source: "class-order placeholder: insect RDL lacks the vertebrate benzodiazepine site, so diazepam is modelled as inactive on the insect GABA-Cl channel."
+        evidence_tier: class_placeholder
   fipronil:
     name: Fipronil
     class: phenylpyrazole
+    cas: "120068-37-3"
     receptors:
-      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
-      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, source: placeholder}
-      vertebrate_GABA_A: {ec50_M: 1.0e-05, n: 1.0, direction: antagonist, source: weaker vertebrate contrast}
-      insect_RDL: {ec50_M: 3.0e-08, n: 1.2, direction: antagonist, source: insect GABA-Cl blocker order}
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A:
+        ec50_M: 1.0e-05
+        n: 1.0
+        direction: antagonist
+        efficacy: 1.0
+        source: "Ratra and Casida 2001, Toxicol Lett 122:215 (fipronil is far less potent at mammalian GABA-A than at insect GABA-gated chloride channels; micromolar order). Value kept unchanged from FlyLab v0.4."
+        evidence_tier: literature_order
+      insect_RDL:
+        ec50_M: 3.0e-08
+        n: 1.2
+        direction: antagonist
+        efficacy: 1.0
+        source: "Hosie et al. 1995, Br J Pharmacol 115:909 (fipronil block of dieldrin-sensitive Drosophila GABA receptors, tens-of-nM order). Later RDL oocyte work reports 0.3-3 uM depending on expression conditions (Lees et al. 2014, PLoS ONE 9:e97468). Library keeps the potent end, unchanged from FlyLab v0.4."
+        evidence_tier: literature_order
+  clothianidin:
+    name: Clothianidin
+    class: neonicotinoid
+    cas: "210880-92-5"
+    receptors:
+      insect_nAChR:
+        ec50_M: 3.0e-08
+        n: 1.2
+        direction: agonist
+        efficacy: 1.0
+        source: "Thany 2009, Neurotoxicology 30:1045 (clothianidin is an agonist at cockroach nAChRs from about 30 nM); Tomizawa and Casida 2005, Annu Rev Pharmacol Toxicol 45:247 for low-nM insect binding."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a7:
+        ec50_M: 7.4e-04
+        n: 1.0
+        direction: partial_agonist
+        efficacy: 0.3
+        source: "Cartereau et al. 2018, Br J Pharmacol 175 (rat alpha7; clothianidin partial agonist, EC50 0.74 mM, vs acetylcholine 0.16 mM)."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a4b2:
+        ec50_M: 1.0e-04
+        n: 1.0
+        direction: agonist
+        efficacy: 0.2
+        source: "Order-of-magnitude contrast from the mammalian alpha7 data of Cartereau et al. 2018, Br J Pharmacol 175; no direct alpha4beta2 EC50 was located, so this row is a high-micromolar class order, not a measured EC50."
+        evidence_tier: literature_order
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  thiamethoxam:
+    name: Thiamethoxam
+    class: neonicotinoid
+    cas: "153719-23-4"
+    notes: "Pro-insecticide: converted to clothianidin in insects and plants, so whole-animal potency is far higher than its own receptor potency."
+    receptors:
+      insect_nAChR:
+        ec50_M: 1.0e-04
+        n: 1.0
+        direction: partial_agonist
+        efficacy: 0.4
+        source: "Thany 2011, Neuropharmacology 60:587 (thiamethoxam is a poor agonist on isolated cockroach neuronal cell bodies but a full agonist at cercal afferent/giant interneuron synapses); Nauen et al. 2003, Pestic Biochem Physiol 76:55 (thiamethoxam is a precursor converted to clothianidin; binding up to 10000-fold weaker than other neonicotinoids)."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a7:
+        ec50_M: 0.01
+        n: 1.0
+        direction: none
+        efficacy: 0.0
+        source: "class-order placeholder justified by Cartereau et al. 2018, Br J Pharmacol 175: thiamethoxam had no agonist effect on mammalian alpha7, so it is modelled as inactive."
+        evidence_tier: class_placeholder
+      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  acetamiprid:
+    name: Acetamiprid
+    class: neonicotinoid
+    cas: "135410-20-7"
+    receptors:
+      insect_nAChR:
+        ec50_M: 5.0e-08
+        n: 1.2
+        direction: agonist
+        efficacy: 1.0
+        source: "Tomizawa and Casida 2005, Annu Rev Pharmacol Toxicol 45:247 (cyanoamidine neonicotinoids bind insect nAChR with low-nM to tens-of-nM affinity)."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a7:
+        ec50_M: 7.3e-04
+        n: 1.0
+        direction: partial_agonist
+        efficacy: 0.3
+        source: "Cartereau et al. 2018, Br J Pharmacol 175 (rat alpha7; acetamiprid EC50 0.73 mM)."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a4b2:
+        ec50_M: 1.0e-04
+        n: 1.0
+        direction: agonist
+        efficacy: 0.2
+        source: "Order-of-magnitude contrast from the mammalian alpha7 data of Cartereau et al. 2018, Br J Pharmacol 175; not a measured alpha4beta2 EC50."
+        evidence_tier: literature_order
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  sulfoxaflor:
+    name: Sulfoxaflor
+    class: sulfoximine
+    cas: "946578-00-3"
+    notes: "Teaching case: the electrophysiological EC50 on isolated neurons is far weaker than the whole-insect potency."
+    receptors:
+      insect_nAChR:
+        ec50_M: 1.5e-04
+        n: 1.0
+        direction: agonist
+        efficacy: 1.0
+        source: "Watson et al. 2011, Pestic Biochem Physiol 101:32 (sulfoxaflor fully activates alpha-bungarotoxin-insensitive nAChRs of cockroach DUM neurons, EC50 about 154 uM); Sparks et al. 2013, Pestic Biochem Physiol 107:1 (mode of action review)."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a4b2:
+        ec50_M: 1.0e-03
+        n: 1.0
+        direction: agonist
+        efficacy: 0.2
+        source: "Sparks et al. 2013, Pestic Biochem Physiol 107:1 (low mammalian nAChR activity reported for sulfoximines). Order-of-magnitude contrast, not a measured EC50."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a7: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  spinosad:
+    name: Spinosad (spinosyn A)
+    class: spinosyn
+    cas: "131929-60-7"
+    notes: "Allosteric activator: acts at a site distinct from the acetylcholine site and still activates alpha-bungarotoxin-blocked receptors."
+    receptors:
+      insect_nAChR:
+        ec50_M: 5.0e-06
+        n: 1.0
+        direction: positive_modulator
+        efficacy: 1.0
+        source: "Perry et al. 2015, Insect Biochem Mol Biol 64:106 (Drosophila Dalpha6 is required for spinosad action in vivo); heterologous alpha6 nAChR studies report allosteric activation in the low-micromolar order (EC50 about 5 uM)."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a4b2:
+        ec50_M: 0.01
+        n: 1.0
+        direction: none
+        efficacy: 0.0
+        source: "class-order placeholder: no mammalian nAChR potency is reported for spinosyns at insecticidal concentrations."
+        evidence_tier: class_placeholder
+      vertebrate_nAChR_a7: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  acetylcholine:
+    name: Acetylcholine
+    class: endogenous transmitter
+    cas: "51-84-3"
+    notes: "Endogenous reference agonist. Included so drug potencies can be read against the natural ligand."
+    receptors:
+      insect_nAChR:
+        ec50_M: 1.0e-05
+        n: 1.2
+        direction: agonist
+        efficacy: 1.0
+        source: "Ihara et al. 2018, Br J Pharmacol 175:1999 (Drosophila Dalpha1/chicken beta2 hybrids; acetylcholine reference responses in the low-micromolar range). Drosophila Dalpha5 homomers report an acetylcholine EC50 of about 8.8 uM."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a4b2:
+        ec50_M: 1.0e-05
+        n: 1.2
+        direction: agonist
+        efficacy: 1.0
+        source: "Chavez-Noriega et al. 1997, J Pharmacol Exp Ther 280:346 (human alpha4beta2 in oocytes; acetylcholine EC50 in the low-micromolar range)."
+        evidence_tier: literature_order
+      vertebrate_nAChR_a7:
+        ec50_M: 1.6e-04
+        n: 1.5
+        direction: agonist
+        efficacy: 1.0
+        source: "Cartereau et al. 2018, Br J Pharmacol 175 (rat alpha7; acetylcholine EC50 0.16 mM)."
+        evidence_tier: literature_order
+      insect_AChE: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder: acetylcholine is the substrate of AChE, not an inhibitor", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  gaba:
+    name: GABA
+    class: endogenous transmitter
+    cas: "56-12-2"
+    notes: "Endogenous reference agonist for the inhibitory chloride channels."
+    receptors:
+      insect_RDL:
+        ec50_M: 5.0e-05
+        n: 1.5
+        direction: agonist
+        efficacy: 1.0
+        source: "Lees et al. 2014, PLoS ONE 9:e97468 (RDLbd and RDLbd I/V in Xenopus oocytes; GABA pEC50 4.2-4.3, i.e. about 50 uM)."
+        evidence_tier: literature_order
+      vertebrate_GABA_A:
+        ec50_M: 1.0e-05
+        n: 1.5
+        direction: agonist
+        efficacy: 1.0
+        source: "Sigel and Steinmann 2012, J Biol Chem 287:40224 (GABA-A receptors; GABA EC50 in the 5-30 uM range for alpha1beta2gamma2)."
+        evidence_tier: literature_order
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  picrotoxin:
+    name: Picrotoxin
+    class: plant convulsant
+    cas: "124-87-8"
+    notes: "Negative control for selectivity: blocks insect and vertebrate anion channels at similar concentrations."
+    receptors:
+      insect_RDL:
+        ec50_M: 1.0e-06
+        n: 1.0
+        direction: antagonist
+        efficacy: 1.0
+        source: "Hosie et al. 1995, Br J Pharmacol 115:909 (picrotoxinin block of Drosophila GABA receptors, micromolar order); RDL oocyte IC50 varies up to about 17-fold with expression conditions (PLoS ONE 2021, RDL expression-condition study)."
+        evidence_tier: literature_order
+      vertebrate_GABA_A:
+        ec50_M: 1.0e-06
+        n: 1.0
+        direction: antagonist
+        efficacy: 1.0
+        source: "Ratra and Casida 2001, Toxicol Lett 122:215 (picrotoxinin blocks mammalian GABA-A at about 1 uM, i.e. no useful insect selectivity)."
+        evidence_tier: literature_order
+      vertebrate_GlyR:
+        ec50_M: 1.0e-05
+        n: 1.0
+        direction: antagonist
+        efficacy: 1.0
+        source: "Ratra and Casida 2001, Toxicol Lett 122:215 and standard glycine receptor pharmacology (picrotoxin blocks homomeric GlyR in the micromolar order). Order-of-magnitude value."
+        evidence_tier: literature_order
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  dieldrin:
+    name: Dieldrin
+    class: cyclodiene organochlorine
+    cas: "60-57-1"
+    receptors:
+      insect_RDL:
+        ec50_M: 1.0e-07
+        n: 1.0
+        direction: antagonist
+        efficacy: 1.0
+        source: "ffrench-Constant et al. 1993, Nature 363:449 (Rdl A301S confers cyclodiene resistance); Hosie et al. 1995, Br J Pharmacol 115:909 (cyclodiene block of dieldrin-sensitive Drosophila GABA receptors in the 0.1 uM order)."
+        evidence_tier: literature_order
+      vertebrate_GABA_A:
+        ec50_M: 1.0e-06
+        n: 1.0
+        direction: antagonist
+        efficacy: 1.0
+        source: "Ratra and Casida 2001, Toxicol Lett 122:215 (cyclodienes block mammalian GABA-A at sub-micromolar to micromolar; the insect selectivity margin is small)."
+        evidence_tier: literature_order
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  ivermectin:
+    name: Ivermectin
+    class: avermectin
+    cas: "70288-86-7"
+    notes: "Avermectins open GluCl irreversibly; they also potentiate other anion channels, which is why the vertebrate rows are not empty."
+    receptors:
+      insect_GluCl:
+        ec50_M: 2.0e-08
+        n: 1.0
+        direction: agonist
+        efficacy: 1.0
+        source: "Kane et al. 2000, PNAS 97:13949 (drug-resistant Drosophila show GluCl is the avermectin target); invertebrate GluCl activation is reported in the 0.1-30 nM order."
+        evidence_tier: literature_order
+      insect_RDL:
+        ec50_M: 1.0e-06
+        n: 1.0
+        direction: positive_modulator
+        efficacy: 0.5
+        source: "Lees et al. 2014, PLoS ONE 9:e97468 (ivermectin activates and potentiates the predominant in vivo RDL variant at sub-micromolar to micromolar)."
+        evidence_tier: literature_order
+      vertebrate_GlyR:
+        ec50_M: 1.0e-06
+        n: 1.0
+        direction: positive_modulator
+        efficacy: 0.8
+        source: "Shan et al. 2001, J Biol Chem 276:12556 (ivermectin is an unconventional agonist of the alpha1 glycine receptor, sub-micromolar to micromolar)."
+        evidence_tier: literature_order
+      vertebrate_GABA_A:
+        ec50_M: 1.0e-05
+        n: 1.0
+        direction: positive_modulator
+        efficacy: 0.5
+        source: "Dawson et al. 2000, J Pharmacol Exp Ther 295:1051 (avermectin effects in mice are mediated through GABA-A; micromolar potentiation)."
+        evidence_tier: literature_order
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  chlorpyrifos_oxon:
+    name: Chlorpyrifos-oxon
+    class: organophosphate (oxon metabolite)
+    cas: "5598-15-2"
+    notes: "Irreversible AChE inhibitor. The library treats fractional AChE occupancy as fractional enzyme inhibition, which ignores time-dependence and ageing."
+    receptors:
+      insect_AChE:
+        ec50_M: 1.0e-08
+        n: 1.0
+        direction: inhibitor
+        efficacy: 1.0
+        source: "Fournier and Mutero 1994, Comp Biochem Physiol C 108:19 (Drosophila AChE is inhibited by oxon organophosphates in the low-nM order and is more sensitive than mammalian AChE)."
+        evidence_tier: literature_order
+      vertebrate_AChE:
+        ec50_M: 3.0e-07
+        n: 1.0
+        direction: inhibitor
+        efficacy: 1.0
+        source: "Archives of Toxicology 2020, interspecies AChE inhibition study in electric eel and human donor blood (chlorpyrifos-oxon IC50 about 0.3 uM in human blood)."
+        evidence_tier: literature_order
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder: the oxon acts on the enzyme, not directly on the receptor", evidence_tier: class_placeholder}
+      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  deltamethrin:
+    name: Deltamethrin
+    class: type II pyrethroid
+    cas: "52918-63-5"
+    receptors:
+      insect_Nav:
+        ec50_M: 4.3e-08
+        n: 1.0
+        direction: positive_modulator
+        efficacy: 1.0
+        source: "Burton et al. 2011, Insect Biochem Mol Biol 41:723 (Drosophila para in Xenopus oocytes; tail-current EC50 0.043 uM deltamethrin, 0.40 uM permethrin, 65 uM DDT)."
+        evidence_tier: literature_order
+      vertebrate_Nav1_x:
+        ec50_M: 5.0e-06
+        n: 1.0
+        direction: positive_modulator
+        efficacy: 0.3
+        source: "Tan and Soderlund 2010, Neurotoxicology 31:16 (modification of rat Nav1.6 by deltamethrin requires micromolar concentrations)."
+        evidence_tier: literature_order
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  permethrin:
+    name: Permethrin
+    class: type I pyrethroid
+    cas: "52645-53-1"
+    receptors:
+      insect_Nav:
+        ec50_M: 4.0e-07
+        n: 1.0
+        direction: positive_modulator
+        efficacy: 1.0
+        source: "Burton et al. 2011, Insect Biochem Mol Biol 41:723 (Drosophila para tail-current EC50 0.40 uM for permethrin)."
+        evidence_tier: literature_order
+      vertebrate_Nav1_x:
+        ec50_M: 4.0e-05
+        n: 1.0
+        direction: positive_modulator
+        efficacy: 0.3
+        source: "Smith and Soderlund 1998, Neurotoxicology 19:823 (permethrin is more than 100-fold less potent on rat brain type IIA sodium channels than on insect para)."
+        evidence_tier: literature_order
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  ddt:
+    name: DDT
+    class: organochlorine
+    cas: "50-29-3"
+    receptors:
+      insect_Nav:
+        ec50_M: 6.5e-05
+        n: 1.0
+        direction: positive_modulator
+        efficacy: 0.1
+        source: "Burton et al. 2011, Insect Biochem Mol Biol 41:723 (Drosophila para tail-current EC50 65 uM for DDT, with only about 7 percent maximum channel modification)."
+        evidence_tier: literature_order
+      vertebrate_Nav1_x:
+        ec50_M: 1.0e-03
+        n: 1.0
+        direction: positive_modulator
+        efficacy: 0.1
+        source: "Vijverberg and van den Bercken 1990, Crit Rev Toxicol 21:105 (DDT and pyrethroids modify mammalian sodium channels only at much higher concentrations than insect channels). Order-of-magnitude contrast."
+        evidence_tier: literature_order
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  chlordimeform:
+    name: Chlordimeform
+    class: formamidine
+    cas: "6164-98-3"
+    notes: "Its N-demethyl metabolite (DCDM) is the potent form: Ka about 2 uM and roughly 70 percent of the octopamine maximum, versus about 30 uM and 9 percent for the parent. In mammals the formamidines act mainly at alpha2-adrenoceptors, a target this library does not model."
+    receptors:
+      insect_OctR:
+        ec50_M: 3.0e-05
+        n: 1.0
+        direction: partial_agonist
+        efficacy: 0.1
+        source: "Nathanson 1985, PNAS 82:599 (octopamine-sensitive adenylate cyclase; formamidines are potent and selective octopamine-2 receptor agonists). Reported Ka order: about 3e-5 M for chlordimeform and about 2e-6 M for its N-demethyl metabolite."
+        evidence_tier: literature_order
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder: mammalian action is at alpha2-adrenoceptors, which are not in this receptor set", evidence_tier: class_placeholder}
+      vertebrate_GABA_A: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+  caffeine:
+    name: Caffeine
+    class: methylxanthine
+    cas: "58-08-2"
+    notes: "Included as a near-empty control. Its main targets (adenosine receptors, phosphodiesterases, ryanodine receptors) are not in this receptor set, so almost every row is a placeholder."
+    receptors:
+      vertebrate_GABA_A:
+        ec50_M: 1.0e-03
+        n: 1.0
+        direction: antagonist
+        efficacy: 0.5
+        source: "Fredholm et al. 1999, Pharmacol Rev 51:83 (caffeine antagonises GABA-A only at millimolar concentrations, far above the adenosine-receptor range)."
+        evidence_tier: literature_order
+      insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
+      insect_RDL: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder: fly caffeine targets are adenosine-like receptors and PDEs, not modelled here", evidence_tier: class_placeholder}
+      vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}

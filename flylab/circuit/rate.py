@@ -70,22 +70,51 @@ DEFAULT_GAINS: dict[str, float] = {
     "ach_tone": 1.0,
 }
 
-CANDIDATES = [
-    Path("data/derived/malecns_named_neighborhood.json"),
-    Path(__file__).resolve().parents[2] / "data/derived/malecns_named_neighborhood.json",
-    Path.home() / ".flylab/malecns_named_neighborhood.json",
+#: named graph -> committed JSON filename
+GRAPHS: dict[str, str] = {
+    "named": "malecns_named_neighborhood.json",
+    "taste_motor": "malecns_taste_motor_neighborhood.json",
+}
+DEFAULT_GRAPH = "named"
+
+#: directories searched for a committed graph JSON, in order
+DATA_DIRS = [
+    Path("data/derived"),
+    Path(__file__).resolve().parents[2] / "data/derived",
+    Path.home() / ".flylab",
 ]
+
+CANDIDATES = [d / GRAPHS["named"] for d in DATA_DIRS]
+
+
+def resolve_graph(name_or_path: str | Path | None = None) -> Path:
+    """Resolve ``"named"`` / ``"taste_motor"`` / an explicit path to a JSON file.
+
+    ``None`` resolves to the default (``"named"``) graph, which is the one the
+    v0.4 regression numbers were taken on.
+    """
+    key = name_or_path if name_or_path is not None else DEFAULT_GRAPH
+    if isinstance(key, str) and key in GRAPHS:
+        for d in DATA_DIRS:
+            p = d / GRAPHS[key]
+            if p.exists():
+                return p
+        raise FileNotFoundError(
+            f"graph {key!r} ({GRAPHS[key]}) missing. Run the extract-malecns-subgraph Action."
+        )
+    p = Path(key)
+    if p.exists():
+        return p
+    # unknown string that is not a path: fall back to the default graph
+    for d in DATA_DIRS:
+        q = d / GRAPHS[DEFAULT_GRAPH]
+        if q.exists():
+            return q
+    raise FileNotFoundError("neighborhood JSON missing. Run extract-malecns-subgraph Action.")
 
 
 def graph_path(path: str | Path | None = None) -> Path:
-    if path:
-        p = Path(path)
-        if p.exists():
-            return p
-    for p in CANDIDATES:
-        if p.exists():
-            return p
-    raise FileNotFoundError("neighborhood JSON missing. Run extract-malecns-subgraph Action.")
+    return resolve_graph(path)
 
 
 _GRAPH_CACHE: dict[str, dict[str, Any]] = {}
@@ -96,7 +125,7 @@ def load_graph(path: str | Path | None = None) -> dict[str, Any]:
 
     The returned dict is shared; callers must treat it as read-only.
     """
-    key = str(graph_path(path).resolve())
+    key = str(resolve_graph(path).resolve())
     if key not in _GRAPH_CACHE:
         _GRAPH_CACHE[key] = json.loads(Path(key).read_text())
     return _GRAPH_CACHE[key]
@@ -272,8 +301,11 @@ _NET_CACHE: dict[str, RateNetwork] = {}
 
 
 def rate_network(path: str | Path | None = None) -> RateNetwork:
-    """Memoised :class:`RateNetwork` for the committed neighborhood graph."""
-    key = str(graph_path(path).resolve())
+    """Memoised :class:`RateNetwork` for a committed neighborhood graph.
+
+    ``path`` may be ``"named"``, ``"taste_motor"``, an explicit path, or None.
+    """
+    key = str(resolve_graph(path).resolve())
     if key not in _NET_CACHE:
         _NET_CACHE[key] = RateNetwork(load_graph(key))
     return _NET_CACHE[key]
@@ -316,6 +348,9 @@ def top_changed(
 __all__ = [
     "SIGN",
     "NT_GAIN_KEY",
+    "GRAPHS",
+    "DEFAULT_GRAPH",
+    "resolve_graph",
     "DEFAULT_GAINS",
     "RateNetwork",
     "rate_network",

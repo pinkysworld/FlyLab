@@ -15,15 +15,27 @@ import numpy as np
 from flylab.circuit.rate import (
     CANDIDATES,
     DEFAULT_GAINS,
+    GRAPHS,
     SIGN,
+    RateNetwork,
     by_superclass,
     compute_gains,
     graph_path,
     load_graph,
     rate_network,
+    resolve_graph,
     top_changed,
 )
 from flylab.notebook.schema import empty_notebook
+
+try:  # notebook schema 0.3
+    from flylab.notebook.schema import set_map
+except ImportError:  # pragma: no cover - schema 0.2 fallback
+
+    def set_map(nb, name, version, citation):
+        nb["map"] = {"name": name, "version": version, "citation": citation}
+        return nb
+
 
 WARNINGS = [
     "Hops-limited MaleCNS neighborhood, not the full 25M-edge CNS.",
@@ -61,13 +73,21 @@ def run_subgraph_assay(
     library: dict[str, Any] | None = None,
     rule_overrides: dict[str, float] | None = None,
     drive: dict[int, float] | None = None,
+    graph: str | None = None,
+    graph_obj: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Run the neighborhood rate model and return a notebook (schema 0.2/0.3).
+    """Run the neighborhood rate model and return a notebook (schema 0.3).
 
-    ``library`` / ``rule_overrides`` / ``drive`` are optional hooks used by the
-    ensemble and sensitivity layers; the defaults reproduce the v0.4 numbers.
+    ``graph`` selects a committed graph (``"named"`` default, ``"taste_motor"``)
+    or an explicit path; ``graph_obj`` passes an in-memory graph dict (used by
+    the sensitivity analysis when edges are thresholded).  ``library`` /
+    ``rule_overrides`` / ``drive`` are hooks for the ensemble layer; the
+    defaults reproduce the v0.4 numbers exactly.
     """
-    net = rate_network(graph_path_arg)
+    if graph_obj is not None:
+        net = RateNetwork(graph_obj)
+    else:
+        net = rate_network(graph if graph is not None else graph_path_arg)
     g = net.graph
     gains, occ = compute_gains(compound, conc_M, library=library, rule_overrides=rule_overrides)
     drive_map = dict(drive) if drive else net.seed_drive(drive_hz)
@@ -78,7 +98,7 @@ def run_subgraph_assay(
 
     named = named_readout(net, r)
     nb = empty_notebook("malecns_neighborhood")
-    nb["map"] = {"name": g["map"], "version": "neighborhood", "citation": g["citation"]}
+    set_map(nb, g["map"], "neighborhood", g["citation"])
     nb["compound"] = compound
     nb["concentration_M"] = conc_M
     nb["occupancy"] = occ["receptors"] if occ else []
@@ -128,9 +148,17 @@ def dose_response_subgraph(compound: str, concs=None):
     return points
 
 
+def resolve_graph_path(name_or_path=None):
+    """Alias of :func:`flylab.circuit.rate.resolve_graph` (lead-requested name)."""
+    return resolve_graph(name_or_path)
+
+
 __all__ = [
     "SIGN",
     "CANDIDATES",
+    "GRAPHS",
+    "resolve_graph",
+    "resolve_graph_path",
     "graph_path",
     "load_graph",
     "run_subgraph_assay",
