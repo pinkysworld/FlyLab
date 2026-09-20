@@ -20,48 +20,67 @@ far that source is from "this compound, this receptor, this species"
 derives which transformation it is allowed to apply (:class:`EngagementModel`):
 
 * ``binding_occupancy`` -- C^n/(Kd^n + C^n) is fractional occupancy of the
-  binding site *of the receptor FlyLab is modelling*.  That claim needs two
-  things at once, and v0.6.1 enforces both: the parameter must be a
-  dissociation constant (``Kd``) or an inhibition constant (``Ki``) from a
-  binding assay, **and** the source relation must be
-  ``exact_compound_exact_receptor_exact_species``.  A binding constant measured
-  on another species' receptor, or on a related/hybrid preparation, does not
-  describe occupancy of the modelled *Drosophila* target, however physical the
-  measurement was in its own organism.
-* ``binding_derived_engagement`` -- the same Hill expression applied to a
-  ``Kd``/``Ki`` whose source is one step away (another species, or a related
-  receptor).  It is an *engagement proxy derived from a binding constant
-  measured elsewhere*, not an occupancy of this receptor, and every row that
-  uses it carries a provenance warning naming the gap (see
-  :func:`provenance_warning`).  This is the model the second peer review asked
-  for: "a Kd measured in an aphid still yielded a model the paper described as
-  physical receptor occupancy".
-* ``functional_engagement`` -- the same algebra applied to a functional
-  potency (``EC50``, ``IC50``, ``Kb``) gives a *normalised functional
-  response*, not a physical occupancy.  FlyLab uses that number as the input
-  to its gain rules and says so in every output.
+  binding site *of the receptor FlyLab is modelling*.
+* ``binding_engagement_proxy`` -- the same Hill expression on a binding
+  constant that was not measured on the modelled target.
+* ``functional_engagement`` -- the same algebra on a functional potency
+  (``EC50``, ``IC50``, ``Kb``) measured on the modelled target: a *normalised
+  functional response*, not a physical occupancy.
+* ``functional_engagement_proxy`` -- a functional potency transferred from
+  another species, a related preparation or a chemical class.
 * ``not_modelled`` -- no number may be produced at all.  This is the answer to
   the second objection: a ``class_order``/``unknown`` row, or a row whose
   relation is ``unsupported``, yields ``None``, never 1e-4.
 
+The evidence-distance hierarchy (v0.6.1)
+----------------------------------------
+
+The two facts decide the model *jointly*, and the second of them is now a
+first-class, ordered quantity rather than a string: :class:`EvidenceDistance`
+grades how far the source sits from "this compound, at this receptor, in
+*Drosophila melanogaster*".  :data:`RELATION_DISTANCE` maps the existing
+:class:`SourceRelation` vocabulary onto it, so nothing downstream breaks and
+every row can report ``evidence_distance: "E1"`` beside its relation string:
+
+===  ==========================================  ===================================
+E    ``SourceRelation``                          meaning
+===  ==========================================  ===================================
+E0   exact_compound_exact_receptor_exact_species this compound, this receptor, this
+                                                 species -- nothing is transferred
+E1   exact_compound_exact_receptor_other_species the right receptor, another organism
+E2   exact_compound_related_receptor             a related/hybrid/native-mixed
+                                                 preparation
+E3   class_extrapolation                         a statement about the chemical class
+E4   unsupported                                 nothing supports a value here
+===  ==========================================  ===================================
+
+:data:`TRANSFORMATION_TABLE` is then the whole of the rule -- the permitted
+transformation as a function of (parameter type, evidence distance):
+
+=================  ====  ==============================
+``param_type``     dist  ``model_for`` result
+=================  ====  ==============================
+Kd / Ki            E0    ``binding_occupancy``
+Kd / Ki            E1    ``binding_engagement_proxy``
+Kd / Ki            E2    ``binding_engagement_proxy``
+Kd / Ki            E3    ``functional_engagement_proxy``
+EC50 / IC50 / Kb   E0    ``functional_engagement``
+EC50 / IC50 / Kb   E1-E3 ``functional_engagement_proxy``
+anything           E4    ``not_modelled``
+relative_potency / class_order / unknown, any distance ``not_modelled``
+=================  ====  ==============================
+
+Distance alone never *raises* a claim: it can only move a row down the ladder
+of :data:`MODEL_STRENGTH`.  E1 and E2 differ in what the proxy's provenance
+warning has to name -- the species gap, or the preparation gap -- not in the
+arithmetic (:func:`provenance_warning`).
+
 The novel part is that FlyLab **refuses** invalid transformations rather than
 silently performing them: :func:`check_transformation` raises
 :class:`EvidenceTypeError` when asked for binding occupancy from an EC50, from
-a cross-species Kd, or for any numeric engagement from a placeholder row.
-
-The two facts therefore decide the model *jointly*; neither alone is enough:
-
-===============  ==========================================  =====================================
-``param_type``   ``relation``                                ``model_for`` result
-===============  ==========================================  =====================================
-Kd / Ki          exact_compound_exact_receptor_exact_species ``binding_occupancy``
-Kd / Ki          exact_compound_exact_receptor_other_species ``binding_derived_engagement``
-Kd / Ki          exact_compound_related_receptor             ``binding_derived_engagement``
-Kd / Ki          class_extrapolation                         ``functional_engagement``
-EC50 / IC50 / Kb any relation except ``unsupported``          ``functional_engagement``
-any              unsupported                                 ``not_modelled``
-relative_potency / class_order / unknown, any relation        ``not_modelled``
-===============  ==========================================  =====================================
+a cross-species Kd (the v0.6.1 fix: "a Kd measured in an aphid still yielded a
+model the paper described as physical receptor occupancy"), or for any numeric
+engagement from a placeholder row.
 """
 
 from __future__ import annotations
@@ -72,12 +91,20 @@ from typing import Any, Mapping
 __all__ = [
     "ParameterType",
     "SourceRelation",
+    "EvidenceDistance",
     "EngagementModel",
     "EvidenceTypeError",
     "ALLOWED",
     "BINDING_MODELS",
+    "PROXY_MODELS",
     "BINDING_OCCUPANCY_RELATION",
+    "BINDING_OCCUPANCY_DISTANCE",
     "MODEL_STRENGTH",
+    "RELATION_DISTANCE",
+    "DISTANCE_RELATION",
+    "DISTANCE_NOTES",
+    "DISTANCE_LABELS",
+    "TRANSFORMATION_TABLE",
     "BINDING_PARAM_TYPES",
     "FUNCTIONAL_PARAM_TYPES",
     "NOT_MODELLED_PARAM_TYPES",
@@ -85,12 +112,15 @@ __all__ = [
     "RELATION_NOTES",
     "as_param_type",
     "as_relation",
+    "as_distance",
+    "distance_for",
     "model_for",
     "check_transformation",
     "is_modelled",
     "describe",
     "engagement_note",
     "provenance_warning",
+    "transformation_table_rows",
 ]
 
 
@@ -123,12 +153,38 @@ class SourceRelation(str, Enum):
         return self.value
 
 
+class EvidenceDistance(str, Enum):
+    """How far the source sits from the modelled target, as an ordered grade.
+
+    The same fact as :class:`SourceRelation`, but ordered and short enough to
+    print: a row reports ``relation`` (the vocabulary) *and*
+    ``evidence_distance`` (the grade), and the transformation rule is written
+    against the grade.  ``E0`` transfers nothing; every step away transfers one
+    more assumption.
+    """
+
+    E0 = "E0"   # this compound, this receptor, this species
+    E1 = "E1"   # this compound and receptor, another species
+    E2 = "E2"   # this compound, a related / hybrid / native-mixed preparation
+    E3 = "E3"   # a chemical-class statement, not a measurement here
+    E4 = "E4"   # nothing supports a value at this receptor
+
+    @property
+    def rank(self) -> int:
+        """0 for ``E0`` .. 4 for ``E4``: bigger means further away."""
+        return int(self.value[1:])
+
+    def __str__(self) -> str:  # pragma: no cover - cosmetic
+        return self.value
+
+
 class EngagementModel(str, Enum):
     """What FlyLab is allowed to compute from a row."""
 
     binding_occupancy = "binding_occupancy"
-    binding_derived_engagement = "binding_derived_engagement"
+    binding_engagement_proxy = "binding_engagement_proxy"
     functional_engagement = "functional_engagement"
+    functional_engagement_proxy = "functional_engagement_proxy"
     not_modelled = "not_modelled"
 
     def __str__(self) -> str:  # pragma: no cover - cosmetic
@@ -155,24 +211,96 @@ ALLOWED: dict[ParameterType, EngagementModel] = {
     ParameterType.unknown: EngagementModel.not_modelled,
 }
 
-#: The one relation that licenses a *physical occupancy* claim: the source must
-#: have measured this compound, at this receptor, in this species.  Anything
-#: further away gives :attr:`EngagementModel.binding_derived_engagement`.
+#: The evidence-distance hierarchy, as a map from the existing relation
+#: vocabulary.  The relation names are unchanged (nothing downstream breaks);
+#: the distance is the ordered grade the rule is written against.
+RELATION_DISTANCE: dict[SourceRelation, EvidenceDistance] = {
+    SourceRelation.exact_compound_exact_receptor_exact_species: EvidenceDistance.E0,
+    SourceRelation.exact_compound_exact_receptor_other_species: EvidenceDistance.E1,
+    SourceRelation.exact_compound_related_receptor: EvidenceDistance.E2,
+    SourceRelation.class_extrapolation: EvidenceDistance.E3,
+    SourceRelation.unsupported: EvidenceDistance.E4,
+}
+
+#: Inverse of :data:`RELATION_DISTANCE` (the map is one-to-one).
+DISTANCE_RELATION: dict[EvidenceDistance, SourceRelation] = {
+    d: r for r, d in RELATION_DISTANCE.items()
+}
+
+#: What each grade means, in one clause, for a dashboard chip or a table cell.
+DISTANCE_NOTES: dict[EvidenceDistance, str] = {
+    EvidenceDistance.E0: "on-target: this compound, this receptor, this species",
+    EvidenceDistance.E1: "cross-species: the right receptor, another organism",
+    EvidenceDistance.E2: "related receptor: a hybrid, chimeric, native-mixed or "
+                         "orthologous preparation",
+    EvidenceDistance.E3: "class extrapolation: a statement about the chemical class, "
+                         "not a measurement at this receptor",
+    EvidenceDistance.E4: "unsupported: no source supports any value here",
+}
+
+#: Two-word labels, e.g. ``"E1 (cross-species)"``.
+DISTANCE_LABELS: dict[EvidenceDistance, str] = {
+    EvidenceDistance.E0: "E0 (on-target)",
+    EvidenceDistance.E1: "E1 (cross-species)",
+    EvidenceDistance.E2: "E2 (related receptor)",
+    EvidenceDistance.E3: "E3 (class extrapolation)",
+    EvidenceDistance.E4: "E4 (unsupported)",
+}
+
+#: The one relation, and the one distance, that license a *physical occupancy*
+#: claim: the source must have measured this compound, at this receptor, in
+#: this species.  Anything further away gives a proxy model.
 BINDING_OCCUPANCY_RELATION = SourceRelation.exact_compound_exact_receptor_exact_species
+BINDING_OCCUPANCY_DISTANCE = EvidenceDistance.E0
 
 #: The two models that may only ever be derived from a Kd/Ki.
 BINDING_MODELS = frozenset(
-    {EngagementModel.binding_occupancy, EngagementModel.binding_derived_engagement}
+    {EngagementModel.binding_occupancy, EngagementModel.binding_engagement_proxy}
 )
 
-#: How strong a claim each model makes.  A relation may only ever move a row
-#: *down* this ladder (see :func:`model_for`), and
+#: The two models that mean "transferred from somewhere else": every row using
+#: one carries a :func:`provenance_warning`.
+PROXY_MODELS = frozenset(
+    {
+        EngagementModel.binding_engagement_proxy,
+        EngagementModel.functional_engagement_proxy,
+    }
+)
+
+#: How strong a claim each model makes.  Evidence distance may only ever move a
+#: row *down* this ladder (see :func:`model_for`), and
 #: :func:`check_transformation` refuses any request above the row's ceiling.
 MODEL_STRENGTH: dict[EngagementModel, int] = {
     EngagementModel.not_modelled: 0,
-    EngagementModel.functional_engagement: 1,
-    EngagementModel.binding_derived_engagement: 2,
-    EngagementModel.binding_occupancy: 3,
+    EngagementModel.functional_engagement_proxy: 1,
+    EngagementModel.functional_engagement: 2,
+    EngagementModel.binding_engagement_proxy: 3,
+    EngagementModel.binding_occupancy: 4,
+}
+
+
+def _transformation(param_type: ParameterType, distance: EvidenceDistance) -> EngagementModel:
+    """The rule itself, written once, as (parameter type, distance) -> model."""
+    ceiling = ALLOWED[param_type]
+    if distance is EvidenceDistance.E4 or ceiling is EngagementModel.not_modelled:
+        # No evidence to transform, or a parameter that carries no scale.
+        return EngagementModel.not_modelled
+    if ceiling is EngagementModel.binding_occupancy:        # Kd / Ki
+        if distance is EvidenceDistance.E0:
+            return EngagementModel.binding_occupancy
+        if distance in (EvidenceDistance.E1, EvidenceDistance.E2):
+            return EngagementModel.binding_engagement_proxy
+        # E3: a class-level statement supports no binding claim at all
+        return EngagementModel.functional_engagement_proxy
+    if distance is EvidenceDistance.E0:                     # EC50 / IC50 / Kb
+        return EngagementModel.functional_engagement
+    return EngagementModel.functional_engagement_proxy
+
+
+#: The whole rule, materialised: ``TRANSFORMATION_TABLE[(param_type, distance)]``.
+#: The paper's methods section prints this table; :func:`model_for` reads it.
+TRANSFORMATION_TABLE: dict[tuple[ParameterType, EvidenceDistance], EngagementModel] = {
+    (pt, d): _transformation(pt, d) for pt in ParameterType for d in EvidenceDistance
 }
 
 BINDING_PARAM_TYPES = frozenset(
@@ -251,48 +379,57 @@ def as_relation(value: Any) -> SourceRelation:
     )
 
 
+def as_distance(value: Any) -> EvidenceDistance:
+    """Coerce a relation name, an ``"E1"``-style grade or an enum to a distance."""
+    if isinstance(value, EvidenceDistance):
+        return value
+    if value is None:
+        return EvidenceDistance.E4
+    text = str(value).strip()
+    for member in EvidenceDistance:
+        if member.value.lower() == text.lower():
+            return member
+    return RELATION_DISTANCE[as_relation(text)]
+
+
+def distance_for(relation: Any) -> EvidenceDistance:
+    """The evidence distance of a ``relation`` (alias of :func:`as_distance`)."""
+    return as_distance(relation)
+
+
 def model_for(param_type: Any, relation: Any = None) -> EngagementModel:
     """The engagement model a row is allowed to drive.
 
-    ``ALLOWED`` sets a *ceiling* from the parameter type alone; the relation can
-    only ever weaken the claim, and for a binding constant it must actively
-    license the strongest one:
+    This is :data:`TRANSFORMATION_TABLE` looked up: the parameter type sets a
+    *ceiling* (``ALLOWED[pt]``) and the evidence distance can only move the row
+    down :data:`MODEL_STRENGTH` from there.  ``relation`` may be a
+    :class:`SourceRelation`, its string, or an :class:`EvidenceDistance`
+    (``"E1"``).
 
-    * ``relation=unsupported`` -> ``not_modelled`` whatever the parameter type
+    * ``E4`` / ``unsupported`` -> ``not_modelled`` whatever the parameter type
       (there is no evidence to transform).
-    * a ``Kd``/``Ki`` reaches ``binding_occupancy`` **only** with
-      ``relation=exact_compound_exact_receptor_exact_species``.  This compound,
-      this receptor, this species is what makes "fractional occupancy of the
-      modelled receptor" a statement about the modelled receptor.
-    * a ``Kd``/``Ki`` from another species or a related/hybrid receptor ->
-      ``binding_derived_engagement``: the same Hill number, labelled as an
-      engagement proxy derived from a binding constant measured elsewhere.
-    * ``relation=class_extrapolation`` -> a binding constant is demoted all the
-      way to ``functional_engagement``: a class-level statement cannot license
-      any binding claim about this particular receptor.
+    * a ``Kd``/``Ki`` reaches ``binding_occupancy`` **only** at ``E0``.  This
+      compound, this receptor, this species is what makes "fractional occupancy
+      of the modelled receptor" a statement about the modelled receptor.
+    * a ``Kd``/``Ki`` at ``E1``/``E2`` -> ``binding_engagement_proxy``: the same
+      Hill number, labelled as a proxy derived from a binding constant measured
+      elsewhere, and carrying a provenance warning naming the gap.
+    * a ``Kd``/``Ki`` at ``E3`` -> ``functional_engagement_proxy``: a
+      class-level statement licenses no binding claim at all.
+    * a functional potency at ``E0`` -> ``functional_engagement``; at
+      ``E1``-``E3`` -> ``functional_engagement_proxy``.
 
     Called without a relation it returns the ceiling, i.e. ``ALLOWED[pt]``.
     """
     pt = as_param_type(param_type)
-    rel = as_relation(relation) if relation is not None else None
-    model = ALLOWED[pt]
-    if rel is None:
-        return model
-    if rel is SourceRelation.unsupported:
-        return EngagementModel.not_modelled
-    if model is EngagementModel.binding_occupancy:
-        if rel is BINDING_OCCUPANCY_RELATION:
-            return EngagementModel.binding_occupancy
-        if rel is SourceRelation.class_extrapolation:
-            return EngagementModel.functional_engagement
-        # exact receptor in another species, or a related/hybrid preparation
-        return EngagementModel.binding_derived_engagement
-    return model
+    if relation is None:
+        return ALLOWED[pt]
+    return TRANSFORMATION_TABLE[(pt, as_distance(relation))]
 
 
 def check_transformation(param_type: Any, model: Any, relation: Any = None) -> None:
     """Raise :class:`EvidenceTypeError` if ``model`` may not be derived from
-    ``param_type`` (and, when given, from ``relation``).
+    ``param_type`` (and, when given, from ``relation`` / its evidence distance).
 
     This is the refusal the peer review asked for: FlyLab does not quietly
     relabel a functional potency as an occupancy, it does not call a Kd
@@ -306,13 +443,13 @@ def check_transformation(param_type: Any, model: Any, relation: Any = None) -> N
     """
     pt = as_param_type(param_type)
     want = model if isinstance(model, EngagementModel) else EngagementModel(str(model))
-    rel = as_relation(relation) if relation is not None else None
-    ceiling = model_for(pt, rel) if rel is not None else ALLOWED[pt]
+    dist = as_distance(relation) if relation is not None else None
+    ceiling = model_for(pt, dist) if dist is not None else ALLOWED[pt]
     if MODEL_STRENGTH[want] <= MODEL_STRENGTH[ceiling]:
         return
-    where = f" with relation={rel.value}" if rel is not None else ""
+    where = f" at evidence distance {DISTANCE_LABELS[dist]}" if dist is not None else ""
+    reason = DISTANCE_NOTES[dist] if dist is not None else PARAM_TYPE_NOTES[pt]
     if ceiling is EngagementModel.not_modelled:
-        reason = RELATION_NOTES[rel] if rel is not None else PARAM_TYPE_NOTES[pt]
         raise EvidenceTypeError(
             f"{pt.value}{where} cannot drive engagement_model={want.value}: "
             f"{reason}. A row of this kind reports N/A (not modelled), never a "
@@ -324,23 +461,23 @@ def check_transformation(param_type: Any, model: Any, relation: Any = None) -> N
             f"{PARAM_TYPE_NOTES[pt]}. A Hill curve built from a {pt.value} is a "
             "normalised functional response (engagement_model="
             f"{ceiling.value}), not physical receptor occupancy and not a "
-            "binding-derived engagement. "
+            "binding-derived proxy. "
             "Use a Kd or Ki row if you need a binding-based model."
         )
     if want is EngagementModel.binding_occupancy:
         # A genuine binding constant, but not measured on the modelled target.
         raise EvidenceTypeError(
             f"{pt.value}{where} cannot drive engagement_model=binding_occupancy: "
-            f"{RELATION_NOTES[rel] if rel is not None else PARAM_TYPE_NOTES[pt]}. "
-            "Physical fractional occupancy of the modelled receptor requires "
-            f"relation={BINDING_OCCUPANCY_RELATION.value}; this row supports at "
-            f"most engagement_model={ceiling.value}, which is a binding-derived "
-            "engagement proxy, not an occupancy of this receptor."
+            f"{reason}. Physical fractional occupancy of the modelled receptor "
+            f"requires evidence distance {DISTANCE_LABELS[BINDING_OCCUPANCY_DISTANCE]}, "
+            f"i.e. relation={BINDING_OCCUPANCY_RELATION.value}; this row supports "
+            f"at most engagement_model={ceiling.value}, which is a proxy, not an "
+            "occupancy of this receptor."
         )
     raise EvidenceTypeError(
         f"{pt.value}{where} cannot drive engagement_model={want.value}: "
-        f"{PARAM_TYPE_NOTES[pt]}. At most {ceiling.value} is allowed for this "
-        "row."
+        f"{reason}. At most {ceiling.value} is allowed for this row, because a "
+        "transferred number is a proxy and must say so."
     )
 
 

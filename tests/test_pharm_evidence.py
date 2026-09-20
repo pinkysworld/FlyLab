@@ -16,6 +16,7 @@ import pytest
 
 from flylab.pharm.evidence import (
     ALLOWED,
+    BINDING_OCCUPANCY_RELATION,
     EngagementModel,
     EvidenceTypeError,
     ParameterType,
@@ -26,6 +27,7 @@ from flylab.pharm.evidence import (
     describe,
     is_modelled,
     model_for,
+    provenance_warning,
 )
 from flylab.pharm.occupancy import (
     compare_compound,
@@ -86,6 +88,60 @@ def test_model_for_uses_the_relation_only_to_weaken_the_claim():
     )
 
 
+# ---------------------------------------------------------------------------
+# v0.6.1: the parameter type and the relation decide jointly
+# ---------------------------------------------------------------------------
+def test_binding_occupancy_needs_the_exact_species_relation():
+    """A Kd measured in another species is not occupancy of the fly receptor."""
+    assert BINDING_OCCUPANCY_RELATION is (
+        SourceRelation.exact_compound_exact_receptor_exact_species
+    )
+    for pt in ("Kd", "Ki"):
+        assert model_for(pt, BINDING_OCCUPANCY_RELATION) is EngagementModel.binding_occupancy
+        for far in ("exact_compound_exact_receptor_other_species",
+                    "exact_compound_related_receptor"):
+            assert model_for(pt, far) is EngagementModel.binding_derived_engagement
+        # unchanged by v0.6.1: a class statement supports no binding claim at all
+        assert model_for(pt, "class_extrapolation") is EngagementModel.functional_engagement
+        assert model_for(pt, "unsupported") is EngagementModel.not_modelled
+
+
+def test_a_cross_species_binding_constant_may_not_claim_occupancy():
+    check_transformation("Kd", EngagementModel.binding_derived_engagement,
+                         "exact_compound_exact_receptor_other_species")  # no raise
+    check_transformation("Kd", EngagementModel.binding_occupancy,
+                         BINDING_OCCUPANCY_RELATION)  # no raise
+    with pytest.raises(EvidenceTypeError) as exc:
+        check_transformation("Kd", EngagementModel.binding_occupancy,
+                             "exact_compound_exact_receptor_other_species")
+    assert "exact_compound_exact_receptor_exact_species" in str(exc.value)
+    assert "binding_derived_engagement" in str(exc.value)
+    with pytest.raises(EvidenceTypeError):
+        check_transformation("Ki", EngagementModel.binding_occupancy,
+                             "exact_compound_related_receptor")
+    # a functional potency may not claim EITHER binding model
+    for model in (EngagementModel.binding_occupancy,
+                  EngagementModel.binding_derived_engagement):
+        with pytest.raises(EvidenceTypeError):
+            check_transformation("EC50", model, BINDING_OCCUPANCY_RELATION)
+    # and nothing numeric survives an unsupported relation
+    with pytest.raises(EvidenceTypeError):
+        check_transformation("EC50", EngagementModel.functional_engagement, "unsupported")
+
+
+def test_a_binding_derived_row_carries_a_warning_naming_the_gap():
+    warning = provenance_warning(
+        EngagementModel.binding_derived_engagement,
+        "exact_compound_exact_receptor_other_species",
+        "Myzus persicae",
+    )
+    assert "Myzus persicae" in warning and "not in Drosophila melanogaster" in warning
+    assert provenance_warning(EngagementModel.binding_occupancy,
+                              BINDING_OCCUPANCY_RELATION, "Drosophila") is None
+    assert provenance_warning(EngagementModel.functional_engagement,
+                              "exact_compound_related_receptor", "x") is None
+
+
 def test_unknown_names_are_rejected_loudly():
     with pytest.raises(EvidenceTypeError):
         as_param_type("pIC50ish")
@@ -125,10 +181,21 @@ def test_describe_is_a_provenance_record():
     assert "Ratra" in record["source"]
     assert record["modelled"] is True
 
+    # the aphid Kd: a genuine binding constant, but not measured in the fly
     kd = describe({"receptor": "insect_nAChR_beta1",
                    **LIB["compounds"]["imidacloprid"]["receptors"]["insect_nAChR_beta1"]})
-    assert kd["engagement_model"] == "binding_occupancy"
+    assert kd["param_type"] == "Kd"
+    assert kd["engagement_model"] == "binding_derived_engagement"
+    assert "Myzus persicae" in kd["provenance_warning"]
     assert kd["doi"] == "10.1186/1471-2202-12-51"
+
+    # the Drosophila Kd: the one row that earns the word "occupancy"
+    dmel = describe({"receptor": "insect_nAChR_native_dmel",
+                     **LIB["compounds"]["imidacloprid"]["receptors"]["insect_nAChR_native_dmel"]})
+    assert dmel["engagement_model"] == "binding_occupancy"
+    assert dmel["provenance_warning"] is None
+    assert dmel["relation"] == "exact_compound_exact_receptor_exact_species"
+    assert dmel["doi"] == "10.1046/j.1471-4159.1996.67041669.x"
 
     placeholder = describe({"receptor": "insect_RDL",
                             **receptor_spec(LIB["compounds"]["diazepam"], "insect_RDL")})
@@ -177,23 +244,50 @@ def test_every_row_of_every_compound_is_typed_and_none_safe():
             else:
                 assert 0.0 <= row["engagement"] <= 1.0
                 assert row["engagement_model"] in {
-                    "binding_occupancy", "functional_engagement"
+                    "binding_occupancy", "binding_derived_engagement",
+                    "functional_engagement",
                 }
+                if row["engagement_model"] == "binding_derived_engagement":
+                    assert row["provenance_warning"]
+                else:
+                    assert "provenance_warning" not in row
 
 
-def test_only_a_kd_row_reports_binding_occupancy():
-    binding = [
+def _rows_with_model(model):
+    return [
         (key, row["receptor"])
         for key in LIB["compounds"]
         for row in compare_compound(key, 1e-6)["receptors"]
-        if row["engagement_model"] == "binding_occupancy"
+        if row["engagement_model"] == model
     ]
-    assert binding == [("imidacloprid", "insect_nAChR_beta1")]
+
+
+def test_only_a_drosophila_kd_row_reports_binding_occupancy():
+    """v0.6.1: a Kd is necessary but not sufficient - the species matters too."""
+    assert _rows_with_model("binding_occupancy") == [
+        ("imidacloprid", "insect_nAChR_native_dmel")
+    ]
+    # the aphid Kd is still modelled, but it is no longer called an occupancy
+    assert _rows_with_model("binding_derived_engagement") == [
+        ("imidacloprid", "insect_nAChR_beta1")
+    ]
+    beta1 = next(
+        r for r in compare_compound("imidacloprid", 1e-6)["receptors"]
+        if r["receptor"] == "insect_nAChR_beta1"
+    )
+    assert beta1["param_type"] == "Kd"
+    assert "Myzus persicae" in beta1["provenance_warning"]
+    assert "not in Drosophila melanogaster" in beta1["provenance_warning"]
 
 
 def test_library_report_separates_evidence_from_missing_evidence():
     report = library_report()
     assert report["by_engagement_model"]["not_modelled"] == report["n_rows_not_modelled"]
-    assert report["by_engagement_model"]["binding_occupancy"] == 1
-    assert report["by_engagement_model"]["functional_engagement"] == report["n_rows_modelled"] - 1
+    by_model = report["by_engagement_model"]
+    assert by_model["binding_occupancy"] == 1          # the Drosophila Kd only
+    assert by_model["binding_derived_engagement"] == 1  # the aphid Kd
+    assert by_model["functional_engagement"] == report["n_rows_modelled"] - 2
+    assert by_model["binding_occupancy"] + by_model["binding_derived_engagement"] == (
+        report["by_param_type"].get("Kd", 0) + report["by_param_type"].get("Ki", 0)
+    )
     assert report["note"]

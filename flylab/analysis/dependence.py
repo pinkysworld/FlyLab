@@ -960,22 +960,59 @@ def _assemble_profile(
     rows: list[dict[str, Any]],
     warnings: list[str],
     runtime_s: float,
+    delta_frac: float = DEFAULT_DELTA_FRAC,
+    delta: float | None = None,
+    real_vehicle: float | None = None,
+    confirmatory: bool = False,
 ) -> dict[str, Any]:
+    margin = equivalence_margin(real_vehicle, delta_frac=delta_frac, delta=delta)
+    for row in rows:
+        _attach_verdict(row, alpha, margin["delta"])
     by_mode = {r["mode"]: r for r in rows}
     D = {_mode_key(m): (by_mode[m]["z"] if m in by_mode else None) for m in MODES}
     P = {
         _mode_key(m).replace("z_", "p_"): (by_mode[m]["p_two_sided"] if m in by_mode else None)
         for m in MODES
     }
-    cls = classify(real_effect, by_mode, alpha=alpha, effect_floor=effect_floor)
+    Q = {
+        _mode_key(m).replace("z_", "q_"): (by_mode[m].get("p_adjusted") if m in by_mode else None)
+        for m in MODES
+    }
+    cls = classify(
+        real_effect, by_mode, alpha=alpha, effect_floor=effect_floor, delta=margin["delta"]
+    )
     res = p_resolution(min((r["n_ok"] for r in rows), default=0))
     if res > float(alpha):
         warnings.append(
             f"n = {int(n)} gives a permutation resolution of {res:.4f}, which is "
-            f"coarser than alpha = {float(alpha)}: NO mode can be beaten at this "
-            "n, so the class cannot be 'topology-dependent' whatever the wiring "
-            f"does. Use at least n = {int(round(1.0 / float(alpha))) - 1} "
-            "(and 500-1000 for a headline claim)."
+            f"coarser than alpha = {float(alpha)}: NO mode can be distinguished "
+            "from the real graph at this n, so the class cannot be "
+            "'topology-dependent' whatever the wiring does. Use at least n = "
+            f"{int(round(1.0 / float(alpha))) - 1} (and 500-1000 for a headline "
+            "claim)."
+        )
+    if margin["delta"] is None:
+        warnings.append(
+            "no equivalence margin could be formed (the vehicle readout is "
+            "undefined or zero), so no mode can be reported as equivalent "
+            "within tolerance; every mode that fails to reject is "
+            "'indeterminate'."
+        )
+    if cls["indeterminate_modes"]:
+        warnings.append(
+            "indeterminate (neither distinguishable nor equivalent within "
+            f"delta = {margin['delta'] if margin['delta'] is None else format(margin['delta'], '.4g')}): "
+            + ", ".join(cls["indeterminate_modes"])
+            + ". These modes support 'not distinguishable from this null "
+            "ensemble' and nothing stronger."
+        )
+    if not confirmatory:
+        warnings.append(
+            "exploratory: this profile is not one of the prespecified "
+            "confirmatory tests (" + ", ".join(CONFIRMATORY_COMPOUNDS)
+            + f" at n >= {PAPER_N}) and carries no multiplicity correction of "
+            "its own. Counting verdicts over many such profiles needs the "
+            "FDR-controlled dependence_landscape instead."
         )
     profile = {
         "compound": compound,
@@ -988,14 +1025,24 @@ def _assemble_profile(
         "alpha": float(alpha),
         "effect_floor": float(effect_floor),
         "real_effect": real_effect,
+        "real_vehicle": real_vehicle,
+        # the prespecified equivalence margin, as an absolute readout value
+        "delta": margin["delta"],
+        "delta_frac": margin["delta_frac"],
+        "delta_scale": margin["delta_scale"],
+        "confirmatory": bool(confirmatory),
+        "multiplicity_correction": None,
+        "design": "confirmatory (prespecified)" if confirmatory else "exploratory",
         # permutation probabilities first, then the z profile D
         "p": P,
+        "q": Q,
         "p_resolution": res,
         "resolution_coarser_than_alpha": bool(res > float(alpha)),
         "D": D,
         "D_vector": [D[_mode_key(m)] for m in MODES],
         "D_keys": [_mode_key(m) for m in MODES],
         "modes": rows,
+        "verdicts": cls["mode_verdicts"],
         "classification": cls,
         "class": cls["class"],
         "stabilised": all(bool(r["stabilised"]) for r in rows) if rows else False,
@@ -1016,6 +1063,32 @@ def _assemble_profile(
         if w not in profile["warnings"]:
             profile["warnings"].append(w)
     return profile
+
+
+def _refinalise(
+    cell: dict[str, Any], alpha: float, effect_floor: float, delta: float | None
+) -> dict[str, Any]:
+    """Recompute one cell's verdicts, class and level on the p now in its rows.
+
+    Used by :func:`dependence_landscape` after Benjamini-Hochberg has written
+    ``p_adjusted`` into the structural rows: the decision is then taken on the
+    adjusted probabilities, while the raw ones stay in ``p_two_sided``.
+    """
+    for row in cell["modes"]:
+        _attach_verdict(row, alpha, delta)
+    by_mode = {r["mode"]: r for r in cell["modes"]}
+    cls = classify(
+        cell["real_effect"], by_mode, alpha=alpha, effect_floor=effect_floor, delta=delta
+    )
+    cell["classification"] = cls
+    cell["class"] = cls["class"]
+    cell["verdicts"] = cls["mode_verdicts"]
+    cell["q"] = {
+        _mode_key(m).replace("z_", "q_"): (by_mode[m].get("p_adjusted") if m in by_mode else None)
+        for m in MODES
+    }
+    cell["necessary_information_level"] = necessary_information_level(cell)
+    return cell
 
 
 # --------------------------------------------------------------------------
@@ -1069,16 +1142,52 @@ def dependence_landscape(
     seed: int = 0,
     alpha: float = DEFAULT_ALPHA,
     effect_floor: float = DEFAULT_EFFECT_FLOOR,
+    delta_frac: float = DEFAULT_DELTA_FRAC,
+    delta: float | None = None,
+    fdr_alpha: float | None = None,
+    fdr_modes: Sequence[str] = STRUCTURAL_MODES,
+    gains_by_compound: dict[str, dict[str, float]] | None = None,
     tol: float = DEFAULT_TOL,
     checkpoints: Sequence[float] = DEFAULT_CHECKPOINTS,
     n_jobs: int = 1,
     **kw: Any,
 ) -> dict[str, Any]:
-    """The compound x concentration dependence landscape.
+    """The compound x concentration dependence landscape, FDR-controlled.
 
     One cell per ``(compound, conc_M)``: its real effect, the per-mode
-    permutation p and z, the dependence class and the necessary information
-    level.  ``compounds=None`` uses the whole library.
+    permutation p and z, the three-way verdict, the dependence class and the
+    necessary information level.  ``compounds=None`` uses the whole library.
+
+    **Multiplicity.** A landscape is a screen, not a planned comparison: the
+    default grid is 21 compounds x 4 concentrations x 4 modes, and the count
+    of topology-dependent cells is the number the paper quotes.  Benjamini-
+    Hochberg FDR is therefore applied across the structural tests of the run
+    (``fdr_modes`` x cells, ``fdr_alpha`` defaulting to ``alpha``), every cell
+    carries ``p_adjusted`` / ``q_value`` / ``fdr_alpha``, and the class is
+    decided on the adjusted probabilities while the raw ones stay beside them.
+    The summary reports **both** counts (``n_topology_dependent`` and
+    ``n_topology_dependent_raw``) so the effect of the correction on the
+    headline number is visible rather than silent.
+
+    Because an empirical permutation p cannot go below ``1/(n+1)``, a coarse
+    run can make FDR rejection arithmetically impossible.  The result reports
+    ``fdr.min_rejections`` (how many tests must sit at the resolution floor
+    before anything can be rejected) and ``fdr.can_reject``; when nothing can
+    be rejected the summary says so instead of reporting zero
+    topology-dependent cells as if that were a finding.  The landscape is
+    ``confirmatory`` only when its resolution is fine enough for one isolated
+    test to clear ``fdr_alpha / m``; otherwise it is labelled ``exploratory``.
+
+    ``gains_by_compound`` replaces the gain patch this landscape would
+    otherwise compute from the library for the named compounds.  It exists so
+    that a caller re-deriving the analysis under an *alternative* mechanism
+    specification (:mod:`flylab.analysis.robustness`) can push that
+    specification all the way into the permutation engine: the engine resolves
+    gains through ``flylab.circuit.rate.compute_gains``, which
+    ``robustness.mechanism_spec`` does not rebind, so passing the gains
+    explicitly is the only way a specification can actually change a null-model
+    result.  The vehicle arm always uses the default gains, which is correct:
+    every member of that family reduces to no change at zero engagement.
 
     The same ``n`` shuffled graphs are reused by every cell (a paired design,
     and the reason this is affordable): shuffle *i* depends only on
@@ -1111,6 +1220,12 @@ def dependence_landscape(
     warnings = list(BASE_WARNINGS) + list(CDA_WARNINGS)
 
     ok_fast, why = _fast_supported(assay, readout, kw)
+    if gains_by_compound and not ok_fast:
+        raise ValueError(
+            "gains_by_compound needs the in-module rate engine, which is not "
+            f"available here ({why}); the notebook-assay fallback resolves its "
+            "own gains and would silently ignore the override."
+        )
     cells: list[dict[str, Any]] = []
     if not ok_fast:
         warnings.append(
@@ -1131,6 +1246,9 @@ def dependence_landscape(
                         seed=seed,
                         alpha=alpha,
                         effect_floor=effect_floor,
+                        delta_frac=delta_frac,
+                        delta=delta,
+                        confirmatory=False,
                         tol=tol,
                         checkpoints=checkpoints,
                         n_jobs=n_jobs,
@@ -1140,18 +1258,33 @@ def dependence_landscape(
         return _landscape_result(
             cells, compounds, concs, assay, graph_name, readout, modes, n, seed,
             alpha, effect_floor, warnings, time.perf_counter() - t0, n_jobs,
+            fdr_alpha=fdr_alpha, fdr_modes=fdr_modes, delta_frac=delta_frac,
+            delta=delta,
         )
 
     base = _state_for(graph_name)
     specs: list[dict[str, Any]] = []
+    overrides = dict(gains_by_compound or {})
     for compound in compounds:
         for conc in concs:
-            gains, _occ = compute_gains(
-                compound, conc, library=kw.get("library"), rule_overrides=kw.get("rule_overrides")
-            )
+            if compound in overrides:
+                gains = dict(overrides[compound])
+            else:
+                gains, _occ = compute_gains(
+                    compound, conc, library=kw.get("library"), rule_overrides=kw.get("rule_overrides")
+                )
             specs.append({"compound": compound, "conc_M": conc, "gains": dict(gains)})
+    if overrides:
+        warnings.append(
+            "gains_by_compound overrides the library-derived gain patch for "
+            + ", ".join(sorted(overrides))
+            + "; these cells describe the caller's specification, not the "
+            "shipped mechanism rules."
+        )
     plans = [_plan(base, assay, readout, s["gains"], kw) for s in specs]
-    reals = [_fast_effect(base, p)["effect"] for p in plans]
+    real_cells = [_fast_effect(base, p) for p in plans]
+    reals = [r["effect"] for r in real_cells]
+    vehicles = [r["vehicle"] for r in real_cells]
 
     nulls: dict[str, list[list[float | None]]] = {}
     for mode in modes:
@@ -1190,15 +1323,21 @@ def dependence_landscape(
                 seed=int(seed),
                 alpha=alpha,
                 effect_floor=effect_floor,
+                delta_frac=delta_frac,
+                delta=delta,
+                real_vehicle=vehicles[idx],
                 real_effect=reals[idx],
                 rows=rows,
-                warnings=[BASE_WARNINGS[1], BASE_WARNINGS[3], CDA_WARNINGS[0]],
+                warnings=[BASE_WARNINGS[1], BASE_WARNINGS[3], CDA_WARNINGS[0], CDA_WARNINGS[1]],
                 runtime_s=0.0,
+                confirmatory=False,
             )
         )
     return _landscape_result(
         cells, compounds, concs, assay, graph_name, readout, modes, n, seed,
         alpha, effect_floor, warnings, time.perf_counter() - t0, n_jobs,
+        fdr_alpha=fdr_alpha, fdr_modes=fdr_modes, delta_frac=delta_frac,
+        delta=delta,
     )
 
 
@@ -1319,6 +1458,62 @@ def _landscape_nulls(
         )
 
 
+def _apply_fdr(
+    cells: list[dict[str, Any]],
+    alpha: float,
+    effect_floor: float,
+    fdr_alpha: float,
+    fdr_modes: Sequence[str],
+    resolution: float,
+) -> dict[str, Any]:
+    """Benjamini-Hochberg across the structural tests of a whole landscape.
+
+    Writes ``p_adjusted`` / ``q_value`` / ``fdr_alpha`` into every row of the
+    family, records each cell's own ``q_value`` (its smallest adjusted
+    structural probability), keeps the uncorrected class as ``class_raw`` and
+    re-decides ``class`` on the adjusted values.
+    """
+    family = [m for m in fdr_modes if m in MODES]
+    index: list[tuple[int, str]] = []
+    pvals: list[float | None] = []
+    for i, cell in enumerate(cells):
+        cell["class_raw"] = cell["class"]
+        cell["classification_raw"] = cell["classification"]
+        cell["necessary_information_level_raw"] = cell["necessary_information_level"]
+        by_mode = {r["mode"]: r for r in cell["modes"]}
+        for mode in family:
+            row = by_mode.get(mode)
+            if row is None:
+                continue
+            index.append((i, mode))
+            pvals.append(row.get("p_two_sided"))
+    bh = benjamini_hochberg(pvals, alpha=fdr_alpha, resolution=resolution)
+    for (i, mode), q in zip(index, bh["adjusted"]):
+        by_mode = {r["mode"]: r for r in cells[i]["modes"]}
+        row = by_mode[mode]
+        row["p_adjusted"] = q
+        row["q_value"] = q
+        row["fdr_alpha"] = float(fdr_alpha)
+        row["fdr_family_size"] = bh["m"]
+    for cell in cells:
+        qs = [
+            r.get("q_value")
+            for r in cell["modes"]
+            if r["mode"] in family and r.get("q_value") is not None
+        ]
+        cell["q_value"] = (min(qs) if qs else None)
+        cell["fdr_alpha"] = float(fdr_alpha)
+        cell["fdr_family_size"] = bh["m"]
+        cell["fdr_modes"] = list(family)
+        cell["multiplicity_correction"] = bh["method"]
+        # each cell keeps its own equivalence margin (delta_frac x |vehicle|)
+        _refinalise(cell, alpha, effect_floor, cell.get("delta"))
+    bh["modes"] = list(family)
+    bh.pop("adjusted", None)
+    bh.pop("rejected", None)
+    return bh
+
+
 def _landscape_result(
     cells: list[dict[str, Any]],
     compounds: Sequence[str],
@@ -1334,28 +1529,58 @@ def _landscape_result(
     warnings: list[str],
     runtime_s: float,
     n_jobs: int,
+    *,
+    fdr_alpha: float | None = None,
+    fdr_modes: Sequence[str] = STRUCTURAL_MODES,
+    delta_frac: float = DEFAULT_DELTA_FRAC,
+    delta: float | None = None,
 ) -> dict[str, Any]:
+    res = p_resolution(int(n))
+    q_alpha = float(alpha if fdr_alpha is None else fdr_alpha)
+    deltas = [c.get("delta") for c in cells if c.get("delta") is not None]
+    bh = _apply_fdr(
+        cells,
+        alpha=float(alpha),
+        effect_floor=float(effect_floor),
+        fdr_alpha=q_alpha,
+        fdr_modes=fdr_modes,
+        resolution=res,
+    )
+
     counts: dict[str, int] = {c: 0 for c in CLASSES}
+    counts_raw: dict[str, int] = {c: 0 for c in CLASSES}
     levels: dict[str, int] = {}
+    verdict_counts: dict[str, int] = {v: 0 for v in VERDICTS}
     table: list[dict[str, Any]] = []
     for cell in cells:
         counts[cell["class"]] = counts.get(cell["class"], 0) + 1
+        counts_raw[cell["class_raw"]] = counts_raw.get(cell["class_raw"], 0) + 1
         lvl = cell["necessary_information_level"]["level"] or "undefined"
         levels[lvl] = levels.get(lvl, 0) + 1
+        for v in cell["verdicts"].values():
+            verdict_counts[v] = verdict_counts.get(v, 0) + 1
         row = {
             "compound": cell["compound"],
             "conc_M": cell["conc_M"],
             "real_effect": cell["real_effect"],
             "class": cell["class"],
+            "class_raw": cell["class_raw"],
+            "q_value": cell["q_value"],
+            "fdr_alpha": cell["fdr_alpha"],
+            "delta": cell["delta"],
             "necessary_information_level": lvl,
+            "necessary_level_verdict": cell["necessary_information_level"].get("verdict"),
             "stabilised": cell["stabilised"],
         }
+        by_mode = {r["mode"]: r for r in cell["modes"]}
         for mode in modes:
             key = _mode_key(mode)
             row[key.replace("z_", "p_")] = cell["p"][key.replace("z_", "p_")]
+            row[key.replace("z_", "q_")] = (by_mode.get(mode) or {}).get("q_value")
             row[key] = cell["D"][key]
+            row[f"verdict_{mode}"] = cell["verdicts"].get(mode)
         table.append(row)
-    res = p_resolution(int(n))
+
     if res > float(alpha):
         warnings.append(
             f"n = {int(n)} gives a permutation resolution of {res:.4f}, coarser "
@@ -1363,14 +1588,74 @@ def _landscape_result(
             "classified as topology-dependent at this n. It is a preview, not a "
             "result; the paper's landscape is run at n = 500-1000."
         )
+    if not bh["can_reject"]:
+        warnings.append(
+            f"FDR CANNOT REJECT ANYTHING AT THIS RESOLUTION: with {bh['m']} "
+            f"structural tests, a permutation resolution of {res:.5f} and "
+            f"fdr_alpha = {q_alpha}, at least {bh['min_rejections']} tests would "
+            "have to sit at the resolution floor simultaneously before "
+            "Benjamini-Hochberg could reject any of them. A count of zero "
+            "topology-dependent cells here is a property of the permutation "
+            "budget, NOT a finding. Raise n to at least "
+            f"{int(round(bh['m'] / q_alpha)) - 1} for a single isolated test to "
+            "be rejectable."
+        )
+    elif bh["min_rejections"] and bh["min_rejections"] > 1:
+        warnings.append(
+            f"the FDR-adjusted threshold is resolution-limited: with {bh['m']} "
+            f"structural tests at resolution {res:.5f}, at least "
+            f"{bh['min_rejections']} tests must sit at the floor together before "
+            "any is rejected, so an isolated strong cell cannot survive the "
+            "correction at this n."
+        )
+    confirmatory = bool(bh.get("resolution_supports_single_rejection"))
+    if not confirmatory:
+        warnings.append(
+            "EXPLORATORY: this landscape's permutation resolution "
+            f"({res:.5f}) does not reach the adjusted threshold fdr_alpha/m = "
+            f"{q_alpha / max(bh['m'], 1):.6f}, so its counts are a screen to be "
+            "confirmed, not a confirmatory result. The prespecified "
+            "confirmatory tests are the "
+            + "/".join(CONFIRMATORY_COMPOUNDS)
+            + f" profiles at n >= {PAPER_N}."
+        )
     unstable = [r for r in table if not r["stabilised"]]
     if unstable:
         warnings.append(
             f"{len(unstable)} of {len(table)} cells had at least one mode whose "
             f"permutation p had not stabilised at n = {int(n)}."
         )
+    n_topo = counts.get("topology-dependent", 0)
+    n_topo_raw = counts_raw.get("topology-dependent", 0)
+    if n_topo != n_topo_raw:
+        warnings.append(
+            f"multiplicity changes the headline count: {n_topo_raw} cells are "
+            f"topology-dependent on the raw permutation p and {n_topo} survive "
+            f"Benjamini-Hochberg at fdr_alpha = {q_alpha} over {bh['m']} "
+            "structural tests. The corrected count is the one to quote."
+        )
     topo = sorted({r["compound"] for r in table if r["class"] == "topology-dependent"})
+    topo_raw = sorted({r["compound"] for r in table if r["class_raw"] == "topology-dependent"})
     comp = sorted({r["compound"] for r in table if r["class"] == "composition-dominated"})
+    statement = (
+        "exploratory screen, FDR-controlled: "
+        f"{n_topo} of {len(cells)} cells are topology-dependent after "
+        f"Benjamini-Hochberg at fdr_alpha = {q_alpha} across {bh['m']} structural "
+        f"tests ({n_topo_raw} before correction)."
+        if not confirmatory
+        else (
+            f"confirmatory-resolution landscape: {n_topo} of {len(cells)} cells "
+            f"are topology-dependent after Benjamini-Hochberg at fdr_alpha = "
+            f"{q_alpha} across {bh['m']} structural tests ({n_topo_raw} before "
+            "correction); the permutation resolution supports the adjusted "
+            "threshold for a single isolated test."
+        )
+    )
+    if not bh["can_reject"]:
+        statement += (
+            " No cell CAN be rejected at this permutation resolution, so the "
+            "corrected count is uninformative rather than zero."
+        )
     return {
         "assay": assay,
         "graph": graph_name,
@@ -1382,17 +1667,39 @@ def _landscape_result(
         "n_jobs": int(n_jobs),
         "seed": int(seed),
         "alpha": float(alpha),
+        "fdr_alpha": q_alpha,
+        "fdr_modes": list(bh["modes"]),
         "effect_floor": float(effect_floor),
+        "delta_frac": (None if delta is not None else float(delta_frac)),
+        "delta_absolute": (None if delta is None else abs(float(delta))),
+        "delta_range": ([min(deltas), max(deltas)] if deltas else None),
         "p_resolution": res,
         "resolution_coarser_than_alpha": bool(res > float(alpha)),
+        "confirmatory": confirmatory,
+        "design": "confirmatory" if confirmatory else "exploratory",
+        "design_statement": statement,
+        "multiplicity_correction": bh["method"],
+        "fdr": bh,
         "shape": [len(compounds), len(concs)],
         "n_cells": len(cells),
         "cells": cells,
         "table": table,
         "summary": {
+            "design": "confirmatory" if confirmatory else "exploratory",
+            "statement": statement,
             "class_counts": counts,
+            "class_counts_raw": counts_raw,
+            "n_topology_dependent": n_topo,
+            "n_topology_dependent_raw": n_topo_raw,
+            "n_structural_tests": bh["m"],
+            "n_structural_rejected_fdr": bh["n_rejected"],
+            "fdr_alpha": q_alpha,
+            "fdr_can_reject": bh["can_reject"],
+            "fdr_min_rejections": bh["min_rejections"],
+            "verdict_counts": verdict_counts,
             "level_counts": levels,
             "topology_dependent_compounds": topo,
+            "topology_dependent_compounds_raw": topo_raw,
             "composition_dominated_compounds": comp,
             "n_unstabilised_cells": len(unstable),
         },

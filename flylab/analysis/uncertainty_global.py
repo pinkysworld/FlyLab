@@ -778,18 +778,31 @@ def sobol_analysis(
                 "interaction": float(T[j] - S[j]),
             }
         )
+        ci = rows[-1]["first_order_ci"]
+        excludes_zero = (
+            None if ci is None else bool(float(ci[0]) > 0.0 or float(ci[1]) < 0.0)
+        )
+        rows[-1]["first_order_ci_excludes_zero"] = excludes_zero
+        rows[-1]["resolution_status"] = (
+            RESOLVED_LABEL if excludes_zero else UNRESOLVED_LABEL
+        )
     rows.sort(key=lambda r: -r["total_order"])
 
     sum_first = float(sum(r["first_order"] for r in rows))
     warnings = list(BASE_WARNINGS)
+    resolution = resolution_summary(rows)
+    warnings.append(resolution["statement"])
     noise = next((r for r in rows if r["factor"] == "lif_seed"), None)
     if noise is not None and engine == "rate":
         warnings.append(
             "lif_seed has no effect on the deterministic rate engine, so its "
             f"indices (S={noise['first_order']:+.3f}, T={noise['total_order']:+.3f}) "
-            "measure the estimator's noise floor at this sample size; treat any "
-            "index of comparable magnitude as indistinguishable from zero. Run "
-            "with engine='lif' to give LIF stochasticity a real index."
+            "are a null-factor control: they show the SIGN and rough SIZE of the "
+            "estimator's error on a factor that is exactly zero. They are one "
+            "draw of that error, not a symmetric +-tolerance band, and an index "
+            "is NOT resolved merely by exceeding them. Resolution is decided per "
+            "factor by whether its own first-order confidence interval excludes "
+            "zero. Run with engine='lif' to give LIF stochasticity a real index."
         )
     if engine == "lif":
         warnings.append(
@@ -825,6 +838,8 @@ def sobol_analysis(
         "sum_first_order": sum_first,
         "interaction_share": float(1.0 - sum_first),
         "rows": rows,
+        "resolution": resolution,
+        "summary": resolution["statement"],
         "convergence": convergence,
         "budget": uncertainty_budget({"rows": rows, "sum_first_order": sum_first, "output_variance": var}),
         "runtime_s": float(time.perf_counter() - t0),

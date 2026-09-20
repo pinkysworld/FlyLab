@@ -37,13 +37,45 @@ Design constraints honoured here
 * Every family member is bounded (``[0.05, 10.0]``), respects the 0.05 floor
   and reduces to 1.0 as engagement -> 0, so "vehicle" always means "no change".
 
+Statistics of the two topology conclusions
+------------------------------------------
+``C3`` and ``C4`` are about whether a drug effect needs the wiring, so they
+must be stated in the same statistical language as §2.3 of the paper, which
+leads with the **empirical two-sided permutation probability** precisely
+because a null distribution on a degraded graph need not be Gaussian.  Up to
+v0.6 they were not: they ran 6 shuffles per specification (4 in fast mode) and
+then tested ``|z_imidacloprid| < 2`` and ``|z_fipronil| > |z_imidacloprid|``.
+At 6 shuffles the smallest attainable permutation p is ``1/7 = 0.143``, so an
+empirical ``p <= 0.05`` was arithmetically impossible and the criteria
+contradicted the method section that framed them.
+
+They are now:
+
+``C3``
+    an empirical two-sided permutation test at :data:`DEFAULT_SHUFFLES`
+    shuffles (resolution ``1/101 = 0.0099``), retained when it **fails to
+    reject** - stated as "not distinguishable from a degree-preserving
+    rewiring null", never as equivalence.
+``C4``
+    an explicit **effect-size contrast** with no threshold and no critical
+    value: the robust standardised distance
+    ``d = |effect - median(null)| / (1.4826 * MAD(null))`` for fipronil
+    against the same quantity for imidacloprid, on the same null at the same
+    shuffle count.
+
+Both predicates record what they computed in ``SpecRun.evidence`` and both
+rendered ``readout`` strings carry the shuffle count, so the criterion in the
+paper cannot drift from the criterion in the code.
+
 Runtime
 -------
 ``conclusion_stability()`` with the full 25-member family takes roughly
-**2-4 minutes** on the committed graphs (about 5-6 s per specification:
-2 rate assays, 1 taste-map assay, 2 rewiring nulls at ``n_shuffles`` shuffles
-and 10 circuit-selectivity ladders).  ``conclusion_stability(fast=True)`` uses
-the 9-member subsample and reduced compound sets and takes roughly 30-50 s.
+**5-7 minutes** on the committed graphs (about 12-16 s per specification:
+2 rate assays, 1 taste-map assay, 2 rewiring nulls at
+:data:`DEFAULT_SHUFFLES` = 100 shuffles -- about 3.5 s each on the ``named``
+cut -- and 10 circuit-selectivity ladders).  ``conclusion_stability(fast=True)``
+uses the 9-member subsample, reduced compound sets and
+:data:`FAST_SHUFFLES` = 25 shuffles, and takes roughly 60-90 s.
 """
 from __future__ import annotations
 
@@ -66,6 +98,10 @@ __all__ = [
     "NICOTINIC_SET",
     "AMPLIFY_SET",
     "CONCLUSIONS",
+    "DEFAULT_SHUFFLES",
+    "FAST_SHUFFLES",
+    "TOPOLOGY_ALPHA",
+    "MIN_SHUFFLES_FOR_ALPHA",
     "receptor_si",
     "vertebrate_threshold",
     "subsample_family",
@@ -619,6 +655,36 @@ FAST_AMPLIFY_SET: tuple[str, ...] = ("deltamethrin", "chlorpyrifos_oxon")
 
 PAPER_CONC_M = 1e-6
 
+#: Permutation shuffles per specification for the two topology predicates.
+#:
+#: The v0.6 value was 6 (4 in fast mode), which made the topology predicates
+#: inconsistent with the paper's own statistics: §2.3 leads with the empirical
+#: two-sided permutation p because a null on a degraded graph need not be
+#: normal, yet at 6 shuffles the smallest attainable p is 1/7 = 0.143, so
+#: ``p <= 0.05`` was arithmetically impossible and the predicates fell back on
+#: a Gaussian ``|z| < 2``.  100 shuffles put the resolution at 1/101 = 0.0099,
+#: which supports alpha = 0.05 with room to spare, and costs about 3.5 s per
+#: compound per specification on the ``named`` cut.
+DEFAULT_SHUFFLES = 100
+
+#: ``fast=True``: 1/26 = 0.0385, still fine enough to resolve alpha = 0.05,
+#: at about a quarter of the cost.  A fast run is a preview, not the paper.
+FAST_SHUFFLES = 25
+
+#: alpha for the permutation-based topology predicate.
+TOPOLOGY_ALPHA = 0.05
+
+#: the two compounds the topology conclusions are about, in the order the
+#: dependence engine is asked for them
+TOPOLOGY_COMPOUNDS: tuple[str, ...] = ("imidacloprid", "fipronil")
+
+#: the structural null modes whose rejection makes a cell topology-dependent
+STRUCTURAL_MODE_NAMES: tuple[str, ...] = ("weight_permute", "rewire_degree_preserving")
+
+#: the smallest shuffle count at which ``p <= TOPOLOGY_ALPHA`` is attainable
+#: at all: ``1/(n+1) <= alpha``.
+MIN_SHUFFLES_FOR_ALPHA = int(round(1.0 / TOPOLOGY_ALPHA)) - 1
+
 
 class SpecRun:
     """Every assay one specification needs, computed once and cached.
@@ -633,24 +699,35 @@ class SpecRun:
         spec: Mapping[str, Any] | None = None,
         conc_M: float = PAPER_CONC_M,
         seed: int = 0,
-        n_shuffles: int = 6,
+        n_shuffles: int = DEFAULT_SHUFFLES,
+        alpha: float = TOPOLOGY_ALPHA,
         nicotinic: Sequence[str] = NICOTINIC_SET,
         amplify: Sequence[str] = AMPLIFY_SET,
         concs: Sequence[float] | None = None,
         threshold_frac: float = 0.5,
         vert_occ_limit: float = 0.2,
+        delta_frac: float | None = None,
     ):
         self.spec = dict(spec or default_spec())
         self.conc_M = float(conc_M)
         self.seed = int(seed)
         self.n_shuffles = int(n_shuffles)
+        self.alpha = float(alpha)
         self.nicotinic = tuple(nicotinic)
         self.amplify = tuple(amplify)
         self.concs = tuple(concs) if concs is not None else None
         self.threshold_frac = float(threshold_frac)
         self.vert_occ_limit = float(vert_occ_limit)
+        # None means "whatever flylab.analysis.dependence prespecifies", which
+        # is resolved lazily so this module never imports the dependence layer
+        # at import time
+        self.delta_frac = (None if delta_frac is None else float(delta_frac))
         self._cache: dict[tuple, Any] = {}
         self.notes: list[str] = []
+        #: what each predicate actually computed, keyed by conclusion name.
+        #: ``tests/test_analysis_robustness.py`` checks that a conclusion's
+        #: stated ``readout`` matches what its predicate put in here.
+        self.evidence: dict[str, dict[str, Any]] = {}
 
     # -- primitives ------------------------------------------------------
     def _memo(self, key: tuple, fn: Callable[[], Any]) -> Any:
@@ -685,21 +762,99 @@ class SpecRun:
 
         return self._memo(("taste_map", compound), go)
 
-    def topology_z(self, compound: str, mode: str = "rewire_degree_preserving") -> float | None:
-        """|z| of the drug effect against a degree-preserving rewiring null."""
+    def topology_landscape(self) -> dict[str, Any]:
+        """The two topology compounds run through the *headline* engine.
+
+        This is deliberately not a statistic of its own.  It calls
+        :func:`flylab.analysis.dependence.dependence_landscape` -- the same
+        permutation machinery, the same information ladder, the same
+        prespecified equivalence margin and the same three-way verdict that
+        produce the paper's n = 1000 result -- for imidacloprid and fipronil at
+        this specification's gains, so a specification's topology verdict is
+        directly comparable with the headline analysis instead of being a
+        z-score comparison beside it.
+
+        Both compounds share one shuffle stream (a paired design), which is
+        why running the full engine for every specification is affordable.
+
+        The specification is pushed in through ``gains_by_compound`` rather
+        than through :func:`mechanism_spec`.  That is not a shortcut: the
+        permutation engine resolves gains through
+        ``flylab.circuit.rate.compute_gains``, which ``mechanism_spec`` does
+        **not** rebind (it rebinds the assay modules only), so a specification
+        installed that way never reached the null models at all -- every
+        member of the family silently produced the default gain patch and
+        therefore the identical null result.  Passing the gains explicitly is
+        what makes the per-specification topology verdict mean anything.
+        """
 
         def go():
-            from flylab.analysis.nullmodels import null_distribution
+            from flylab.analysis.dependence import (
+                DEFAULT_DELTA_FRAC,
+                dependence_landscape,
+            )
 
-            with mechanism_spec(self.spec):
-                r = null_distribution(
-                    "subgraph", compound, self.conc_M, mode=mode,
-                    n=self.n_shuffles, seed=self.seed, readout="auto",
-                )
-            z = r.get("z")
-            return None if z is None else abs(float(z))
+            frac = DEFAULT_DELTA_FRAC if self.delta_frac is None else self.delta_frac
+            return dependence_landscape(
+                compounds=list(TOPOLOGY_COMPOUNDS),
+                concs_M=(self.conc_M,),
+                n=self.n_shuffles,
+                seed=self.seed,
+                alpha=self.alpha,
+                delta_frac=frac,
+                gains_by_compound={c: self.gains(c) for c in TOPOLOGY_COMPOUNDS},
+            )
 
-        return self._memo(("topo", compound, mode), go)
+        return self._memo(("topology_landscape",), go)
+
+    def topology_cell(self, compound: str) -> dict[str, Any]:
+        """One compound's dependence cell under this specification."""
+        land = self.topology_landscape()
+        for cell in land["cells"]:
+            if cell["compound"] == compound:
+                return cell
+        raise KeyError(compound)
+
+    def topology_evidence(self, compound: str) -> dict[str, Any]:
+        """Everything the topology predicates are allowed to look at.
+
+        Flat, JSON-safe and recorded per specification, so a test (and a
+        reader) can check that a conclusion's stated ``readout`` is what was
+        actually computed.
+        """
+        cell = self.topology_cell(compound)
+        by_mode = {r["mode"]: r for r in cell["modes"]}
+        degree = by_mode.get("rewire_degree_preserving") or {}
+        sd = degree.get("null_sd") or 0.0
+        gap = degree.get("abs_gap_from_null_median")
+        return {
+            "compound": compound,
+            "conc_M": self.conc_M,
+            "engine": "flylab.analysis.dependence.dependence_landscape",
+            "n_shuffles": int(self.n_shuffles),
+            "alpha": float(self.alpha),
+            "p_resolution": cell.get("p_resolution"),
+            "delta": cell.get("delta"),
+            "delta_frac": cell.get("delta_frac"),
+            "class_raw": cell.get("class_raw"),
+            "class_fdr_within_run": cell.get("class"),
+            "gains": dict(self.gains(compound)),
+            "real_effect": cell.get("real_effect"),
+            "real_vehicle": cell.get("real_vehicle"),
+            "p_two_sided": {m: r.get("p_two_sided") for m, r in by_mode.items()},
+            "verdicts": dict(cell.get("verdicts") or {}),
+            "structural_p": {
+                m: by_mode[m].get("p_two_sided") for m in STRUCTURAL_MODE_NAMES if m in by_mode
+            },
+            "necessary_information_level": (
+                cell.get("necessary_information_level") or {}
+            ).get("level"),
+            # recorded, not used by any predicate: how far the real effect sits
+            # from the rewiring null's centre in units of that null's own spread
+            "standardised_distance_degree": (
+                None if (gap is None or not sd) else float(gap / sd)
+            ),
+        }
 
     def circuit_threshold(self, compound: str) -> float | None:
         """Lowest concentration whose relative ``mean_hz`` change reaches
@@ -764,19 +919,50 @@ def _c_rdl_disinhibition(run: SpecRun) -> bool | None:
     return bool(treated > vehicle)
 
 
-def _c_imidacloprid_topology_weak(run: SpecRun) -> bool | None:
-    z = run.topology_z("imidacloprid")
-    if z is None:
+def _c_imidacloprid_topology_not_distinguishable(run: SpecRun) -> bool | None:
+    """Imidacloprid's mean-rate effect is **not distinguishable** from a
+    degree-preserving rewiring null.
+
+    Computed exactly as the ``readout`` string says: the empirical two-sided
+    permutation probability ``(k+1)/(n+1)`` over ``run.n_shuffles`` rewirings,
+    compared against ``run.alpha``.  This is a failure to reject and is
+    reported as such - it is not a claim of equivalence, and the equivalence
+    evidence (the gap from the null median) is recorded beside it so that a
+    reader can see how large a difference the test leaves open.
+    """
+    r = run.topology_null("imidacloprid")
+    p = r["p_two_sided"]
+    run.evidence["C3_imidacloprid_topology_not_distinguishable"] = dict(r)
+    if p is None:
         return None
-    return bool(z < 2.0)
+    return bool(float(p) > float(run.alpha))
 
 
 def _c_fipronil_topology_exceeds(run: SpecRun) -> bool | None:
-    z_fip = run.topology_z("fipronil")
-    z_imi = run.topology_z("imidacloprid")
-    if z_fip is None or z_imi is None:
+    """Fipronil sits further from its rewiring null than imidacloprid does.
+
+    An explicit **effect-size contrast**, not a significance test: the robust
+    standardised distance ``d = |effect - median(null)| / (1.4826 * MAD(null))``
+    is computed for both compounds against the same degree-preserving rewiring
+    null at the same shuffle count, and the conclusion is retained when
+    ``d_fipronil > d_imidacloprid``.  No threshold, no critical value and no
+    p-value enter the comparison; the per-compound permutation probabilities
+    are recorded alongside for the reader, not used by the predicate.
+    """
+    fip = run.topology_null("fipronil")
+    imi = run.topology_null("imidacloprid")
+    run.evidence["C4_fipronil_topology_exceeds"] = {
+        "statistic": "robust standardised distance from the rewiring null median",
+        "formula": "d = |effect_real - median(null)| / (1.4826 * MAD(null))",
+        "n_shuffles": int(run.n_shuffles),
+        "fipronil": fip,
+        "imidacloprid": imi,
+        "d_fipronil": fip["robust_distance"],
+        "d_imidacloprid": imi["robust_distance"],
+    }
+    if fip["robust_distance"] is None or imi["robust_distance"] is None:
         return None
-    return bool(z_fip > z_imi)
+    return bool(float(fip["robust_distance"]) > float(imi["robust_distance"]))
 
 
 def _c_nicotinic_buffering(run: SpecRun) -> bool | None:
@@ -816,14 +1002,29 @@ CONCLUSIONS: dict[str, dict[str, Any]] = {
         "readout": "subgraph mean_hz, treated > vehicle",
         "evaluate": _c_rdl_disinhibition,
     },
-    "C3_imidacloprid_topology_weak": {
-        "claim": "imidacloprid's mean-rate effect is not a wiring result",
-        "readout": "|z| < 2 against a degree-preserving rewiring null",
-        "evaluate": _c_imidacloprid_topology_weak,
+    "C3_imidacloprid_topology_not_distinguishable": {
+        "claim": (
+            "imidacloprid's mean-rate effect is not distinguishable from a "
+            "degree-preserving rewiring null"
+        ),
+        "readout": (
+            "empirical two-sided permutation p > {alpha:g} against a "
+            "degree-preserving rewiring null, n = {n_shuffles} shuffles "
+            "(resolution 1/(n+1) = {resolution:.4f}); a failure to reject, "
+            "not a claim of equivalence"
+        ),
+        "kind": "permutation test (failure to reject)",
+        "evaluate": _c_imidacloprid_topology_not_distinguishable,
     },
     "C4_fipronil_topology_exceeds": {
         "claim": "fipronil's topology dependence exceeds imidacloprid's",
-        "readout": "|z_fipronil| > |z_imidacloprid| on the same null",
+        "readout": (
+            "d_fipronil > d_imidacloprid, where d = |effect - median(null)| / "
+            "(1.4826 * MAD(null)) against the same degree-preserving rewiring "
+            "null, n = {n_shuffles} shuffles; an effect-size contrast, not a "
+            "significance test"
+        ),
+        "kind": "effect-size contrast (no threshold)",
         "evaluate": _c_fipronil_topology_exceeds,
     },
     "C5_nicotinic_buffering": {
@@ -858,6 +1059,24 @@ BASE_WARNINGS = [
 # --------------------------------------------------------------------------
 # the Conclusion Stability Matrix
 # --------------------------------------------------------------------------
+def _render_readout(
+    template: str | None, n_shuffles: int, resolution: float
+) -> str | None:
+    """Fill a conclusion's ``readout`` template with the run's actual numbers.
+
+    The rendered string is what the paper quotes, so it must describe exactly
+    what the predicate computed - including the shuffle count it computed it
+    at.  Templates without placeholders pass through unchanged.
+    """
+    if template is None:
+        return None
+    return str(template).format(
+        n_shuffles=int(n_shuffles),
+        alpha=TOPOLOGY_ALPHA,
+        resolution=float(resolution),
+    )
+
+
 def conclusion_stability(
     conclusions: Mapping[str, Mapping[str, Any]] | None = None,
     family: Sequence[Mapping[str, Any]] | None = None,
@@ -879,8 +1098,18 @@ def conclusion_stability(
     do not.
 
     ``fast=True`` uses :func:`subsample_family` (9 of 25 specifications),
-    reduced compound sets and 4 rewiring shuffles: about 30-50 s instead of
-    2-4 minutes.
+    reduced compound sets and :data:`FAST_SHUFFLES` rewiring shuffles instead
+    of :data:`DEFAULT_SHUFFLES`.
+
+    **The shuffle count matters.** Two of the seven conclusions are about
+    topology, and one of them (``C3``) is decided by an empirical two-sided
+    permutation probability.  That probability cannot fall below its
+    resolution ``1/(n+1)``, so a run with fewer than
+    :data:`MIN_SHUFFLES_FOR_ALPHA` shuffles cannot reject at ``alpha`` at all
+    and the predicate would be vacuous; the result warns when that is the
+    case.  The shuffle count appears in the output (``n_shuffles``), inside
+    each topology row's rendered ``readout``, and in the per-specification
+    ``evidence`` block.
 
     ``n_jobs`` is accepted for API symmetry but the analysis runs serially: a
     specification is installed by rebinding a process-global symbol, so two
@@ -890,11 +1119,30 @@ def conclusion_stability(
     t0 = time.perf_counter()
     fam = list(family) if family is not None else (subsample_family() if fast else MECHANISM_FAMILY)
     concl = dict(conclusions) if conclusions is not None else CONCLUSIONS
-    shuffles = int(n_shuffles if n_shuffles is not None else (4 if fast else 6))
+    shuffles = int(
+        n_shuffles if n_shuffles is not None else (FAST_SHUFFLES if fast else DEFAULT_SHUFFLES)
+    )
+    resolution = 1.0 / (shuffles + 1)
     nic = tuple(nicotinic) if nicotinic is not None else (FAST_NICOTINIC_SET if fast else NICOTINIC_SET)
     amp = tuple(amplify) if amplify is not None else (FAST_AMPLIFY_SET if fast else AMPLIFY_SET)
 
     warnings = list(BASE_WARNINGS)
+    warnings.append(
+        f"the topology conclusions were evaluated at n_shuffles = {shuffles} "
+        f"per specification (permutation resolution 1/(n+1) = {resolution:.4f}). "
+        "C3 is an empirical two-sided permutation test at alpha = "
+        f"{TOPOLOGY_ALPHA}; C4 is an effect-size contrast with no threshold. "
+        "Neither uses a Gaussian z."
+    )
+    if resolution > TOPOLOGY_ALPHA:
+        warnings.append(
+            f"n_shuffles = {shuffles} gives a permutation resolution of "
+            f"{resolution:.4f}, coarser than alpha = {TOPOLOGY_ALPHA}: the C3 "
+            "permutation test CANNOT reject at this shuffle count, so its "
+            "'not distinguishable' verdict is vacuous. Use at least "
+            f"n_shuffles = {MIN_SHUFFLES_FOR_ALPHA} (the paper runs "
+            f"{DEFAULT_SHUFFLES})."
+        )
     if int(n_jobs) > 1:
         warnings.append(
             f"n_jobs={n_jobs} requested but ignored: an alternative mechanism "
@@ -913,7 +1161,7 @@ def conclusion_stability(
             progress(spec["name"])
         run = SpecRun(
             spec, conc_M=conc_M, seed=seed, n_shuffles=shuffles,
-            nicotinic=nic, amplify=amp, concs=concs, **kw,
+            alpha=TOPOLOGY_ALPHA, nicotinic=nic, amplify=amp, concs=concs, **kw,
         )
         for name, c in concl.items():
             try:
@@ -927,6 +1175,9 @@ def conclusion_stability(
             "gains_fipronil": run.gains("fipronil"),
             "mean_gap_nicotinic": run.mean_gap(nic),
             "mean_gap_nav_ache": run.mean_gap(amp),
+            "n_shuffles": int(run.n_shuffles),
+            # exactly what each predicate computed, for audit
+            "evidence": {k: dict(v) for k, v in run.evidence.items()},
         }
         per_spec_runtime[spec["name"]] = float(time.perf_counter() - ts)
 
@@ -942,7 +1193,10 @@ def conclusion_stability(
             {
                 "conclusion": name,
                 "claim": c["claim"],
-                "readout": c.get("readout"),
+                "readout": _render_readout(c.get("readout"), shuffles, resolution),
+                "readout_template": c.get("readout"),
+                "kind": c.get("kind", "model readout"),
+                "n_shuffles": shuffles,
                 "n_specs": len(verdicts),
                 "n_retained": n_true,
                 "n_lost": n_false,
@@ -970,6 +1224,20 @@ def conclusion_stability(
         "family_size": len(fam),
         "fast": bool(fast),
         "n_shuffles": shuffles,
+        "shuffle_resolution": resolution,
+        "topology_alpha": TOPOLOGY_ALPHA,
+        "topology_criteria": {
+            "C3_imidacloprid_topology_not_distinguishable": _render_readout(
+                concl.get("C3_imidacloprid_topology_not_distinguishable", {}).get("readout"),
+                shuffles,
+                resolution,
+            ),
+            "C4_fipronil_topology_exceeds": _render_readout(
+                concl.get("C4_fipronil_topology_exceeds", {}).get("readout"),
+                shuffles,
+                resolution,
+            ),
+        },
         "conc_M": float(conc_M),
         "seed": int(seed),
         "nicotinic_set": list(nic),

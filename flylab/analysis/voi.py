@@ -14,7 +14,33 @@ total variance,
 so the quantity is the **first-order Sobol' index scaled back into the units of
 the readout's variance**, and it is computed from exactly the same sample as
 :func:`flylab.analysis.uncertainty_global.sobol_analysis` -- no extra model
-evaluations.  ``S_j`` is the right index here and ``T_j`` is not: resolving one
+evaluations.
+
+Why no VOI here is negative
+---------------------------
+A value of information cannot be negative: resolving an assumption exactly
+cannot *increase* the variance that remains.  A Jansen first-order estimate
+can be, because at finite ``N`` an index that is truly 0 is estimated as a
+small signed number, and v0.6 of this module passed that sign straight through
+to the table (expression -0.018, potency -0.019, gain_coef -0.144 Hz^2).  Those
+are estimator noise around zero, not negative information.
+
+This module therefore separates the two quantities it was conflating:
+
+``first_order`` / ``voi_fraction_raw`` / ``voi_var_raw``
+    the raw Sobol' estimate and the same number in Hz^2, kept unclipped with
+    its bootstrap confidence interval, because a negative estimate is a useful
+    convergence diagnostic.
+``voi_var`` (= ``decision_voi_var``)
+    the decision-relevant value of information, ``max(0, S_j) * Var(Y)``.  It
+    is what a ranking of experiments must use, and it is never negative.
+``status``
+    ``unresolved at this sample size`` for any factor whose first-order
+    confidence interval includes zero.  Such a factor gets no number to quote:
+    the sample cannot tell its contribution apart from nothing, which is a
+    statement about the sample, not about the factor.
+
+``S_j`` is the right index here and ``T_j`` is not: resolving one
 factor removes its main effect but leaves its interactions with everything that
 stays unknown.  ``T_j * Var(Y)`` is reported alongside as
 ``voi_upper_bound_var``: the variance that would go if resolving ``j`` also
@@ -40,10 +66,26 @@ from flylab.analysis.uncertainty_global import FACTOR_NAMES, sobol_analysis
 __all__ = [
     "EXPERIMENTS",
     "VOI_WARNING",
+    "NEGATIVE_VOI_NOTE",
+    "UNRESOLVED",
+    "RESOLVED",
     "voi",
     "value_of_information",
     "to_markdown",
 ]
+
+#: the label a factor gets when its first-order CI includes zero
+UNRESOLVED = "unresolved at this sample size"
+RESOLVED = "resolved"
+
+NEGATIVE_VOI_NOTE = (
+    "A value of information cannot be negative, so the ranking uses "
+    "max(0, S_j) x Var(Y). A negative raw first-order estimate is finite-sample "
+    "estimator noise around zero, not negative information; it is kept in "
+    "voi_fraction_raw / voi_var_raw as a convergence diagnostic. Any factor "
+    f"whose first-order confidence interval includes zero is labelled "
+    f"'{UNRESOLVED}' and is deliberately given no VOI number to quote."
+)
 
 VOI_WARNING = (
     "VOI here is over MODEL variance, not biological variance: it says how much "
@@ -234,20 +276,36 @@ def voi(
         if name not in wanted:
             continue
         exp = EXPERIMENTS.get(name, {})
-        v = float(r["first_order"]) * var
-        v_hi = float(r["total_order"]) * var
+        s_raw = float(r["first_order"])
+        # a value of information cannot be negative; a negative first-order
+        # estimate is finite-sample noise about zero, so the decision-relevant
+        # quantity is max(0, S_j) * Var(Y) and the raw estimate is kept beside it
+        s_decision = max(0.0, s_raw)
         ci = r.get("first_order_ci")
+        unresolved = (
+            True if ci is None else bool(float(ci[0]) <= 0.0 <= float(ci[1]))
+        )
+        residual_sd = float(var * (1.0 - s_decision)) ** 0.5 if var > 0 else 0.0
         rows.append(
             {
                 "factor": name,
-                "voi_var": v,
-                "voi_fraction": float(r["first_order"]),
-                "voi_ci_var": [ci[0] * var, ci[1] * var] if ci else None,
-                "voi_upper_bound_var": v_hi,
-                "voi_upper_bound_fraction": float(r["total_order"]),
+                # headline, decision-relevant, never negative
+                "voi_var": s_decision * var,
+                "voi_fraction": s_decision,
+                "decision_voi_var": s_decision * var,
+                # the raw Sobol' estimate, unclipped, with its CI
+                "voi_fraction_raw": s_raw,
+                "voi_var_raw": s_raw * var,
+                "first_order_ci": ([float(ci[0]), float(ci[1])] if ci else None),
+                "voi_ci_var": ([float(ci[0]) * var, float(ci[1]) * var] if ci else None),
+                "ci_includes_zero": unresolved,
+                "status": (UNRESOLVED if unresolved else RESOLVED),
+                "clipped_from_negative": bool(s_raw < 0.0),
+                "voi_upper_bound_var": max(0.0, float(r["total_order"])) * var,
+                "voi_upper_bound_fraction": max(0.0, float(r["total_order"])),
                 # how much of the readout's SD the experiment would remove
-                "residual_sd": float(max(0.0, var * (1.0 - float(r["first_order"])))) ** 0.5,
-                "sd_reduction": sd - float(max(0.0, var * (1.0 - float(r["first_order"])))) ** 0.5,
+                "residual_sd": residual_sd,
+                "sd_reduction": sd - residual_sd,
                 "experiment": exp.get("experiment"),
                 "design": exp.get("design"),
                 "resolves": exp.get("resolves"),
@@ -257,13 +315,25 @@ def voi(
                 "blocking_gate": exp.get("blocking_gate"),
             }
         )
-    rows.sort(key=lambda r: -r["voi_var"])
+    # ties at zero (every unresolved factor) are broken by the raw estimate so
+    # the order is deterministic rather than input-order dependent
+    rows.sort(key=lambda r: (-r["voi_var"], -r["voi_fraction_raw"], r["factor"]))
     for i, r in enumerate(rows, 1):
         r["rank"] = i
 
-    bench = [r for r in rows if r.get("cost") not in ("none (compute only)",)]
-    top = bench[0] if bench else (rows[0] if rows else None)
-    free = [r for r in rows if r.get("cost") == "none (compute only)" and r["voi_fraction"] > 0]
+    resolved = [r for r in rows if r["status"] == RESOLVED]
+    unresolved_names = [r["factor"] for r in rows if r["status"] == UNRESOLVED]
+    bench = [
+        r
+        for r in resolved
+        if r.get("cost") not in ("none (compute only)",)
+    ]
+    top = bench[0] if bench else (resolved[0] if resolved else None)
+    free = [
+        r
+        for r in resolved
+        if r.get("cost") == "none (compute only)" and r["voi_fraction"] > 0
+    ]
 
     recommendation = None
     if top is not None:
@@ -280,8 +350,45 @@ def voi(
                 + ", ".join(f"{r['factor']} ({100 * r['voi_fraction']:.0f}%)" for r in free)
                 + " can be reduced from existing data or compute alone."
             )
+        if unresolved_names:
+            recommendation += (
+                " The remaining factors ("
+                + ", ".join(sorted(unresolved_names))
+                + f") are {UNRESOLVED}: their first-order confidence intervals "
+                "include zero, so this sample cannot rank them and no VOI "
+                "figure should be quoted for them."
+            )
+    elif unresolved_names:
+        recommendation = (
+            "No experiment is ranked: every factor's first-order confidence "
+            f"interval includes zero, so all of them are {UNRESOLVED} "
+            "(" + ", ".join(sorted(unresolved_names)) + "). Raise n_base before "
+            "reading anything into the ordering."
+        )
 
-    warnings = [VOI_WARNING] + list(res.get("warnings", []))
+    warnings = [VOI_WARNING, NEGATIVE_VOI_NOTE] + list(res.get("warnings", []))
+    if rows and all(r.get("first_order_ci") is None for r in rows):
+        warnings.append(
+            "no bootstrap confidence intervals were computed (n_boot=0), so no "
+            "factor can be shown to be distinguishable from zero and every one "
+            f"is reported as '{UNRESOLVED}'. Re-run with n_boot > 0 to rank them."
+        )
+    if unresolved_names:
+        warnings.append(
+            f"{UNRESOLVED} (first-order CI includes zero): "
+            + ", ".join(sorted(unresolved_names))
+            + ". These factors are reported with a decision VOI of 0 and no "
+            "ranking claim; that is a statement about the sample size, not "
+            "about the factors."
+        )
+    clipped = sorted(r["factor"] for r in rows if r["clipped_from_negative"])
+    if clipped:
+        warnings.append(
+            "raw first-order estimates below zero (estimator noise, clipped to "
+            "0 for the decision VOI and kept in voi_fraction_raw): "
+            + ", ".join(clipped)
+            + "."
+        )
     warnings.append(
         "VOI_j uses the FIRST-ORDER index: resolving one factor leaves its "
         "interactions with the factors that stay unknown. voi_upper_bound_var "
@@ -306,6 +413,8 @@ def voi(
         "output_sd": sd,
         "interaction_share": res.get("interaction_share"),
         "rows": rows,
+        "resolved_factors": [r["factor"] for r in resolved],
+        "unresolved_factors": sorted(unresolved_names),
         "recommendation": recommendation,
         "runtime_s": float(time.perf_counter() - t0),
         "label": "model_derived",
@@ -319,18 +428,21 @@ def to_markdown(result: Mapping[str, Any]) -> str:
         f"### Value of information - {result['compound']} {result['conc_M']:g} M, "
         f"readout {result['readout']} (Var(Y) = {result['output_variance']:.4g})",
         "",
-        "| # | factor | VOI (share of Var Y) | VOI (Hz^2) | upper bound | experiment that resolves it | cost |",
-        "|---|---|---|---|---|---|---|",
+        "| # | factor | decision VOI (share of Var Y) | decision VOI (Hz^2) | raw S1 | 95% CI on S1 | status | upper bound | experiment that resolves it | cost |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in result["rows"]:
+        ci = r.get("first_order_ci")
+        ci_s = f"[{ci[0]:+.3f}, {ci[1]:+.3f}]" if ci else "-"
         lines.append(
-            f"| {r['rank']} | {r['factor']} | {r['voi_fraction']:+.3f} | "
-            f"{r['voi_var']:+.3g} | {r['voi_upper_bound_fraction']:+.3f} | "
+            f"| {r['rank']} | {r['factor']} | {r['voi_fraction']:.3f} | "
+            f"{r['voi_var']:.3g} | {r.get('voi_fraction_raw', r['voi_fraction']):+.3f} | "
+            f"{ci_s} | {r.get('status', '')} | {r['voi_upper_bound_fraction']:.3f} | "
             f"{r['experiment']} | {r['cost']} |"
         )
     if result.get("recommendation"):
         lines += ["", f"**{result['recommendation']}**"]
-    lines += ["", f"_{VOI_WARNING}_"]
+    lines += ["", f"_{NEGATIVE_VOI_NOTE}_", "", f"_{VOI_WARNING}_"]
     return "\n".join(lines)
 
 

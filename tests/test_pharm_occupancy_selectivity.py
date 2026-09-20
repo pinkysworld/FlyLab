@@ -21,10 +21,19 @@ def test_imidacloprid_still_prefers_the_insect_receptor():
     # both are functional potencies, so neither is called an occupancy
     assert rows["insect_nAChR"]["engagement_model"] == "functional_engagement"
     assert rows["insect_nAChR"]["param_type"] == "EC50"
-    # the subunit-resolved beta1 row is the one genuine binding constant
+    # the subunit-resolved beta1 row is a genuine binding constant, but it was
+    # measured in an aphid, so it is an engagement proxy, not an occupancy
     beta1 = rows["insect_nAChR_beta1"]
-    assert beta1["param_type"] == "Kd" and beta1["engagement_model"] == "binding_occupancy"
+    assert beta1["param_type"] == "Kd"
+    assert beta1["engagement_model"] == "binding_derived_engagement"
+    assert "Myzus persicae" in beta1["provenance_warning"]
     assert beta1["engagement"] > 0.9
+    # the Drosophila head-membrane Kd is the row entitled to say "occupancy"
+    native = rows["insect_nAChR_native_dmel"]
+    assert native["param_type"] == "Kd"
+    assert native["engagement_model"] == "binding_occupancy"
+    assert native["engagement"] > 0.9
+    assert "provenance_warning" not in native
     pair = result["selectivity"]["nAChR"]
     assert pair["ec50_ratio_vert_over_insect"] == pytest.approx(500.0)
     assert pair["log10_ec50_ratio_vert_over_insect"] == pytest.approx(2.699, abs=1e-3)

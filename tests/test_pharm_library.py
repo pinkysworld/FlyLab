@@ -181,21 +181,52 @@ def test_fipronil_vertebrate_row_is_typed_as_an_ic50():
     assert LIB["compounds"]["fipronil"]["receptors"]["insect_RDL"]["param_type"] == "IC50"
 
 
-def test_the_only_binding_constant_is_the_verified_one():
-    """Kd/Ki rows must come from a radioligand binding study, named in source."""
+def test_the_binding_constants_are_the_verified_ones():
+    """Kd/Ki rows must come from a radioligand binding study, named in source.
+
+    v0.6.1 adds the second half of the rule: only the row whose source measured
+    the MODELLED organism may drive a physical occupancy model.
+    """
     binding = {
         (key, receptor)
         for key, entry in LIB["compounds"].items()
         for receptor, spec in entry["receptors"].items()
         if spec["param_type"] in ("Kd", "Ki")
     }
-    assert binding == {("imidacloprid", "insect_nAChR_beta1")}
-    spec = LIB["compounds"]["imidacloprid"]["receptors"]["insect_nAChR_beta1"]
-    assert spec["param_type"] == "Kd"
-    assert spec["value_M"] == pytest.approx(8.3e-11)
-    assert "Bass" in spec["source"] and "binding" in spec["source"]
-    assert "Myzus persicae" in spec["species"]
-    assert model_for(spec["param_type"], spec["relation"]) is EngagementModel.binding_occupancy
+    assert binding == {
+        ("imidacloprid", "insect_nAChR_beta1"),
+        ("imidacloprid", "insect_nAChR_native_dmel"),
+    }
+
+    aphid = LIB["compounds"]["imidacloprid"]["receptors"]["insect_nAChR_beta1"]
+    assert aphid["param_type"] == "Kd"
+    assert aphid["value_M"] == pytest.approx(8.3e-11)
+    assert "Bass" in aphid["source"] and "binding" in aphid["source"]
+    assert "Myzus persicae" in aphid["species"]
+    # cross-species: a real binding constant, but NOT occupancy of a fly receptor
+    assert model_for(aphid["param_type"], aphid["relation"]) is (
+        EngagementModel.binding_derived_engagement
+    )
+
+    fly = LIB["compounds"]["imidacloprid"]["receptors"]["insect_nAChR_native_dmel"]
+    assert fly["param_type"] == "Kd"
+    assert fly["value_M"] == pytest.approx(2.0e-9)
+    assert "Tomizawa" in fly["source"] and "8858952" in fly["source"]
+    assert fly["species"].startswith("Drosophila melanogaster")
+    assert fly["relation"] == "exact_compound_exact_receptor_exact_species"
+    assert model_for(fly["param_type"], fly["relation"]) is EngagementModel.binding_occupancy
+    # the preparation resolves no subunit, and the row says so
+    assert "not resolved to subunits" in fly["species"]
+
+
+def test_the_native_drosophila_key_is_documented_as_a_preparation():
+    receptors = receptor_table()
+    key = receptors["insect_nAChR_native_dmel"]
+    assert key["organism"] == "insect"
+    assert "PREPARATION-RESOLVED" in key["note"]
+    assert "NOT a subunit" in key["note"]
+    # it is not one of the aggregate key's subunit-resolved children
+    assert "insect_nAChR_native_dmel" not in receptors["insect_nAChR"]["subunit_resolved_keys"]
 
 
 def test_subunit_split_puts_each_compound_where_its_source_measured():
@@ -272,7 +303,7 @@ def test_library_report_counts_match_the_yaml():
     assert report["n_rows_not_modelled"] == sum(1 for s in rows if spec_value_M(s) is None)
     assert report["n_rows_modelled"] + report["n_rows_not_modelled"] == len(rows)
     assert report["by_param_type"]["unknown"] == report["by_evidence_tier"]["class_placeholder"]
-    assert report["by_param_type"].get("Kd") == 1
+    assert report["by_param_type"].get("Kd") == 2
 
 
 def test_occupancy_curve_spans_the_grid():

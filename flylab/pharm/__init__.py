@@ -13,6 +13,7 @@ from flylab.pharm.evidence import (
     check_transformation,
     describe,
     model_for,
+    provenance_warning,
 )
 from flylab.pharm.exposure import exposure_profile
 from flylab.pharm.mechanisms import MECHANISM_TABLE, gains_from_occupancy, mechanism_table_rows
@@ -54,6 +55,7 @@ __all__ = [
     "model_for",
     "check_transformation",
     "describe",
+    "provenance_warning",
     "compare_compound",
     "load_library",
     "occupancy_curve",
