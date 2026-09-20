@@ -57,11 +57,11 @@ The relevant distinction is scale, evidence typing, named synapse-resolution cir
 
 The dependence framework uses degraded graph ensembles and empirical permutation probabilities.
 
-The safe interpretation is:
+flylab/analysis/dependence.py reports one of three verdicts per null mode, and the safe interpretation follows them:
 
-- a small empirical p means the real-graph effect is distinguishable from that null ensemble at the chosen permutation effort,
-- a large p means the analysis did not distinguish the real effect from that null ensemble,
-- a large p is not proof of equality or biological equivalence.
+- a small empirical p means the real-graph effect is **distinguishable** from that null ensemble at the chosen permutation effort,
+- a non-rejection whose gap from the null ensemble's median is below the prespecified margin is reported as **equivalent within tolerance**; the margin is declared in advance, not fitted, and defaults to a small fraction of the vehicle readout,
+- any other non-rejection is **indeterminate**: consistent with a difference this study cannot resolve, and not evidence of equality or biological equivalence.
 
 Accordingly, prefer:
 
@@ -71,15 +71,15 @@ over:
 
 > "The degree-preserving graph reproduces the effect."
 
-The latter is stronger than a non-significant permutation comparison establishes unless an explicit equivalence criterion is added.
+Only the equivalent-within-tolerance verdict licenses the word "reproduces". Imidacloprid's sign, weight and degree modes at a thousand permutations are indeterminate, not equivalent, and must not be written up as though the shuffle had given the same effect.
 
 ## Current headline comparisons
 
 ### Imidacloprid
 
-At the current headline concentration and readout, the imidacloprid real-graph effect is not distinguishable from several structure-preserving null ensembles at n = 1000, while it differs strongly from the Erdős-Rényi control.
+At the current headline concentration and readout, the imidacloprid real-graph effect is not distinguishable from several structure-preserving null ensembles at n = 1000, while it differs strongly from the Erdős-Rényi control. Those non-rejections carry the **indeterminate** verdict, not equivalence.
 
-The current interpretation is that detailed wiring is not supported as necessary for this particular model output.
+The current interpretation is that detailed wiring is not supported as necessary for this particular model output, which is weaker than saying it is unnecessary.
 
 ### Fipronil
 
@@ -95,13 +95,15 @@ Do **not** summarize it as:
 
 > "Exactly the chloride-channel blockers are topology-dependent."
 
-That statement is biologically inaccurate and too categorical for the current exploratory classification. The current set includes perturbations with different pharmacological actions and at least one low-concentration AChE case.
+That statement is biologically inaccurate and too categorical for the current exploratory classification. The topology-sensitive set is chlorpyrifos_oxon, dieldrin, fipronil, gaba, ivermectin and picrotoxin, and three of those are not chloride-channel blockers: gaba is an RDL agonist, ivermectin a GluCl opener, and chlorpyrifos_oxon an AChE inhibitor that appears at one concentration only.
 
-Until multiplicity handling or a clearly declared exploratory framing is finalized, describe the landscape as:
+Multiplicity is handled rather than pending. The landscape applies Benjamini-Hochberg across its structural tests, records p_adjusted, q_value and fdr_alpha per cell, classifies on the adjusted values while keeping the raw ones beside them, and labels the run **confirmatory** or **exploratory** according to whether it was prespecified and whether its permutation resolution can support a rejection at the adjusted threshold at all. Any count taken from the landscape must be quoted with that label.
+
+Describe the landscape as:
 
 > "Topology-sensitive classifications are concentrated among perturbations affecting inhibitory signalling, with mechanism and concentration-specific exceptions."
 
-The exact counts and classifications should be taken from papers/results.json, not copied by hand into durable project descriptions.
+The exact counts and classifications should be taken from papers/results.json, not copied by hand into durable project descriptions. That record has not been regenerated since the current round of revisions, so check any number against the shipped defaults before quoting it.
 
 ## Specification robustness
 
@@ -117,6 +119,20 @@ However, distinguish two things:
 2. **Statistical dependence conclusions derived from permutation nulls**
 
 If a robustness predicate uses a small null sample or z-score shortcut, do not present it as equivalent to the full n = 1000 permutation analysis. The manuscript and README should reserve strong statistical language for analyses that actually use the corresponding permutation evidence.
+
+## Withdrawn ablation claims
+
+Two ablation readings were withdrawn after review. Both still appear elsewhere in the repository and in earlier manuscript text, so neither may be restated without the correction below.
+
+### "The connectome without the pharmacology is not a cheap substitute for the connectome with it"
+
+Withdrawn. The claim rested on the topology-only level of the ablation ladder, which applied a depression-only generic multiplier to every transmitter alike. A baseline that can only reduce activity cannot order a library containing compounds whose full-model effect is positive, so its poor score was a property of the rule, not of the connectome. Under the direction-aware rule now shipped as the default (GENERIC_RULES in flylab/analysis/baselines.py), which keeps a generic magnitude and takes one sign bit from the mechanism table, that level's rank correlation with the full model rises from about 0.24 to about 0.96. The old rule survives only as a floor, reported beside the fair rule, and is never a competitor.
+
+### A bare rank correlation of about 0.99 between composition-only and the full model
+
+Withdrawn as stated. The two levels are functions of the same gain vector: composition-only applies it to a fixed census, the full model applies it per cell on a row-normalised matrix in which each cell's recurrent input is already a composition-weighted average of its presynaptic gains. A high correlation is therefore expected for algebraic reasons. composition_reference_distribution shows that pharmacology-free pseudo-compounds, drawn as arbitrary gain vectors, already reach a median rank correlation around 0.8, so the observed value is the structural floor plus a small excess. composition_dominance_under_normalisations shows that the agreement does not survive a degree-corrected engine: it falls to about 0.67 at 1e-6 M and inverts, to about -0.37, at 1e-8 M.
+
+Never quote the correlation without its matched reference distribution and the engine normalisation it was computed under.
 
 ## Typed evidence
 
@@ -186,7 +202,9 @@ Do not describe FlyLab as:
 - proof that a given compound "needs the connectome",
 - proof that non-significant null comparisons are equivalent,
 - the first connectome pharmacology simulator,
-- the first executable Drosophila circuit environment.
+- the first executable Drosophila circuit environment,
+- a demonstration that the connectome without the pharmacology is not a cheap substitute for the connectome with it,
+- a composition-versus-topology verdict resting on a bare rank correlation, without its reference distribution and the engine normalisation used.
 
 ## Claims FlyLab can make
 

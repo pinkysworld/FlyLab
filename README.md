@@ -64,7 +64,9 @@ The analysis asks whether the real-graph effect is distinguishable from null ens
 - only graph size, weight distribution and transmitter composition,
 - node degree and transmitter identity,
 - the real edge list with shuffled weights,
-- the real weighted graph with transmitter identities permuted.
+- the real weighted graph with transmitter labels permuted at matched out-strength, so each transmitter's share of total synaptic weight is held fixed.
+
+A plain label permutation is also run, but it moves the weighted excitation/inhibition balance as well as transmitter identity, so it is reported as a joint null rather than as a rung of the ladder.
 
 This makes it possible to separate effects that are sensitive to detailed wiring from effects that are already explained by much coarser network information.
 
