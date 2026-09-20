@@ -15,7 +15,23 @@ permissions:
   contents: read
 
 jobs:
+  attribution:
+    name: commit attribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The policy checks every commit reachable from the checked-out ref.
+          # A shallow clone could hide an older prohibited attribution.
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: enforce repository commit attribution policy
+        run: python scripts/check_commit_attribution.py
+
   pytest:
+    needs: attribution
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +42,7 @@ jobs:
       - run: pytest -q
 
   slow:
+    needs: attribution
     # The minutes-long end-to-end checks: the pip wheel build, the static
     # (Pyodide) site and the browser boot. Weekly, on demand, and as part of
     # the release gate (.github/workflows/release.yml) -- never on a PR, where
