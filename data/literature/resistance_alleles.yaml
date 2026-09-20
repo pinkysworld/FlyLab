@@ -1,0 +1,415 @@
+# FlyLab literature dataset: target-site resistance alleles as EC50/IC50 shifts.
+#
+# Scope: genotype toggles for the FlyLab occupancy model. Each allele names the
+# FlyLab receptor key it acts on, the library compound keys it affects, and the
+# published fold-shift. NOTHING HERE IS INVENTED. Where no usable number was
+# found the field is null and `notes` says so.
+#
+# CRITICAL MODELLING CAVEAT
+#   FlyLab applies an allele as a multiplicative shift of the receptor EC50.
+#   That is only defensible for `assay_type: electrophysiology_expressed` or
+#   `binding_expressed` rows. Rows with `assay_type: whole_animal_bioassay`
+#   carry penetration, metabolism and excretion in the same number and MUST NOT
+#   be applied as a pure receptor shift. `use_as_ec50_shift` records which is
+#   which.
+#
+# evidence_tier:
+#   literature_value  - the number is stated in the cited paper for this allele
+#                       and this compound.
+#   literature_order  - only an order-of-magnitude or a derived ratio is
+#                       supported by the cited paper.
+#   class_placeholder - no number exists; field is null.
+
+schema_version: 1
+dataset: resistance_alleles
+dataset_version: "0.1"
+created_utc: "2026-09-19"
+species_note: >-
+  Drosophila melanogaster data are preferred. Where the only quantitative work
+  is in another arthropod the `species` field names that species and the entry
+  must be labelled as a cross-species transfer in any notebook that uses it.
+
+alleles:
+
+  # ---------------------------------------------------------------- RDL -----
+  - id: rdl_A302S_dmel
+    gene: Rdl
+    allele: A302S
+    alternative_numbering: "A301S (numbering used for most non-Drosophila RDL orthologues)"
+    species: Drosophila melanogaster
+    target_receptor: insect_RDL
+    affected_compounds: [dieldrin, picrotoxin, fipronil]
+    shifts:
+      - compound: picrotoxin
+        metric: resistance_ratio_IC50
+        fold: 116.0
+        assay_type: electrophysiology_native_neuron
+        preparation: "whole-cell recording from cultured neurons of Rdl (A302S) mutant vs wild-type Drosophila larvae"
+        use_as_ec50_shift: true
+        evidence_tier: literature_value
+        source: "Zhang HG, ffrench-Constant RH, Jackson MB (1994) J Physiol 479(Pt 1):65-75. PMID 7527461. DOI 10.1113/jphysiol.1994.sp020278"
+        quote: "Resistance ratios were 116, 970 and 9 for the three blockers, respectively (picrotoxin, lindane, TBPS)."
+      - compound: lindane
+        metric: resistance_ratio_IC50
+        fold: 970.0
+        assay_type: electrophysiology_native_neuron
+        use_as_ec50_shift: true
+        evidence_tier: literature_value
+        source: "Zhang HG, ffrench-Constant RH, Jackson MB (1994) J Physiol 479(Pt 1):65-75. PMID 7527461"
+        notes: "lindane is not currently a FlyLab library compound; kept because it anchors the size of the A302S effect."
+      - compound: dieldrin
+        metric: resistance_ratio_IC50
+        fold: null
+        assay_type: electrophysiology_expressed
+        use_as_ec50_shift: null
+        evidence_tier: class_placeholder
+        source: "ffrench-Constant RH, Rocheleau TA, Steichen JC, Chalmers AE (1993) Nature 363:449-451. DOI 10.1038/363449a0"
+        notes: >-
+          ffrench-Constant 1993 establishes that A302S is the cyclodiene
+          resistance mutation, but no fold-shift in dieldrin IC50 on the
+          expressed receptor was located. Left null deliberately.
+      - compound: fipronil
+        metric: resistance_ratio_IC50
+        fold: null
+        assay_type: electrophysiology_expressed
+        preparation: "homo-oligomeric RDL vs RDL(A302S) in Xenopus laevis oocytes"
+        use_as_ec50_shift: null
+        evidence_tier: class_placeholder
+        source: "Hosie AM, Baylis HA, Buckingham SD, Sattelle DB (1995) Br J Pharmacol 115(6):909-912. PMID 7582519. DOI 10.1111/j.1476-5381.1995.tb15896.x"
+        quote: "Mutant RDL GABA-receptors ... were markedly less sensitive to fipronil than the wild-type receptors."
+        notes: >-
+          Direction is certain (reduced fipronil sensitivity) but the paper's
+          abstract gives no IC50 pair and the full text was not retrievable.
+          Number left null rather than guessed. See rdl_A301S_nlug below for a
+          contrasting quantitative result in another species.
+
+  - id: rdl_A302G_dsim
+    gene: Rdl
+    allele: A301G
+    alternative_numbering: "A302G in Drosophila melanogaster RDL numbering"
+    species: Drosophila simulans
+    target_receptor: insect_RDL
+    affected_compounds: [fipronil, picrotoxin]
+    shifts:
+      - compound: fipronil
+        metric: resistance_ratio_whole_animal
+        fold: 20000.0
+        assay_type: whole_animal_bioassay
+        preparation: "laboratory-selected D. simulans strain carrying RDL A301G + T350M"
+        use_as_ec50_shift: false
+        evidence_tier: literature_value
+        source: "Le Goff G, Hamon A, Berge JB, Amichot M (2005) J Neurochem 92:1295-1305. DOI 10.1111/j.1471-4159.2004.02922.x. PMID 15748149"
+        quote: "approximately 20,000-fold resistance to the insecticide fipronil"
+        notes: >-
+          The ~20000x figure belongs to the whole strain (two RDL mutations plus
+          unidentified additional factors), NOT to A301G alone. Do not use as a
+          receptor EC50 shift. The paper states A301G alone decreased sensitivity
+          to fipronil and picrotoxin in Xenopus oocytes but the isolated
+          oocyte fold-shifts were not retrieved.
+      - compound: picrotoxin
+        metric: resistance_ratio_IC50
+        fold: null
+        assay_type: electrophysiology_expressed
+        use_as_ec50_shift: null
+        evidence_tier: class_placeholder
+        source: "Le Goff G et al. (2005) J Neurochem 92:1295-1305"
+        notes: "Direction only (decreased sensitivity); no number retrieved."
+
+  - id: rdl_A301S_nlug
+    gene: Rdl
+    allele: A301S
+    species: Nilaparvata lugens (brown planthopper)
+    target_receptor: insect_RDL
+    affected_compounds: [fipronil, ethiprole, gaba]
+    shifts:
+      - compound: fipronil
+        metric: fold_shift_IC50
+        fold: 1.1
+        pIC50_wildtype: 5.74
+        pIC50_mutant: 5.70
+        assay_type: electrophysiology_expressed
+        preparation: "N. lugens RDL wild-type vs A301S in Xenopus oocytes, two-electrode voltage clamp"
+        use_as_ec50_shift: true
+        evidence_tier: literature_value
+        source: "Garrood WT, Zimmer CT, Gutbrod O, Luke B, Williamson MS, Bass C, Nauen R, Davies TGE (2017) Pestic Biochem Physiol 142:1-8. DOI 10.1016/j.pestbp.2017.01.007. PMID 29107231"
+        notes: >-
+          IMPORTANT NEGATIVE RESULT. A301S does NOT significantly shift fipronil
+          potency on the expressed planthopper receptor (5.74 vs 5.70 pIC50),
+          even though it shifts ethiprole. Any FlyLab toggle that assumes
+          A302S/A301S automatically confers fipronil resistance at the receptor
+          is contradicted by this paper.
+      - compound: ethiprole
+        metric: fold_shift_IC50
+        fold: 5.1
+        pIC50_wildtype: 6.41
+        pIC50_mutant: 5.70
+        assay_type: electrophysiology_expressed
+        use_as_ec50_shift: true
+        evidence_tier: literature_value
+        source: "Garrood WT et al. (2017) Pestic Biochem Physiol 142:1-8"
+        notes: >-
+          Authors summarise the effect as 8-10 fold reduction in receptor
+          sensitivity; 5.1x is the ratio computed directly from the reported
+          pIC50 pair. Both figures are recorded so the discrepancy is visible.
+          Ethiprole is not currently a FlyLab library compound.
+      - compound: gaba
+        metric: fold_shift_EC50_agonist
+        fold: 33.9
+        pEC50_wildtype: 5.43
+        pEC50_mutant: 3.90
+        assay_type: electrophysiology_expressed
+        use_as_ec50_shift: true
+        evidence_tier: literature_value
+        source: "Garrood WT et al. (2017) Pestic Biochem Physiol 142:1-8"
+        notes: >-
+          A301S also makes the receptor ~34x less sensitive to GABA itself. If
+          FlyLab ever models RDL agonist drive, this shift must be applied to
+          the transmitter as well as to the antagonist.
+
+  # -------------------------------------------------------------- nAChR -----
+  - id: nachr_beta1_R81T_mper
+    gene: "nAChR beta1 (loop D)"
+    allele: R81T
+    species: Myzus persicae (green peach aphid)
+    target_receptor: insect_nAChR
+    affected_compounds: [imidacloprid, thiamethoxam]
+    shifts:
+      - compound: imidacloprid
+        metric: binding_Kd_nM
+        wildtype_high_affinity_site_Kd_nM: 0.083
+        wildtype_high_affinity_site_Kd_sd_nM: 0.0085
+        wildtype_low_affinity_site_Kd_nM: 1.7
+        wildtype_low_affinity_site_Kd_sd_nM: 0.65
+        mutant_single_site_Kd_nM: 4.14
+        mutant_single_site_Kd_sd_nM: 0.39
+        fold: 50.0
+        assay_type: binding_native_membrane
+        preparation: "[3H]-imidacloprid saturation binding on membranes from susceptible clone 4106A vs resistant clone FRC (R81T)"
+        use_as_ec50_shift: true
+        evidence_tier: literature_value
+        source: "Bass C, Puinean AM, Andrews M, Cutler P, Daniels M, Elias J, Paul VL, Crossthwaite AJ, Denholm I, Field LM, Foster SP, Lind R, Williamson MS, Slater R (2011) BMC Neurosci 12:51. DOI 10.1186/1471-2202-12-51. PMID 21627790"
+        notes: >-
+          The high-affinity site (Kd 0.083 nM) is lost in R81T; the remaining
+          site has Kd 4.14 nM. The ~50x figure is the loss of the high-affinity
+          component; the residual low-affinity site is shifted ~2.4x. Which one
+          FlyLab should use depends on whether the model has one or two sites.
+      - compound: imidacloprid
+        metric: resistance_ratio_whole_animal
+        fold: 1679.0
+        fold_with_PBO: 234.0
+        assay_type: whole_animal_bioassay
+        preparation: "leaf-dip spray bioassay, FRC vs 4106A, with and without piperonyl butoxide pretreatment"
+        use_as_ec50_shift: false
+        evidence_tier: literature_value
+        source: "Bass C et al. (2011) BMC Neurosci 12:51"
+        notes: >-
+          FRC also over-expresses CYP6CY3; the PBO-suppressed ratio (234x) is
+          the closer estimate of the target-site component. Whole-animal value,
+          do not apply as a receptor shift.
+      - compound: thiamethoxam
+        metric: resistance_ratio_whole_animal
+        fold: 225.0
+        fold_with_PBO: 26.0
+        assay_type: whole_animal_bioassay
+        use_as_ec50_shift: false
+        evidence_tier: literature_value
+        source: "Bass C et al. (2011) BMC Neurosci 12:51"
+      - compound: clothianidin
+        metric: resistance_ratio_whole_animal
+        fold: null
+        assay_type: whole_animal_bioassay
+        use_as_ec50_shift: null
+        evidence_tier: class_placeholder
+        notes: "Bass et al. 2011 tested imidacloprid and thiamethoxam only. No clothianidin, acetamiprid or nitenpyram ratio was found for this allele."
+
+  # ---------------------------------------------------------------- Nav -----
+  - id: para_L1014F_kdr
+    gene: para (voltage-gated sodium channel)
+    allele: L1014F
+    common_name: kdr
+    species: "Drosophila melanogaster para channel (mutation originally described in Musca domestica), expressed in Xenopus laevis oocytes"
+    target_receptor: insect_Nav
+    affected_compounds: [deltamethrin, permethrin, ddt]
+    shifts:
+      - compound: deltamethrin
+        metric: fold_reduction_open_channel_affinity
+        fold: 20.0
+        assay_type: electrophysiology_expressed
+        preparation: "Drosophila para + tipE in Xenopus oocytes, two-electrode voltage clamp; affinity for the open channel"
+        use_as_ec50_shift: true
+        evidence_tier: literature_value
+        source: "Vais H, Williamson MS, Goodson SJ, Devonshire AL, Warmke JW, Usherwood PNR, Cohen CJ (2000) J Gen Physiol 115(3):305-318. DOI 10.1085/jgp.115.3.305. PMID 10694259"
+        quote: "kdr reduces affinity for open channels by 20-fold"
+      - compound: ddt
+        metric: fold_reduction_channel_modification
+        fold: 10.0
+        assay_type: electrophysiology_expressed
+        use_as_ec50_shift: true
+        evidence_tier: literature_order
+        source: "Usherwood PNR, Vais H, Khambay BPS, Davies TGE, Williamson MS (2005) FEBS Lett 579(28):6317-6325. DOI 10.1016/j.febslet.2005.09.096. PMID 16263118"
+        notes: >-
+          DDT-induced modification is reduced approximately 10-fold by L1014F
+          alone or by L1014F+M918T. Reported as an approximate factor, hence
+          literature_order.
+      - compound: permethrin
+        metric: fold_reduction_open_channel_affinity
+        fold: null
+        assay_type: electrophysiology_expressed
+        use_as_ec50_shift: null
+        evidence_tier: class_placeholder
+        notes: "Direction established (reduced sensitivity) but no isolated L1014F permethrin fold-shift was retrieved."
+
+  - id: para_M918T_superkdr
+    gene: para (voltage-gated sodium channel)
+    allele: M918T
+    common_name: super-kdr
+    genotype_note: "Quantified in Vais et al. 2000 as the M918T + L1014F double mutant, which is how super-kdr occurs in field populations."
+    species: "Drosophila melanogaster para channel expressed in Xenopus laevis oocytes"
+    target_receptor: insect_Nav
+    affected_compounds: [deltamethrin, permethrin, ddt]
+    shifts:
+      - compound: deltamethrin
+        metric: fold_reduction_open_channel_affinity
+        fold: 100.0
+        assay_type: electrophysiology_expressed
+        use_as_ec50_shift: true
+        evidence_tier: literature_value
+        source: "Vais H et al. (2000) J Gen Physiol 115(3):305-318. PMID 10694259"
+        quote: "super-kdr reduces affinity for open channels by 100-fold"
+        notes: >-
+          Vais et al. also report that super-kdr reduces efficacy by cutting the
+          number of deltamethrin binding sites per channel from two to one. A
+          pure EC50 shift therefore under-represents the allele; FlyLab should
+          also cap the maximal Nav effect if it models efficacy.
+      - compound: permethrin
+        metric: fold_reduction_sensitivity
+        fold: null
+        assay_type: electrophysiology_expressed
+        use_as_ec50_shift: null
+        evidence_tier: class_placeholder
+        source: "Usherwood PNR et al. (2005) FEBS Lett 579:6317-6325"
+        quote: "the super-kdr mutation M918T ... profoundly reduces sensitivity to permethrin and deltamethrin"
+        notes: "Qualitative only for permethrin; no isolated number retrieved."
+      - compound: ddt
+        metric: fold_reduction_channel_modification
+        fold: 1.0
+        assay_type: electrophysiology_expressed
+        use_as_ec50_shift: true
+        evidence_tier: literature_order
+        source: "Usherwood PNR et al. (2005) FEBS Lett 579:6317-6325"
+        notes: >-
+          KEY DISSOCIATION. M918T alone only marginally influences DDT, while it
+          profoundly reduces pyrethroid sensitivity. fold = 1.0 encodes "no
+          meaningful shift". A FlyLab genotype toggle that shifts all Nav
+          ligands together would be wrong for this allele.
+
+  # ---------------------------------------------------------------- AChE ----
+  - id: ace_dmel_point_mutations
+    gene: Ace
+    allele: "I161V / G265A / F330Y / G368A (and combinations)"
+    species: Drosophila melanogaster
+    target_receptor: insect_AChE
+    affected_compounds: [paraoxon, chlorpyrifos_oxon]
+    assay_type: enzyme_kinetics_recombinant
+    preparation: >-
+      Recombinant D. melanogaster AChE variants; fold-insensitivity expressed as
+      the ratio of the bimolecular inhibition rate constant ki of wild type to
+      that of the mutant, substrate acetylthiocholine, 25 C.
+    use_as_ec50_shift: true
+    shifts:
+      - compound: paraoxon
+        per_allele_fold:
+          I161V: 2.3
+          G265A: 8.9
+          F330Y: 2.2
+          G368A: 8.7
+        evidence_tier: literature_value
+        source: "Menozzi P, Shi MA, Lougarre A, Tang ZH, Fournier D (2004) BMC Evol Biol 4:4. DOI 10.1186/1471-2148-4-4. PMID 15018651. PMCID PMC362867 (Table 5)"
+      - compound: chlorpyrifos_oxon
+        per_allele_fold:
+          I161V: 0.80
+          G265A: 1.5
+          F330Y: 1.7
+          G368A: 10.0
+        evidence_tier: literature_value
+        source: "Menozzi P et al. (2004) BMC Evol Biol 4:4 (Table 5)"
+        notes: >-
+          I161V is slightly SENSITISING (0.80) to chlorpyrifos-oxon. Single
+          mutations give modest shifts; the resistance phenotype is built by
+          combining them.
+      - compound: "combination allele VAYA (I161V+G265A+F330Y+G368A)"
+        per_compound_fold:
+          malaoxon: 5900.0
+          coumaphos_oxon: 1100.0
+        evidence_tier: literature_value
+        source: "Menozzi P et al. (2004) BMC Evol Biol 4:4"
+        notes: >-
+          Included to show the ceiling of Ace target-site resistance. Neither
+          malaoxon nor coumaphos-oxon is a FlyLab library compound; no VAYA
+          value for paraoxon or chlorpyrifos-oxon was extracted.
+    isolated_single_mutation_highlights:
+      G265A_coumaphos_oxon_fold: 38.0
+      F330Y_diazinon_oxon_fold: 91.0
+      evidence_tier: literature_value
+      source: "Menozzi P et al. (2004) BMC Evol Biol 4:4"
+
+  # -------------------------------------------------------------- GluCl -----
+  - id: glucl_A309V_pxyl
+    gene: GluCl (M3 helix)
+    allele: A309V
+    species: Plutella xylostella (diamondback moth)
+    target_receptor: insect_GluCl
+    affected_compounds: [abamectin]
+    shifts:
+      - compound: abamectin
+        metric: fold_reduction_sensitivity
+        fold: 4.8
+        assay_type: electrophysiology_expressed
+        preparation: "PxGluCl wild-type vs mutant expressed heterologously, two-electrode voltage clamp"
+        use_as_ec50_shift: true
+        evidence_tier: literature_value
+        source: "Wang X, Puinean AM, O'Reilly AO, Williamson MS, Smelt CLC, Millar NS, Wu Y (2017) Insect Biochem Mol Biol 86:50-57. DOI 10.1016/j.ibmb.2017.05.006. PMID 28576654"
+        notes: >-
+          FlyLab library key for this pharmacology is `ivermectin` (avermectin
+          class). Abamectin and ivermectin are distinct avermectins; treat this
+          as a class-level transfer, not an ivermectin measurement.
+      - compound: abamectin
+        metric: fold_reduction_sensitivity
+        allele_variant: G315E
+        fold: 493.0
+        assay_type: electrophysiology_expressed
+        use_as_ec50_shift: true
+        evidence_tier: literature_value
+        source: "Wang X et al. (2017) Insect Biochem Mol Biol 86:50-57"
+        notes: "G315E, same M3 helix, same study; included because it brackets the achievable GluCl shift. A309I and A309G had no significant effect."
+
+  - id: glucl_G323D_turt
+    gene: GluCl1 / GluCl3
+    allele: "GluCl1 G323D; GluCl3 G326E"
+    species: Tetranychus urticae (two-spotted spider mite)
+    target_receptor: insect_GluCl
+    affected_compounds: [abamectin]
+    shifts:
+      - compound: abamectin
+        metric: resistance_ratio_whole_animal
+        fold_GluCl1_G323D: 18.0
+        fold_GluCl3_G326E: 2000.0
+        assay_type: whole_animal_bioassay
+        use_as_ec50_shift: false
+        evidence_tier: literature_value
+        source: "Kwon DH, Yoon KS, Clark JM, Lee SH (2010) Insect Mol Biol 19:583-591. DOI 10.1111/j.1365-2583.2010.01017.x. PMID 20522121; fold values as summarised in Wang X et al. (2017) Insect Biochem Mol Biol 86:50-57"
+        notes: >-
+          Whole-organism resistance ratios, not receptor shifts. Kwon et al.
+          2010 identified G323D as co-segregating with resistance; the 18x and
+          2000x figures are the ones quoted in the 2017 comparison. No
+          G36A-type GluCl allele was found in the literature; the task's
+          "GluCl G36A" could not be sourced and is not represented here.
+
+not_sourced:
+  - "Rdl A302S fipronil fold-shift on the expressed Drosophila receptor (direction only; Hosie 1995 gives no IC50 pair)."
+  - "Rdl A302S dieldrin fold-shift (any preparation)."
+  - "Rdl A302G isolated oocyte fold-shifts for fipronil and picrotoxin."
+  - "nAChR beta1 R81T resistance ratios for clothianidin, acetamiprid, nitenpyram."
+  - "para L1014F and M918T isolated permethrin fold-shifts."
+  - "Drosophila Ace paraoxon/chlorpyrifos-oxon fold for the quadruple VAYA allele."
+  - "A GluCl 'G36A' allele - no such allele was found; A309V/G315E/G323D/G326E are the published GluCl abamectin-resistance substitutions."

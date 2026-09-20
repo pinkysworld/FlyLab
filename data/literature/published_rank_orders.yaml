@@ -1,0 +1,254 @@
+# FlyLab literature dataset: published potency rank orders and selectivity
+# contrasts, for retrospective validation of the occupancy model.
+#
+# These are TARGETS, not inputs. The intended use is: run the model, then check
+# that the model reproduces the ordering (and, where `use_in_flylab: curve`,
+# the numbers) in the cited assay. Nothing here is fitted to FlyLab.
+#
+# use_in_flylab:
+#   rank-order-only - only the ordering is claimed; do not read absolute values.
+#   fold-shift      - a ratio between two named conditions is usable.
+#   curve           - absolute concentration-response values usable for a curve.
+
+schema_version: 1
+dataset: published_rank_orders
+dataset_version: "0.1"
+created_utc: "2026-09-19"
+
+entries:
+
+  # ------------------------------------------------ neonicotinoid potency ----
+  - id: neonic_potency_dmel_larval
+    assay: "Larval feeding bioassay (EC50 for failure to pupate/eclose), Armenia strain"
+    species: Drosophila melanogaster
+    readout: EC50
+    units: ppm
+    ordered_compounds:
+      - {compound: clothianidin, value: 0.11, rank: 1}
+      - {compound: nitenpyram,   value: 0.88, rank: null}
+    evidence_tier: literature_value
+    use_in_flylab: rank-order-only
+    source: "Perry T, Heckel DG, McKenzie JA, Batterham P (2012) Pestic Biochem Physiol 102(1):56-60. DOI 10.1016/j.pestbp.2011.10.010"
+    notes: >-
+      Only the two extremes of the reported range (most potent clothianidin
+      0.11 ppm, least potent nitenpyram 0.88 ppm) were recoverable; the
+      intermediate compounds' individual EC50 values were not retrieved, so
+      their ranks are null. Whole-animal assay: metabolism and uptake are
+      inside the number. Use for ordering only.
+
+  - id: neonic_potency_dmel_adult
+    assay: "Adult contact/feeding bioassay (LC50), Oregon-R strain"
+    species: Drosophila melanogaster
+    readout: LC50
+    units: ppm
+    ordered_compounds:
+      - {compound: clothianidin, value: 0.80, rank: 1}
+      - {compound: nitenpyram,   value: 20.0, rank: null}
+    evidence_tier: literature_value
+    use_in_flylab: rank-order-only
+    source: "Perry T, Heckel DG, McKenzie JA, Batterham P (2012) Pestic Biochem Physiol 102(1):56-60"
+    notes: >-
+      25-fold spread between the most and least potent neonicotinoid in adults,
+      vs 8-fold in larvae. Same caveat as above.
+
+  - id: neonic_chronic_lifespan_dmel
+    assay: "Chronic oral exposure at a field-relevant dose (10 ug/L), adult lifespan reduction"
+    species: Drosophila melanogaster
+    readout: "relative potency for lifespan reduction (ordinal)"
+    units: null
+    ordered_compounds:
+      - {compound: clothianidin,  value: null, rank: 1}
+      - {compound: imidacloprid,  value: null, rank: 2}
+      - {compound: thiamethoxam,  value: null, rank: 3}
+      - {compound: thiacloprid,   value: null, rank: 4}
+    evidence_tier: literature_order
+    use_in_flylab: rank-order-only
+    source: "Tasman K, Rands SA, Hodge JJL (2021) Front Physiol 12:659440. DOI 10.3389/fphys.2021.659440 (review; ordering as stated there)"
+    notes: >-
+      Taken from a review's summary sentence, not from a primary table. Ordering
+      is consistent with the acute Drosophila bioassay above (clothianidin most
+      potent, thiamethoxam weak) and with thiamethoxam being a pro-insecticide.
+
+  - id: neonic_resistance_ratio_myzus
+    assay: "Spray bioassay, neonicotinoid-resistant clone FRC vs susceptible 4106A"
+    species: Myzus persicae
+    readout: resistance_ratio
+    units: fold
+    ordered_compounds:
+      - {compound: imidacloprid, value: 1679.0, rank: 1}
+      - {compound: thiamethoxam, value: 225.0,  rank: 2}
+    evidence_tier: literature_value
+    use_in_flylab: fold-shift
+    source: "Bass C et al. (2011) BMC Neurosci 12:51. DOI 10.1186/1471-2202-12-51. PMID 21627790"
+    notes: >-
+      Combined target-site (nAChR beta1 R81T) and metabolic (CYP6CY3)
+      resistance. With PBO the ratios fall to 234 and 26 respectively; the
+      PBO-suppressed pair is the better estimate of the target-site component.
+
+  # ------------------------------ insect vs vertebrate nAChR selectivity -----
+  - id: neonic_insect_vs_vertebrate_nachr
+    assay: "Radioligand binding and oocyte electrophysiology across insect and vertebrate nAChR preparations (review synthesis)"
+    species: "insect (Drosophila, Musca, Myzus) vs vertebrate (rat/chicken alpha4beta2, alpha7)"
+    readout: "insect-over-vertebrate selectivity"
+    units: fold
+    ordered_compounds:
+      - {compound: imidacloprid,  value: null, rank: null, direction: "insect-selective"}
+      - {compound: nitenpyram,    value: null, rank: null, direction: "insect-selective"}
+      - {compound: acetamiprid,   value: null, rank: null, direction: "insect-selective"}
+      - {compound: clothianidin,  value: null, rank: null, direction: "insect-selective"}
+      - {compound: nicotine,      value: null, rank: null, direction: "vertebrate-selective (reversed)"}
+    evidence_tier: literature_order
+    use_in_flylab: rank-order-only
+    source: "Tomizawa M, Casida JE (2003) Annu Rev Entomol 48:339-364. DOI 10.1146/annurev.ento.48.091801.112731. PMID 12208819; Tomizawa M, Casida JE (2005) Annu Rev Pharmacol Toxicol 45:247-268; Tomizawa M, Lee DL, Casida JE (2000) J Agric Food Chem 48:6016-6024. DOI 10.1021/jf000873c. PMID 11312774"
+    notes: >-
+      NUMBERS DELIBERATELY NULL. The Ki tables in these reviews are paywalled and
+      could not be verified, so no per-compound selectivity ratio is recorded.
+      What IS verified from the 2000 JAFC abstract: "The favorable selective
+      toxicity of neonicotinoid insecticides ... for insects versus mammals is
+      not shared by three of their N-unsubstituted imine derivatives or by
+      nicotine or epibatidine." The nitro/cyano pharmacophore, not the ring
+      system, carries the selectivity. The current FlyLab library encodes this
+      contrast as a ~500x insect-over-vertebrate ratio for imidacloprid
+      (2e-8 M vs 1e-5 M); that ratio is a teaching choice, not a value from
+      these reviews.
+
+  - id: neonic_alpha7_partial_agonism
+    assay: "Rat alpha7 nAChR expressed in Xenopus oocytes, two-electrode voltage clamp"
+    species: Rattus norvegicus (recombinant alpha7)
+    readout: EC50
+    units: M
+    ordered_compounds:
+      - {compound: acetylcholine, value: 1.6e-4, rank: 1, efficacy: "full agonist (reference)"}
+      - {compound: acetamiprid,   value: 7.3e-4, rank: 2, efficacy: "partial agonist"}
+      - {compound: clothianidin,  value: 7.4e-4, rank: 3, efficacy: "partial agonist"}
+      - {compound: thiamethoxam,  value: null,   rank: null, efficacy: "no agonist effect"}
+    evidence_tier: literature_value
+    use_in_flylab: curve
+    source: "Cartereau A, Martin C, Thany SH (2018) Br J Pharmacol 175(11):1987-1998 (rat alpha7 neonicotinoid actions)"
+    notes: >-
+      This is the vertebrate arm of the selectivity contrast and is already the
+      cited basis of the clothianidin and acetamiprid vertebrate_nAChR_a7 rows
+      in flylab/pharm/library.yaml. Sub-millimolar EC50 at alpha7 against
+      tens-of-nM at insect nAChR is the selectivity margin the dual scorecard
+      should reproduce.
+
+  # ----------------------------------------- GABA-gated chloride channel -----
+  - id: gaba_blocker_potency_insect_vs_vertebrate
+    assay: "[3H]EBOB displacement from the noncompetitive-blocker site; housefly head membranes vs human recombinant GABA-A"
+    species: "Musca domestica (insect) vs Homo sapiens recombinant GABA-A"
+    readout: IC50
+    units: nM
+    ordered_compounds:
+      - {compound: fipronil,              insect_value: "3-12 (class range for fipronil and its derivatives)", vertebrate_value: 1103.0, rank: 1}
+      - {compound: "fipronil sulfone",    insect_value: null, vertebrate_value: 175.0, rank: null}
+      - {compound: "desulfinyl fipronil", insect_value: null, vertebrate_value: 129.0, rank: null}
+    evidence_tier: literature_value
+    use_in_flylab: fold-shift
+    source: "Ratra GS, Casida JE (2001) Toxicol Lett 122(3):215-222. DOI 10.1016/s0378-4274(01)00366-6. PMID 11489356"
+    notes: >-
+      Insect IC50 3-12 nM vs an average vertebrate IC50 of 1103 nM for fipronil
+      gives roughly 90-370 fold insect selectivity. Ratra & Casida also report
+      that binding potency on the beta3 homopentamer correlates with the
+      housefly receptor (r = 0.88, n = 20), i.e. the selectivity is driven by
+      vertebrate subunit composition, not by a different site.
+
+  - id: fipronil_human_beta3_homomer
+    assay: "Human recombinant GABA-A beta3 homo-oligomeric receptor, radioligand binding"
+    species: Homo sapiens (recombinant)
+    readout: IC50
+    units: nM
+    ordered_compounds:
+      - {compound: fipronil,          value: "0.5-2.4 (range covering fipronil, lindane and alpha-endosulfan)", rank: 1}
+      - {compound: "alpha-endosulfan", value: "0.5-2.4", rank: 1}
+      - {compound: lindane,           value: "0.5-2.4", rank: 1}
+    evidence_tier: literature_value
+    use_in_flylab: rank-order-only
+    source: "Ratra GS, Kamita SG, Casida JE (2001) Toxicol Appl Pharmacol 172(3):233-240. DOI 10.1006/taap.2001.9154. PMID 11312652"
+    notes: >-
+      IMPORTANT COUNTERWEIGHT to the selectivity story. Fipronil is nanomolar-
+      potent on the human beta3 HOMOpentamer; selectivity in vivo comes from the
+      fact that native mammalian receptors are heteromeric. A FlyLab scorecard
+      that shows fipronil as simply "vertebrate-safe" overstates the case;
+      the warning text should name subunit composition.
+
+  - id: fipronil_phenylpyrazole_selectivity_direction
+    assay: "GABA-gated chloride channel block, house fly brain vs mouse brain"
+    species: "Musca domestica vs Mus musculus"
+    readout: "relative potency (direction only)"
+    units: null
+    ordered_compounds:
+      - {compound: fipronil, value: null, rank: 1, direction: "more potent at house fly than mouse"}
+    evidence_tier: literature_order
+    use_in_flylab: rank-order-only
+    source: "Cole LM, Nicholson RA, Casida JE (1993) Pestic Biochem Physiol 46(1):47-54. DOI 10.1006/pest.1993.1035"
+    notes: "Original statement of phenylpyrazole selective toxicity. Numeric IC50 pair not retrieved."
+
+  - id: rdl_antagonist_order_drosophila
+    assay: "Homo-oligomeric Drosophila RDL expressed in Xenopus laevis oocytes; block of GABA-evoked current"
+    species: Drosophila melanogaster
+    readout: "antagonist potency (ordinal)"
+    units: null
+    ordered_compounds:
+      - {compound: fipronil,   value: null, rank: null}
+      - {compound: picrotoxin, value: null, rank: null}
+      - {compound: dieldrin,   value: null, rank: null}
+    evidence_tier: class_placeholder
+    use_in_flylab: rank-order-only
+    source: "Hosie AM, Baylis HA, Buckingham SD, Sattelle DB (1995) Br J Pharmacol 115(6):909-912. PMID 7582519"
+    notes: >-
+      NOT SOURCED. All three are active at Drosophila RDL and all three lose
+      potency on A302S, but no paper giving the three IC50 values in one
+      Drosophila RDL preparation was located, so no ordering is asserted.
+      Note also that reported RDL IC50s vary with expression conditions: Lees
+      et al. 2014 (PLoS ONE 9:e97468) report fipronil in the 0.3-3 uM range on
+      the predominant in vivo splice/edit variant, against the tens-of-nM
+      figure used by the FlyLab library. See README "contradictions".
+
+  - id: benzodiazepine_inactive_at_insect_rdl
+    assay: "Homo-oligomeric Drosophila RDL in Xenopus laevis oocytes; modulation of the response to 10 uM GABA"
+    species: Drosophila melanogaster
+    readout: "potentiation of GABA response"
+    units: null
+    ordered_compounds:
+      - {compound: flunitrazepam, value: "no effect at 0.1-100 uM", rank: null}
+      - {compound: "Ro 5-4864 (4'-chlorodiazepam)", value: "negligible effect", rank: null}
+    evidence_tier: literature_value
+    use_in_flylab: rank-order-only
+    source: "Hosie AM, Sattelle DB (1996) Br J Pharmacol 117(6):1229-1237. DOI 10.1111/j.1476-5381.1996.tb16720.x. PMID 8882620"
+    quote: "flunitrazepam (0.1 uM-100 uM) had no effect on the amplitude of responses to 10 uM GABA"
+    notes: >-
+      This is the evidence behind the FlyLab library's class_placeholder for
+      diazepam at insect_RDL. Diazepam itself was not the compound tested;
+      flunitrazepam and Ro 5-4864 stand in for the benzodiazepine site. The
+      same paper notes that barbiturate and steroid potencies on RDL do
+      resemble native insect receptors, so "insect GABA receptors have no
+      allosteric modulation" would be wrong - it is specifically the
+      benzodiazepine site that is absent.
+
+  # ---------------------------------------------------- avermectin target ----
+  - id: ivermectin_gluCl_vs_vertebrate
+    assay: "GluCl activation (nematode/invertebrate) vs mammalian glycine receptor and GABA-A modulation"
+    species: "Haemonchus contortus GluCl vs mammalian recombinant GlyR alpha1 / GABA-A"
+    readout: EC50
+    units: M
+    ordered_compounds:
+      - {compound: ivermectin, target: insect_GluCl,       value: "1e-10 to 1e-9 (estimated 0.1-1 nM at H. contortus GluCl)", rank: 1}
+      - {compound: ivermectin, target: vertebrate_GlyR,    value: "~1e-6 (micromolar)", rank: 2}
+      - {compound: ivermectin, target: vertebrate_GABA_A,  value: "~1e-6 to 1e-5 (micromolar)", rank: 3}
+    evidence_tier: literature_order
+    use_in_flylab: rank-order-only
+    source: "Wolstenholme AJ (2012) J Biol Chem 287:40232-40238 (GluCl review); Shan Q, Haddrill JL, Lynch JW (2001) J Biol Chem 276:12556-12564 (ivermectin at alpha1 GlyR); Dawson GR et al. (2000) J Pharmacol Exp Ther 295:1051-1060 (avermectin action via GABA-A in mice)"
+    notes: >-
+      Three-order-of-magnitude selectivity for the invertebrate glutamate-gated
+      chloride channel over mammalian Cys-loop anion channels; this is the
+      contrast the FlyLab scorecard should show for ivermectin. Exact GluCl
+      EC50 values vary with subunit and species; recorded as an order, not a
+      value. Note also Lees et al. 2014 (PLoS ONE 9:e97468): ivermectin also
+      activates and potentiates insect RDL at sub-micromolar to micromolar, so
+      ivermectin is not GluCl-exclusive within the insect.
+
+not_sourced:
+  - "Per-compound insect-over-vertebrate nAChR Ki ratios from Tomizawa & Casida (paywalled tables)."
+  - "A single Drosophila RDL preparation giving fipronil, picrotoxin and dieldrin IC50 values side by side."
+  - "Drosophila PER or feeding-suppression concentration-response curves for any neonicotinoid (see behavioral_assays.yaml)."
+  - "Quantitative caffeine or quinine PER-suppression IC50 values in Drosophila."
