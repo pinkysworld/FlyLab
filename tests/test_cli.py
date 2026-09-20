@@ -15,7 +15,11 @@ from typer.testing import CliRunner
 
 from flylab.cli import app
 
-runner = CliRunner()
+# Typer renders help through Rich: it wraps at the terminal width and emits ANSI
+# codes, so a narrow CI terminal splits long option names like
+# "--closure-min-weight" across lines and the plain `in` check fails. Pin a wide,
+# colourless terminal for every invocation so help assertions are stable.
+runner = CliRunner(env={"COLUMNS": "250", "TERM": "dumb", "NO_COLOR": "1"})
 
 #: every command and sub-command the bench exposes
 COMMANDS = [
