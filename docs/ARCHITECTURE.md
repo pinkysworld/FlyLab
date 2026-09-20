@@ -116,9 +116,11 @@ FlyLab uses small committed circuit cuts derived from MaleCNS v1.0 rather than r
 
 Current research artifacts include:
 
-- named neighbourhood cut,
-- taste-motor cut,
+- named neighbourhood cut (1126 nodes, 1360 edges),
+- taste-motor cut (1841 nodes, 19066 edges),
 - compact cell census fallback.
+
+The two cuts are not interchangeable. The named cut is an in-star: about 85 per cent of its edges terminate on four seed cells and only 184 of its nodes have any input at all, so a degree-preserving rewire of it is close to the identity and a negative topology result there is weak evidence. The taste-motor cut is the one to repeat such a result on before generalising.
 
 These derived files are research inputs and must not be hand-edited.
 
@@ -134,6 +136,8 @@ Primary locations:
 The deterministic rate runtime is the workhorse for large permutation and uncertainty analyses.
 
 It is designed to make repeated graph perturbation computationally practical.
+
+The engine row-normalises its weight matrix. The shipped default divides each row by its absolute weight sum (normalise="row_abs"; "none" and "degree" are selectable), so each cell's recurrent input is a composition-weighted average of its presynaptic gains. This is a modelling choice that bounds rates and keeps the iteration stable, not a measurement of the circuit. It also partly builds "composition-dominated" into the readout, so any statement comparing composition with topology must name the normalisation it was computed under.
 
 ### LIF model
 
@@ -171,12 +175,15 @@ The analysis package is deliberately allowed to produce results that weaken the 
 
 flylab/analysis/dependence.py compares a real-graph drug contrast with degraded-graph null ensembles.
 
-The key statistical distinction is:
+It reports one of three verdicts per null mode, never two:
 
-- **distinguishable from a null ensemble**
-- **not distinguishable from a null ensemble**
+- **distinguishable**: the empirical permutation probability is at or below alpha, so the real graph and that graph model give different drug effects,
+- **equivalent within tolerance**: the test did not reject and the gap between the real effect and the null ensemble's median is below a prespecified margin,
+- **indeterminate**: the test did not reject and the gap is not below that margin, so the result is consistent with a difference this study cannot resolve.
 
-A non-significant comparison does not, by itself, establish equivalence. Durable documentation should therefore avoid treating "not distinguishable" as identical to "reproduced" unless an explicit tolerance or equivalence rule is added.
+The margin is prespecified rather than fitted, and is by default a small fraction of the vehicle readout of the real graph. Only the equivalence verdict licenses saying a graph model *reproduces* an effect; a bare non-rejection is indeterminate and must be written as such.
+
+The instrument itself is tested against planted ground truth rather than assumed to work: dependence.py provides synthetic_cut, ladder_recovery and ladder_power, which plant a recurrent loop of known strength, check that the ladder calls it topology-dependent and the unplanted control not, and map detection rate against effect size and permutation count.
 
 ### Null models
 
@@ -187,7 +194,8 @@ Current families include models that alter:
 - edge placement,
 - degree-preserving wiring,
 - weight placement,
-- transmitter identity.
+- transmitter identity (a joint null: it moves the weighted E/I balance too),
+- transmitter identity at matched out-strength, implemented in dependence.py as a local mode: this is the weight-matched null that is the ladder's rank-3 rung.
 
 ### Ablation
 

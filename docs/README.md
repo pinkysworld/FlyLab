@@ -14,6 +14,7 @@ If you are new to the project, start with the main [README](../README.md). This 
 | [Research map](RESEARCH_MAP.md) | current analyses, generated results and open research gaps |
 | [Browser build](PAGES.md) | Pyodide bridge, static site and GitHub Pages details |
 | [Software stack](STACK.md) | dependencies, engineering choices and platform constraints |
+| [Workflows](WORKFLOW.md) | experiment specs, claim cards and the artifact manifest |
 | [Paper status](../papers/STATUS.md) | current manuscript state and what remains before submission |
 | [Submission checklist](../papers/SUBMISSION_CHECKLIST.md) | paper-specific mechanical and scientific checks |
 | [Contributor handoff](../HANDOFF.md) | internal constraints for contributors and coding agents |
@@ -75,11 +76,13 @@ Relevant files:
 
 The dependence analysis compares a real-graph effect with distributions produced by degraded graph models that retain different amounts of network information.
 
-Its safest interpretation is comparative:
+flylab/analysis/dependence.py reports one of three verdicts per null mode:
 
-- a small empirical permutation p means the real-graph effect differs from that null ensemble at the chosen permutation effort,
-- a large p means the analysis did not distinguish the real effect from that null ensemble,
-- a large p is not, by itself, proof of mathematical or biological equivalence.
+- **distinguishable**: a small empirical permutation p, so the real-graph effect differs from that null ensemble at the chosen permutation effort,
+- **equivalent within tolerance**: the test did not reject and the gap between the real effect and the null ensemble's median is below a prespecified margin,
+- **indeterminate**: the test did not reject and the gap is not below that margin, so the comparison is consistent with a difference the study cannot resolve.
+
+A non-rejection on its own is indeterminate, never equivalence. Only the equivalence verdict licenses saying a null reproduces the effect.
 
 Relevant files:
 
@@ -165,6 +168,8 @@ Avoid:
 - "safe" based on the vertebrate receptor scorecard
 - "the connectome matters" without naming the compound, concentration, readout and null comparison
 - biological conclusions from circuit outputs that have no independent biological validation
+- "the connectome without the pharmacology is not a cheap substitute for the connectome with it" (withdrawn: it rested on a topology-only baseline that could only depress)
+- a bare composition-versus-full rank correlation, quoted without its matched reference distribution and the engine normalisation used
 
 See [NOVELTY.md](NOVELTY.md) for the research-positioning version of these rules.
 

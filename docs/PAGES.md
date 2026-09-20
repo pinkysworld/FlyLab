@@ -81,7 +81,7 @@ The exact route set is defined by the current implementation. Do not copy a rout
 
 ## Transport parity
 
-tests/test_browser_bridge.py compares representative browser-bridge and server calls.
+tests/test_browser_bridge.py compares representative browser-bridge and server calls, and separately asserts that the bridge mirrors the server's route set **exactly in both directions**: every /api/ route the server serves is mirrored by the bridge, and the bridge invents none the server does not serve. The per-call comparison is representative; the route-set contract is not.
 
 The intended contract is:
 
@@ -106,7 +106,7 @@ These transport differences should be explicit rather than hidden.
 
 ## LIF execution
 
-The browser may use browser-oriented execution defaults to keep interactive latency acceptable.
+The browser may use browser-oriented execution defaults to keep interactive latency acceptable. Concretely, the static build defaults the spiking window to 200 ms against 500 ms natively, with the same 0.1 ms integration step: a shorter run of the same model, not a coarser one.
 
 Any such difference must be visible in the UI and documentation. A shorter simulation window is not the same experiment and must never be silently presented as identical to a longer native run.
 
@@ -159,7 +159,7 @@ python -m pip install -e ".[dev,viz]"
 flylab serve
 ~~~
 
-This runs the FastAPI transport and shared UI in the default browser.
+This runs the FastAPI transport and the shared UI at http://127.0.0.1:8765. It does not open a browser: pass --open if you want one launched, or use --host and --port to change the address.
 
 ## Zero-install bench
 
@@ -213,9 +213,9 @@ If reproducible performance numbers are needed for a paper or release, record:
 
 ## Offline and restricted-network use
 
-The build system can vendor Pyodide assets so the scientific runtime does not depend on a third-party Python CDN at execution time.
+The chart libraries are vendored by default; --no-vendor-js opts out. The Pages workflow builds with --vendor-pyodide, so the scientific runtime does not depend on a third-party Python CDN at execution time either. The generated manifest.json records both decisions as js_vendored and pyodide_vendored, so a published build states whether it is self-contained rather than leaving it to be inferred.
 
-Front-end asset policy should be checked against the generated build before making a "fully offline" claim. A release should only use that wording after an automated browser test confirms there are no required off-origin requests.
+The published site is therefore self-contained as built. That self-containment is currently verified by inspecting the build and its manifest, not by an automated browser test, so a stronger claim than this one needs such a test first: a check that a loaded page issues no required off-origin request.
 
 ## Reproducibility wording for papers
 
