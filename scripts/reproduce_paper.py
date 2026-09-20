@@ -140,6 +140,17 @@ TIER_HATCH = {"literature_order": "", "measured_fit": "..", "class_placeholder":
 PANEL4 = ("imidacloprid", "fipronil", "deltamethrin", "ivermectin")
 PAPER_CONC = 1e-6
 
+#: null mode -> the key a dependence result files its probability under.
+#: ``sign_permute_weight_matched`` is the ladder's rank-3 rung; the plain
+#: ``sign_permute`` beside it is a joint target-set-and-sign null (T23).
+_P_KEY: dict[str, str] = {
+    "sign_permute": "p_sign",
+    "sign_permute_weight_matched": "p_sign_wm",
+    "weight_permute": "p_weight",
+    "rewire_degree_preserving": "p_degree",
+    "erdos_renyi": "p_ER",
+}
+
 
 # --------------------------------------------------------------------------
 # run context
@@ -807,12 +818,67 @@ def step_curves(ctx: Ctx) -> None:
 
 
 def step_mechanisms(ctx: Ctx) -> None:
-    """T2: the mechanism -> gain patch rules, verbatim from the code."""
+    """T2, T21: the mechanism -> gain rules and the transmitter sign table.
+
+    T21 exists because five of the seven signed weights the rate engine
+    iterates are asserted magnitudes that appeared in no manuscript table, are
+    varied by no member of the specification family and are not bounded by the
+    label-permuting null. Publishing them is the minimum; the table says of
+    each row whether it is a convention or an assertion.
+    """
+    from flylab.circuit.rate import NORMALISATION_NOTES, sign_table_rows
     from flylab.pharm.mechanisms import GAIN_KEYS, mechanism_table_rows
 
     rows = mechanism_table_rows()
     ctx.put("mechanism_rules", len(rows))
     ctx.put("gain_keys", list(GAIN_KEYS), text=", ".join(GAIN_KEYS))
+
+    signs = sign_table_rows()
+    asserted = [r for r in signs if r["evidence"] == "asserted"]
+    ctx.put("sign_rows", len(signs))
+    ctx.put("sign_asserted", len(asserted))
+    ctx.put(
+        "sign_asserted_transmitters",
+        [r["transmitter"] for r in asserted],
+        text=", ".join(f"{r['transmitter']} {r['sign']:+g}" for r in asserted),
+    )
+    for r in signs:
+        ctx.put(f"sign_{r['transmitter']}", float(r["sign"]), text=f"{r['sign']:+g}")
+    ctx.put(
+        "sign_in_specification_family",
+        any(r["in_specification_family"] for r in signs),
+    )
+    ctx.put("norm_note_row_abs", NORMALISATION_NOTES["row_abs"])
+    ctx.put("norm_note_none", NORMALISATION_NOTES["none"])
+    ctx.put("norm_note_degree", NORMALISATION_NOTES["degree"])
+    if asserted:
+        ctx.note(
+            "%d of the %d transmitter sign magnitudes the rate engine iterates (%s) "
+            "are asserted rather than measured, are exempt from the specification "
+            "family and are not bounded by the label-permuting null. They are now "
+            "published in T21 rather than left in the source."
+            % (
+                len(asserted),
+                len(signs),
+                ", ".join(f"{r['transmitter']} {r['sign']:+g}" for r in asserted),
+            )
+        )
+    save_table(
+        ctx,
+        "T21_transmitter_signs",
+        signs,
+        ["transmitter", "sign", "role", "evidence", "in_specification_family", "rationale"],
+        "The signed weight every transmitter contributes in the rate engine "
+        "(`flylab.circuit.rate.SIGN_TABLE`). Acetylcholine at +1 is the "
+        "normalisation and GABA at -1 the convention it is scaled against; the other "
+        "five magnitudes are **asserted**, carry no citation, are not varied by any "
+        "member of the specification family, and are not bounded by the "
+        "label-permuting null (which permutes assignments and leaves the table "
+        "itself untouched). Glutamate in particular is signed inhibitory at 40 % of "
+        "the stated strength, which is a hedge against the cells whose glutamatergic "
+        "output is excitatory rather than a measurement.",
+        md_fields=["transmitter", "sign", "role", "evidence", "in_specification_family"],
+    )
     save_table(
         ctx,
         "T2_mechanisms",
@@ -828,9 +894,17 @@ def step_mechanisms(ctx: Ctx) -> None:
 
 
 def step_graph(ctx: Ctx) -> None:
-    """F4: the MaleCNS taste-motor graph, GRN seeds, and GRN -> MN9 paths."""
+    """F4 + T19: the MaleCNS cuts, their structure, GRN seeds and GRN -> MN9 paths.
+
+    The structural census (T19) is here because the referee's B3 is a fact
+    about the substrate, not about the analysis: a degree-preserving rewire of
+    an in-star is close to the identity, so a negative topology verdict on such
+    a cut is weak evidence. The paper has to be able to print these numbers.
+    """
     import numpy as np
 
+    from flylab.analysis.baselines import graph_census
+    from flylab.analysis.dependence import cut_census
     from flylab.analysis.impact import grn_to_mn9_paths
     from flylab.analysis.layout import graph_for_viewer
     from flylab.analysis.selectivity import graph_composition
@@ -852,6 +926,123 @@ def step_graph(ctx: Ctx) -> None:
         ctx.put(f"{gname}_ei_ratio_syn", float(comp["ei_ratio_synapses"]))
     ctx.put("taste_view_edges_drawn", len(view["edges"]))
     ctx.put("taste_view_min_weight", float(view["min_weight"]))
+
+    # ---- T19: how much wiring each cut actually has ------------------
+    census_rows: list[dict[str, Any]] = []
+    for gname in ("named", "taste_motor"):
+        cc = cut_census(gname)
+        nts = graph_census(gname)
+        total_nodes = sum(nts.values()) or 1
+        ctx.put(f"{gname}_mean_degree", float(cc["mean_degree"]))
+        ctx.put(f"{gname}_density", float(cc["density"]), text=f"{cc['density']:.2e}")
+        ctx.put(f"{gname}_n_seed_nodes", int(cc["n_seed_nodes"]))
+        ctx.put(f"{gname}_edges_onto_seeds", int(cc["edges_onto_seeds"]))
+        ctx.put(
+            f"{gname}_share_onto_seeds",
+            float(cc["share_onto_seeds"]),
+            text=f"{cc['share_onto_seeds']:.0%}",
+        )
+        ctx.put(f"{gname}_nodes_with_input", int(cc["n_nodes_with_in_degree"]))
+        ctx.put(
+            f"{gname}_share_recurrent_edges",
+            float(cc["share_edges_from_nodes_with_input"]),
+            text=f"{cc['share_edges_from_nodes_with_input']:.0%}",
+        )
+        ctx.put(f"{gname}_max_in_degree", int(cc["max_in_degree"]))
+        ctx.put(f"{gname}_in_star", bool(cc["in_star"]))
+        for nt in ("acetylcholine", "gaba", "glutamate", "unclear", "octopamine", "histamine"):
+            ctx.put(f"{gname}_cells_{nt}", int(nts.get(nt, 0)))
+        ctx.put(
+            f"{gname}_share_unclear_cells",
+            float(nts.get("unclear", 0) / total_nodes),
+            text=f"{nts.get('unclear', 0) / total_nodes:.0%}",
+        )
+        census_rows.append(
+            {
+                "cut": gname,
+                "n_nodes": cc["n_nodes"],
+                "n_edges": cc["n_edges"],
+                "mean_degree": round(float(cc["mean_degree"]), 3),
+                "density": cc["density"],
+                "n_seed_nodes": cc["n_seed_nodes"],
+                "edges_onto_seeds": cc["edges_onto_seeds"],
+                "share_onto_seeds": round(float(cc["share_onto_seeds"]), 4),
+                "nodes_with_in_degree": cc["n_nodes_with_in_degree"],
+                "share_edges_from_nodes_with_input": round(
+                    float(cc["share_edges_from_nodes_with_input"]), 4
+                ),
+                "max_in_degree": cc["max_in_degree"],
+                "in_star": cc["in_star"],
+                **{f"cells_{k}": v for k, v in sorted(nts.items())},
+            }
+        )
+    if ctx.get("named_in_star"):
+        ctx.note(
+            "the `named` cut is an in-star: %s of its %d edges terminate on its %d seed "
+            "cells, only %d of %d nodes receive any input and only %s of edges leave a "
+            "node that itself receives input (mean degree %.2f). A degree-preserving "
+            "rewire of such a graph is close to the identity, so a negative topology "
+            "verdict on this cut is weak evidence. The `taste_motor` cut (mean degree "
+            "%.2f) is the substrate to generalise from."
+            % (
+                ctx.text("named_share_onto_seeds"),
+                ctx.get("named_edges") or 0,
+                ctx.get("named_n_seed_nodes") or 0,
+                ctx.get("named_nodes_with_input") or 0,
+                ctx.get("named_nodes") or 0,
+                ctx.text("named_share_recurrent_edges"),
+                ctx.get("named_mean_degree") or 0.0,
+                ctx.get("taste_motor_mean_degree") or 0.0,
+            )
+        )
+    if not ctx.get("named_cells_octopamine"):
+        ctx.note(
+            "the `named` cut contains no octopaminergic cell at all, so a compound "
+            "whose only insect mechanism acts through g_oct (chlordimeform) cannot "
+            "move this readout for substrate reasons rather than pharmacological ones."
+        )
+    save_table(
+        ctx,
+        "T19_cut_census",
+        census_rows,
+        [
+            "cut",
+            "n_nodes",
+            "n_edges",
+            "mean_degree",
+            "density",
+            "n_seed_nodes",
+            "edges_onto_seeds",
+            "share_onto_seeds",
+            "nodes_with_in_degree",
+            "share_edges_from_nodes_with_input",
+            "max_in_degree",
+            "in_star",
+            "cells_acetylcholine",
+            "cells_gaba",
+            "cells_glutamate",
+            "cells_histamine",
+            "cells_unclear",
+        ],
+        "Structure of the two committed cuts. `share_onto_seeds` is the fraction of "
+        "edges terminating on a seed cell and `share_edges_from_nodes_with_input` the "
+        "fraction whose source itself receives input -- the recurrence budget, and the "
+        "only edges that can carry a path longer than one hop. A cut where most edges "
+        "point at a few hubs and most nodes have no input is an in-star, and a "
+        "degree-preserving rewire of it destroys very little; the transmitter census "
+        "is by cell, not by synapse, and a transmitter absent from a cut cannot be "
+        "perturbed on it.",
+        md_fields=[
+            "cut",
+            "n_nodes",
+            "n_edges",
+            "mean_degree",
+            "share_onto_seeds",
+            "nodes_with_in_degree",
+            "share_edges_from_nodes_with_input",
+            "in_star",
+        ],
+    )
 
     seeds = view["seeds"]
     sweet_ids = set(seeds.get("LB3b", []) + seeds.get("LB3c", []))
@@ -1116,16 +1307,26 @@ def _f(x: Any) -> float | None:
 
 
 def step_evidence(ctx: Ctx) -> None:
-    """F11 + T10: the typed evidence census of the compound library (schema v3).
+    """F11 + T10, T20: the typed evidence census of the compound library.
 
     RQ1. Every library row records *what its source measured* (``param_type``)
-    and *how far that source is from this compound/receptor/species*
-    (``relation``); those two facts alone decide which transformation FlyLab is
-    allowed to apply. The census is the auditable summary of that typing.
+    and *how far that source is from this compound/receptor/species*, graded
+    E0-E4 (``evidence_distance``); the permitted transformation is a function
+    of that pair, materialised in ``TRANSFORMATION_TABLE``. The census is the
+    auditable summary of that typing, and T20 is the rule itself.
     """
-    from flylab.pharm.evidence import EngagementModel
+    from flylab.pharm.evidence import (
+        DISTANCE_LABELS,
+        EngagementModel,
+        EvidenceDistance,
+        as_param_type,
+        as_relation,
+        model_for,
+        transformation_table_rows,
+    )
     from flylab.pharm.occupancy import (
         ENGAGEMENT_IS_NOT_OCCUPANCY,
+        evidence_distance_table,
         library_report,
         load_library,
         spec_value_M,
@@ -1135,6 +1336,7 @@ def step_evidence(ctx: Ctx) -> None:
     plt = _plt()
     rep = library_report()
     lib = load_library()
+    dist = evidence_distance_table(lib)
 
     ctx.put("ev_schema_version", int(rep["schema_version"]))
     ctx.put("ev_rows", int(rep["n_rows"]))
@@ -1155,45 +1357,110 @@ def step_evidence(ctx: Ctx) -> None:
         "unsupported",
     ):
         ctx.put(f"ev_rel_{name}", int(by_rel.get(name, 0)))
+    for model in EngagementModel:
+        ctx.put(f"ev_model_{model.value}", int(by_model.get(model.value, 0)))
     ctx.put("ev_binding_rows", int(by_model.get(EngagementModel.binding_occupancy.value, 0)))
     ctx.put("ev_functional_rows", int(by_model.get(EngagementModel.functional_engagement.value, 0)))
     ctx.put("ev_not_modelled_rows", int(by_model.get(EngagementModel.not_modelled.value, 0)))
+    ctx.put(
+        "ev_proxy_rows",
+        int(
+            by_model.get(EngagementModel.functional_engagement_proxy.value, 0)
+            + by_model.get(EngagementModel.binding_engagement_proxy.value, 0)
+        ),
+    )
 
-    # the rows that may legally use a binding-occupancy model, named
+    # the evidence-distance grading: the ordered form of `relation`, and what
+    # the transformation rule is actually written against
+    by_dist = rep["by_evidence_distance"]
+    for grade in EvidenceDistance:
+        ctx.put(f"ev_dist_{grade.value}", int(by_dist.get(grade.value, 0)))
+    ctx.put(
+        "ev_distance_labels",
+        [DISTANCE_LABELS[g] for g in EvidenceDistance],
+        text="; ".join(DISTANCE_LABELS[g] for g in EvidenceDistance),
+    )
+    ctx.put("ev_n_binding_occupancy", int(dist["n_binding_occupancy"]))
+
+    # every row's permitted model, from the type system rather than re-derived
     binding: list[str] = []
+    proxies: list[str] = []
     rows: list[dict[str, Any]] = []
     for compound, entry in (lib.get("compounds") or {}).items():
         for receptor, spec in (entry.get("receptors") or {}).items():
-            pt = str(spec.get("param_type"))
+            param_type = as_param_type(spec.get("param_type"))
+            relation = as_relation(spec.get("relation"))
             value = spec_value_M(spec)
-            is_binding = pt in ("Kd", "Ki") and value is not None
-            if is_binding:
-                binding.append(f"{compound} at {receptor} ({pt} {value:.2g} M)")
+            model = (
+                model_for(param_type, relation)
+                if value is not None
+                else EngagementModel.not_modelled
+            )
+            named = f"{compound} at {receptor} ({param_type.value} {value:.2g} M)" if value else ""
+            if model is EngagementModel.binding_occupancy:
+                binding.append(named)
+            elif model is EngagementModel.binding_engagement_proxy:
+                proxies.append(named)
             rows.append(
                 {
                     "compound": compound,
                     "receptor": receptor,
-                    "param_type": pt,
+                    "param_type": param_type.value,
                     "value_M": value,
                     "hill_n": spec.get("n"),
                     "direction": spec.get("direction"),
-                    "relation": spec.get("relation"),
+                    "relation": relation.value,
+                    "evidence_distance": spec.get("evidence_distance")
+                    or {
+                        "exact_compound_exact_receptor_exact_species": "E0",
+                        "exact_compound_exact_receptor_other_species": "E1",
+                        "exact_compound_related_receptor": "E2",
+                        "class_extrapolation": "E3",
+                        "unsupported": "E4",
+                    }[relation.value],
                     "species": spec.get("species"),
                     "evidence_tier": spec.get("evidence_tier"),
-                    "engagement_model": (
-                        EngagementModel.binding_occupancy.value
-                        if is_binding
-                        else (
-                            EngagementModel.functional_engagement.value
-                            if value is not None and pt in ("EC50", "IC50", "Kb")
-                            else EngagementModel.not_modelled.value
-                        )
-                    ),
+                    "engagement_model": model.value,
                     "source": spec.get("source"),
                 }
             )
     ctx.put("ev_binding_row_names", binding, text="; ".join(binding) or "none")
     ctx.put("ev_n_binding_named", len(binding))
+    ctx.put("ev_binding_proxy_row_names", proxies, text="; ".join(proxies) or "none")
+    ctx.put("ev_n_binding_proxy_named", len(proxies))
+
+    # T20: the rule itself, as (parameter type x evidence distance) -> model
+    save_table(
+        ctx,
+        "T20_transformation_rule",
+        transformation_table_rows(),
+        [
+            "param_type",
+            "evidence_distance",
+            "evidence_distance_label",
+            "relation",
+            "engagement_model",
+            "model_strength",
+            "engagement_model_note",
+            "param_type_note",
+        ],
+        "The transformation rule of the evidence type system, materialised. The "
+        "permitted transformation is a function of two facts: the parameter the "
+        "source measured and the ordered distance E0-E4 between that source and "
+        "this compound at this receptor in this species. A binding constant yields "
+        "physical fractional occupancy only at E0; transferred, it becomes a labelled "
+        "proxy carrying a warning that names the gap. Anything at E4 is `not_modelled` "
+        "and returns N/A. `tests/test_pharm_evidence.py` checks the soundness "
+        "invariant exhaustively over every library row and every entry point: no "
+        "number reaching a circuit readout originates from a row whose "
+        "(param_type, distance) pair does not admit one.",
+        md_fields=[
+            "param_type",
+            "evidence_distance_label",
+            "engagement_model",
+            "model_strength",
+        ],
+    )
 
     problems = validate_library()
     ctx.put("ev_library_problems", problems, text=", ".join(problems) or "none")
@@ -1213,25 +1480,38 @@ def step_evidence(ctx: Ctx) -> None:
             "hill_n",
             "direction",
             "relation",
+            "evidence_distance",
             "species",
             "evidence_tier",
             "engagement_model",
             "source",
         ],
         "Typed pharmacological evidence (library schema v3). `param_type` is what the "
-        "cited source measured; `relation` is how far that source is from this "
-        "compound, this receptor and this species; `engagement_model` is the only "
-        "transformation those two facts permit. `binding_occupancy` requires a Kd or "
-        "Ki; `functional_engagement` is a normalised Hill response, not occupancy; "
+        "cited source measured; `evidence_distance` grades how far that source sits "
+        "from this compound at this receptor in this species (E0 on-target to E4 "
+        "unsupported); `engagement_model` is the only transformation that pair "
+        "permits (T20). `binding_occupancy` requires a Kd or Ki measured at E0; a "
+        "transferred binding constant becomes `binding_engagement_proxy`; "
+        "`functional_engagement` is a normalised Hill response and not an occupancy; "
         "`not_modelled` rows return N/A and are excluded from every numeric result.",
-        md_fields=["compound", "receptor", "param_type", "value_M", "relation", "engagement_model"],
+        md_fields=[
+            "compound",
+            "receptor",
+            "param_type",
+            "value_M",
+            "evidence_distance",
+            "engagement_model",
+        ],
     )
 
     # F11: what the library actually rests on
     fig, axes = plt.subplots(1, 3, figsize=(11.2, 3.6))
     panels = (
         ("parameter type", by_param),
-        ("source relation", {k.replace("exact_compound_", "").replace("_", " "): v for k, v in by_rel.items()}),
+        (
+            "evidence distance",
+            {DISTANCE_LABELS[g]: by_dist.get(g.value, 0) for g in EvidenceDistance},
+        ),
         ("engagement model", by_model),
     )
     for ax, (title, data) in zip(axes, panels):
@@ -1239,8 +1519,12 @@ def step_evidence(ctx: Ctx) -> None:
         names = [k for k, _ in items]
         vals = [v for _, v in items]
         colours = [
-            CRIT if n in ("unknown", "unsupported", "not_modelled") else
-            (GOOD if n in ("Kd", "Ki", "binding_occupancy", "exact receptor exact species") else SEQ[2])
+            CRIT if n in ("unknown", "unsupported", "not_modelled", "E4 (unsupported)") else
+            (
+                GOOD
+                if n in ("Kd", "Ki", "binding_occupancy", "E0 (on-target)")
+                else (WARN if str(n).endswith("_proxy") else SEQ[2])
+            )
             for n in names
         ]
         y = list(range(len(names)))[::-1]
@@ -1264,32 +1548,58 @@ def step_evidence(ctx: Ctx) -> None:
         fig,
         "F11_evidence_types",
         "What the compound library rests on, row by row. Left: the parameter each "
-        "cited source actually measured. Middle: how far that source is from this "
-        "compound at this receptor in this species. Right: the transformation the type "
-        "system then permits. Green marks the rows that may use a physical "
-        "binding-occupancy model (a measured Kd or Ki); red marks rows that carry no "
-        "modellable evidence and therefore return N/A rather than a small number. The "
-        "type system, not a convention, enforces this: asking for an engagement from an "
-        "untyped row raises rather than returning a value.",
+        "cited source actually measured. Middle: the ordered evidence distance between "
+        "that source and this compound at this receptor in this species. Right: the "
+        "transformation the type system then permits, which is a function of the two. "
+        f"Green marks the {ctx.get('ev_dist_E0')} on-target (E0) rows and the "
+        f"{ctx.get('ev_n_binding_occupancy')} of them that may use a physical "
+        "binding-occupancy model; amber marks the proxy models, where the same Hill "
+        "expression is computed but reported as a transfer with a warning naming the "
+        "gap; red marks rows that carry no modellable evidence and return N/A rather "
+        "than a small number. The type system, not a convention, enforces this: asking "
+        "for an engagement from an untyped row raises rather than returning a value, "
+        "and a soundness invariant is checked exhaustively over every row and every "
+        "entry point.",
     )
 
 
 def step_dependence(ctx: Ctx) -> None:
-    """F6, F12 + T6, T11, T12: connectome-dependence analysis (RQ2).
+    """F6, F12, F16 + T6, T11, T12, T12b, T22, T23: dependence analysis (RQ2).
 
-    Replaces the v0.5 null-model panel. Same four degradations, but the
-    empirical permutation *p* leads, the permutation count is swept inside the
-    same draws, and every compound-concentration cell of the library is
-    classified and assigned the weakest graph model that already reproduces the
-    effect.
+    Four things changed after the second referee round and all of them move
+    numbers rather than wording.
+
+    *The ladder's rank-3 rung is now a weight-matched transmitter null.* Plain
+    label permutation does not preserve the weighted excitation/inhibition
+    balance, so it moves the drug's target set and the sign matrix at once;
+    it is still run, and reported, as a joint null (T23 measures the
+    difference rather than asserting it).
+
+    *Non-rejection is no longer equivalence.* Every mode carries a three-way
+    verdict against a prespecified margin, and the landscape is
+    Benjamini-Hochberg corrected across its structural tests with both counts
+    reported.
+
+    *The landscape is repeated on a cut that has topology.* The ``named`` cut
+    is an in-star (T19); ``taste_motor`` has mean degree 10.4, and the two do
+    not agree.
+
+    *The instrument is tested.* A known topology-dependent effect is planted
+    in a synthetic cut of the same size and density and the ladder is asked to
+    find it, with a power surface over planted strength and permutation count
+    (T22, F16).
     """
     import numpy as np
 
     from flylab.analysis.dependence import (
+        DEFAULT_MODES,
+        INFORMATION_LADDER,
         MODE_INFORMATION,
-        classify,
+        balance_report,
         dependence_landscape,
-        necessary_information_level,
+        dependence_profile,
+        ladder_power,
+        ladder_recovery,
     )
     from flylab.analysis.nullmodels import MODES, null_distribution
 
@@ -1298,21 +1608,123 @@ def step_dependence(ctx: Ctx) -> None:
     jobs = max(1, ctx.jobs - len(ctx.background))
     n = 20 if ctx.fast else 1000
     n_taste = 20 if ctx.fast else 300
-    n_land = 20 if ctx.fast else 100
+    n_land = 20 if ctx.fast else 1000
+    n_land_taste = 20 if ctx.fast else 300
     #: fractions of n at which the permutation p is recomputed on the same
     #: draws -- a free permutation-count sweep (25, 50, 100, 200, 400, n).
     sweep = (0.025, 0.05, 0.1, 0.2, 0.4, 1.0)
+    modes = tuple(DEFAULT_MODES)
     ctx.put("dep_n", n)
     ctx.put("dep_n_taste", n_taste)
     ctx.put("dep_n_landscape", n_land)
+    ctx.put("dep_n_landscape_taste", n_land_taste)
     ctx.put("dep_p_floor", 1.0 / (n + 1), text=f"{1.0 / (n + 1):.4f}")
+    ctx.put("dep_p_floor_landscape", 1.0 / (n_land + 1), text=f"{1.0 / (n_land + 1):.4f}")
+    ctx.put("dep_modes", list(modes), text=", ".join(modes))
+    ctx.put("dep_ladder", list(INFORMATION_LADDER), text=" < ".join(INFORMATION_LADDER))
 
     draws: dict[tuple[str, str], list[float]] = {}
     rows: list[dict[str, Any]] = []
     sweep_rows: list[dict[str, Any]] = []
 
     def arm(compound: str, assay: str, readout: str, n_i: int, tag: str) -> dict[str, Any]:
-        per_mode: dict[str, dict[str, Any]] = {}
+        """One profile, plus the raw draws the histogram and the sweep need.
+
+        The profile is authoritative -- it carries the equivalence margin, the
+        three-way verdicts, the class and the ladder. ``null_distribution`` is
+        called again only for the four ``nullmodels`` degradations, to keep
+        their draws for F6 and their checkpoint prefixes for T11; shuffle *i*
+        depends only on ``(seed, i)``, so the two agree exactly.
+        """
+        prof = dependence_profile(
+            compound,
+            PAPER_CONC,
+            assay=assay,
+            readout=readout,
+            modes=modes,
+            n=n_i,
+            seed=ctx.seed,
+            n_jobs=jobs,
+            checkpoints=sweep,
+        )
+        by_mode = {r["mode"]: r for r in prof["modes"]}
+        for mode in modes:
+            row = by_mode.get(mode)
+            if row is None:
+                continue
+            info = MODE_INFORMATION[mode]
+            rows.append(
+                {
+                    "compound": compound,
+                    "assay": assay,
+                    "readout": readout,
+                    "mode": mode,
+                    "information_kept": info["keeps"],
+                    "rank": info["rank"],
+                    "joint_null": bool(info.get("joint")),
+                    "on_ladder": mode in INFORMATION_LADDER,
+                    "n": row["n"],
+                    "n_ok": row["n_ok"],
+                    "real_effect": row["real_effect"],
+                    "p_two_sided": row["p_two_sided"],
+                    "p_resolution": row["p_resolution"],
+                    "verdict": row.get("verdict"),
+                    "abs_gap_from_null_median": row.get("abs_gap_from_null_median"),
+                    "delta": row.get("delta"),
+                    "within_tolerance": row.get("within_tolerance"),
+                    "n_stabilised": row["n_stabilised"],
+                    "z": row["z"],
+                    "null_mean": row["null_mean"],
+                    "null_median": row.get("null_median"),
+                    "null_sd": row["null_sd"],
+                }
+            )
+            ctx.put(f"dep_{tag}_{compound}_p_{mode}", _f(row["p_two_sided"]))
+            ctx.put(f"dep_{tag}_{compound}_z_{mode}", _f(row["z"]))
+            ctx.put(f"dep_{tag}_{compound}_verdict_{mode}", row.get("verdict"))
+            ctx.put(f"dep_{tag}_{compound}_gap_{mode}", _f(row.get("abs_gap_from_null_median")))
+        cls = prof["classification"]
+        lvl = prof["necessary_information_level"]
+        ctx.put(
+            f"dep_{tag}_{compound}_effect",
+            _f(prof["real_effect"]),
+            unit="Hz" if assay == "subgraph" else None,
+        )
+        ctx.put(f"dep_{tag}_{compound}_vehicle", _f(prof.get("real_vehicle")))
+        ctx.put(f"dep_{tag}_{compound}_class", cls["class"])
+        ctx.put(f"dep_{tag}_{compound}_level", lvl.get("level"))
+        ctx.put(f"dep_{tag}_{compound}_level_verdict", lvl.get("verdict"))
+        ctx.put(f"dep_{tag}_{compound}_delta", _f(prof.get("delta")), unit="Hz")
+        ctx.put(
+            f"dep_{tag}_{compound}_delta_frac",
+            _f(prof.get("delta_frac")),
+            text=None if prof.get("delta_frac") is None else f"{prof['delta_frac']:.0%}",
+        )
+        ctx.put(f"dep_{tag}_{compound}_confirmatory", bool(prof.get("confirmatory")))
+        ctx.put(f"dep_{tag}_{compound}_design", str(prof.get("design")))
+        ctx.put(
+            f"dep_{tag}_{compound}_equivalent_modes",
+            cls["equivalent_modes"],
+            text=", ".join(cls["equivalent_modes"]) or "none",
+        )
+        ctx.put(
+            f"dep_{tag}_{compound}_indeterminate_modes",
+            cls["indeterminate_modes"],
+            text=", ".join(cls["indeterminate_modes"]) or "none",
+        )
+        zs = [abs(r["z"]) for r in prof["modes"] if r["z"] is not None]
+        ctx.put(f"dep_{tag}_{compound}_max_abs_z", float(max(zs)) if zs else None)
+        struct = [
+            _f(by_mode[m]["p_two_sided"])
+            for m in ("weight_permute", "rewire_degree_preserving")
+            if m in by_mode
+        ]
+        ctx.put(
+            f"dep_{tag}_{compound}_min_structural_p",
+            min([p for p in struct if p is not None], default=None),
+        )
+
+        # draws and prefix sweep, for F6 and T11 only
         for mode in MODES:
             d = null_distribution(
                 assay,
@@ -1325,29 +1737,6 @@ def step_dependence(ctx: Ctx) -> None:
                 n_jobs=jobs,
                 checkpoints=sweep,
             )
-            per_mode[mode] = d
-            info = MODE_INFORMATION[mode]
-            rows.append(
-                {
-                    "compound": compound,
-                    "assay": assay,
-                    "readout": readout,
-                    "mode": mode,
-                    "information_kept": info["keeps"],
-                    "rank": info["rank"],
-                    "n": d["n"],
-                    "n_ok": d["n_ok"],
-                    "real_effect": d["real_effect"],
-                    "p_two_sided": d["p_two_sided"],
-                    "p_resolution": d["p_resolution"],
-                    "beats_null": d["beats_null"],
-                    "n_stabilised": d["n_stabilised"],
-                    "z": d["z"],
-                    "null_mean": d["null_mean"],
-                    "null_sd": d["null_sd"],
-                    "runtime_s": round(d["runtime_s"], 2),
-                }
-            )
             for cp in (d["convergence"] or {}).get("checkpoints") or []:
                 sweep_rows.append(
                     {
@@ -1358,66 +1747,46 @@ def step_dependence(ctx: Ctx) -> None:
                         "p_two_sided": cp["p"],
                         "p_resolution": cp["p_resolution"],
                         "z": cp["z"],
-                        "beats_null_at_0.05": cp["beats_null"],
+                        "significant_at_0.05": cp["beats_null"],
                     }
                 )
                 ctx.put(f"sweep_{tag}_{compound}_{mode}_n{cp['n']}", _f(cp["p"]))
-            ctx.put(f"dep_{tag}_{compound}_p_{mode}", _f(d["p_two_sided"]))
-            ctx.put(f"dep_{tag}_{compound}_z_{mode}", _f(d["z"]))
             if assay == "subgraph":
                 draws[(compound, mode)] = [v for v in d["null_effects"] if v is not None]
-        real = next(iter(per_mode.values()))["real_effect"]
-        cls = classify(real, per_mode)
-        lvl = necessary_information_level(
-            {
-                "modes": [
-                    {"mode": m, "p_two_sided": d["p_two_sided"], "stabilised": d["stabilised"], "n": d["n"],
-                     "real_effect": d["real_effect"]}
-                    for m, d in per_mode.items()
-                ],
-                "alpha": 0.05,
-                "real_effect": real,
-                "classification": cls,
-            }
-        )
-        ctx.put(f"dep_{tag}_{compound}_effect", _f(real), unit="Hz" if assay == "subgraph" else None)
-        ctx.put(f"dep_{tag}_{compound}_class", cls["class"])
-        ctx.put(f"dep_{tag}_{compound}_level", lvl.get("level"))
-        zs = [abs(d["z"]) for d in per_mode.values() if d["z"] is not None]
-        ctx.put(f"dep_{tag}_{compound}_max_abs_z", float(max(zs)) if zs else None)
-        struct = [
-            _f(per_mode[m]["p_two_sided"])
-            for m in ("weight_permute", "rewire_degree_preserving")
-            if per_mode.get(m)
-        ]
-        ctx.put(
-            f"dep_{tag}_{compound}_min_structural_p",
-            min([p for p in struct if p is not None], default=None),
-        )
-        return {"class": cls, "level": lvl, "per_mode": per_mode, "real": real}
+        return prof
 
     named = {c: arm(c, "subgraph", "mean_hz", n, "named") for c in ("imidacloprid", "fipronil")}
     taste = arm("fipronil", "taste_map", "bitter_veto_ratio", n_taste, "taste")
 
-    if named["imidacloprid"]["class"]["class"] == "composition-dominated":
+    imi = named["imidacloprid"]
+    imi_modes = {r["mode"]: r for r in imi["modes"]}
+    gap_plain = (imi_modes.get("sign_permute") or {}).get("abs_gap_from_null_median")
+    gap_matched = (imi_modes.get("sign_permute_weight_matched") or {}).get(
+        "abs_gap_from_null_median"
+    )
+    if gap_plain is not None and gap_matched is not None:
         ctx.note(
-            "imidacloprid's neighbourhood mean-rate effect is composition-dominated: "
-            "every structure-preserving degradation of the MaleCNS cut reproduces it "
-            "(sign p = %s, weight p = %s, degree p = %s), and only the Erdos-Renyi "
-            "control is beaten. For an nAChR agonist this readout tracks the cut's "
-            "excitation/inhibition balance, not its wiring."
-            % (
-                ctx.text("dep_named_imidacloprid_p_sign_permute"),
-                ctx.text("dep_named_imidacloprid_p_weight_permute"),
-                ctx.text("dep_named_imidacloprid_p_rewire_degree_preserving"),
-            )
+            "the transmitter null matters to the equivalence claim and not to the "
+            "probability: imidacloprid's gap from the null median is %.2f Hz under the "
+            "plain label permutation and %.2f Hz under the weight-matched null, against "
+            "a prespecified margin of %s Hz. The plain permutation is a joint "
+            "target-set-and-sign null and is reported as one."
+            % (gap_plain, gap_matched, ctx.text("dep_named_imidacloprid_delta"))
         )
-    if taste["class"]["class"] != "topology-dependent":
+    if taste["class"] != "topology-dependent":
         ctx.note(
-            "the fipronil bitter-veto ratio on the taste-motor cut is a negative at "
-            "n=%d shuffles (all four modes p > 0.05, max |z| = %s, p resolution %.3f): "
-            "the veto ratio is model behaviour, not evidence about the wiring."
-            % (n_taste, ctx.text("dep_taste_fipronil_max_abs_z"), 1.0 / (n_taste + 1))
+            "the fipronil bitter-veto ratio on the taste-motor path is a negative at "
+            "n=%d shuffles (max |z| = %s, p resolution %.4f): the veto ratio is model "
+            "behaviour, not evidence about the wiring, and the verdicts say which "
+            "modes are equivalent within tolerance (%s) and which are merely "
+            "indeterminate (%s)."
+            % (
+                n_taste,
+                ctx.text("dep_taste_fipronil_max_abs_z"),
+                1.0 / (n_taste + 1),
+                ctx.text("dep_taste_fipronil_equivalent_modes"),
+                ctx.text("dep_taste_fipronil_indeterminate_modes"),
+            )
         )
 
     save_table(
@@ -1431,37 +1800,69 @@ def step_dependence(ctx: Ctx) -> None:
             "mode",
             "information_kept",
             "rank",
+            "on_ladder",
+            "joint_null",
             "n",
             "n_ok",
             "real_effect",
             "p_two_sided",
             "p_resolution",
-            "beats_null",
+            "verdict",
+            "abs_gap_from_null_median",
+            "delta",
+            "within_tolerance",
             "n_stabilised",
             "z",
             "null_mean",
+            "null_median",
             "null_sd",
-            "runtime_s",
         ],
         "Connectome-dependence profile. `real_effect` is treated minus vehicle on the "
         "real MaleCNS cut; the null is the same contrast on `n` degraded copies of that "
         "cut, with the seed block and node order held fixed. `p_two_sided` is the "
         "empirical permutation probability (k+1)/(n+1) and is the statistic to read "
         "first; `p_resolution` is its floor, and `z` is a standardised distance from a "
-        "usually non-normal null. `n_stabilised` is the smallest permutation count from "
-        "which the verdict no longer moved.",
-        md_fields=["compound", "assay", "mode", "information_kept", "n", "real_effect", "p_two_sided", "z"],
+        "usually non-normal null. `verdict` is the only claim the design supports: "
+        "`distinguishable` when the test rejects, `equivalent_within_tolerance` when "
+        "the gap from the null median is below the prespecified margin `delta`, and "
+        "`indeterminate` otherwise -- a failure to reject is never evidence of "
+        "equivalence. `sign_permute` is a **joint** target-set-and-sign null and is "
+        "off the ladder (`on_ladder = False`); the rank-3 rung is the weight-matched "
+        "transmitter null, which holds each transmitter's share of total outgoing "
+        "weight fixed (T23).",
+        md_fields=[
+            "compound",
+            "assay",
+            "mode",
+            "on_ladder",
+            "real_effect",
+            "p_two_sided",
+            "verdict",
+            "abs_gap_from_null_median",
+            "delta",
+        ],
     )
 
     save_table(
         ctx,
         "T11_permutation_sweep",
         sweep_rows,
-        ["compound", "assay", "mode", "n", "p_two_sided", "p_resolution", "z", "beats_null_at_0.05"],
+        [
+            "compound",
+            "assay",
+            "mode",
+            "n",
+            "p_two_sided",
+            "p_resolution",
+            "z",
+            "significant_at_0.05",
+        ],
         "Permutation-count sweep. The same draws are re-read as prefixes, so every row "
         "is a valid smaller permutation sample and no extra circuit runs were needed. "
-        "It separates the count a *verdict* needs from the count a quotable *p* needs.",
-        md_fields=["compound", "assay", "mode", "n", "p_two_sided", "beats_null_at_0.05"],
+        "It separates the count a *verdict* needs from the count a quotable *p* needs. "
+        "`significant_at_0.05` is a rejection of the null at that prefix, not a "
+        "statement that the shuffled graph reproduces the effect.",
+        md_fields=["compound", "assay", "mode", "n", "p_two_sided", "significant_at_0.05"],
     )
 
     # where does the verdict settle, and where does the value settle?
@@ -1488,48 +1889,441 @@ def step_dependence(ctx: Ctx) -> None:
     ctx.put("dep_p_within_0p02_from_n", int(min(settle)) if settle else None)
     ctx.put("dep_p_within_0p02_worst_n", int(max(settle)) if settle else None)
 
-    # ---- the landscape over the library -------------------------------
-    land = dependence_landscape(n=n_land, seed=ctx.seed, n_jobs=jobs)
-    cells = land["cells"]
-    counts: dict[str, int] = {}
-    for c in cells:
-        counts[c["class"]] = counts.get(c["class"], 0) + 1
-    ctx.put("dep_land_cells", len(cells))
-    ctx.put("dep_land_compounds", len(land["compounds"]))
-    ctx.put("dep_land_concs", len(land["concs_M"]))
-    for label in ("topology-dependent", "mixed", "composition-dominated", "no-effect", "undefined"):
-        ctx.put(f"dep_land_{label.replace('-', '_')}", int(counts.get(label, 0)))
-    topo = sorted({c["compound"] for c in cells if c["class"] == "topology-dependent"})
-    ctx.put("dep_land_topology_compounds", topo, text=", ".join(topo) or "none")
+    # ---- T23: what each transmitter null does to the weighted E/I balance --
+    bal = balance_report(graph="named", n=min(n, 1000), seed=ctx.seed)
+    bal_rows: list[dict[str, Any]] = []
+    for mode, per_nt in bal["modes"].items():
+        for nt, r in per_nt.items():
+            bal_rows.append({"mode": mode, "transmitter": nt, **r})
+    plain_ach = bal["modes"]["sign_permute"]["acetylcholine"]
+    matched_ach = bal["modes"]["sign_permute_weight_matched"]["acetylcholine"]
+    ctx.put("bal_n", int(bal["n"]))
+    ctx.put("bal_real_ach_share", float(bal["real"]["acetylcholine"]))
+    ctx.put("bal_plain_ach_mean", float(plain_ach["null_mean"]))
+    ctx.put("bal_plain_ach_sd", float(plain_ach["null_sd"]))
+    ctx.put("bal_plain_ach_min", float(plain_ach["null_min"]))
+    ctx.put("bal_plain_ach_max", float(plain_ach["null_max"]))
+    ctx.put("bal_plain_ach_percentile", float(plain_ach["percentile_of_real"]))
+    ctx.put("bal_matched_max_deviation", float(matched_ach["max_abs_deviation"]))
+    ctx.put("bal_tol", float(bal["tol"]))
+    ctx.put("bal_plain_preserves", bool(bal["preserves_weighted_balance"]["sign_permute"]))
     ctx.put(
-        "dep_land_topology_cells",
-        [f"{c['compound']}@{c['conc_M']:.0e}" for c in cells if c["class"] == "topology-dependent"],
-        text=", ".join(f"{c['compound']} {_fmt_M(c['conc_M'])}" for c in cells if c["class"] == "topology-dependent"),
+        "bal_matched_preserves",
+        bool(bal["preserves_weighted_balance"]["sign_permute_weight_matched"]),
+    )
+    if not bal["preserves_weighted_balance"]["sign_permute"]:
+        ctx.note(
+            "plain transmitter-label permutation does NOT preserve the weighted "
+            "excitation/inhibition balance: the cholinergic share of total outgoing "
+            "synaptic weight is %.3f on the real `named` cut against %.3f +- %.3f over "
+            "%d permutations, putting the real graph at the %.0fth percentile of its "
+            "own null. The weight-matched null holds every tracked share within %.3f."
+            % (
+                bal["real"]["acetylcholine"],
+                plain_ach["null_mean"],
+                plain_ach["null_sd"],
+                bal["n"],
+                plain_ach["percentile_of_real"],
+                float(matched_ach["max_abs_deviation"]),
+            )
+        )
+    save_table(
+        ctx,
+        "T23_transmitter_null_balance",
+        bal_rows,
+        [
+            "mode",
+            "transmitter",
+            "real",
+            "null_mean",
+            "null_sd",
+            "null_min",
+            "null_max",
+            "max_abs_deviation",
+            "percentile_of_real",
+            "within_tol",
+        ],
+        "Share of total outgoing synaptic weight carried by each transmitter on the "
+        "`named` cut, on the real graph and across the draws of each transmitter null. "
+        "A gain patch acts *through* transmitter identity, so this share is what the "
+        "drug sees. Plain label permutation moves it -- the real graph sits outside "
+        "its own null on the cholinergic share -- which makes that mode a joint "
+        "target-set-and-sign null rather than a null about transmitter identity. The "
+        "weight-matched null is a constrained shuffle that holds every tracked share "
+        "inside the tolerance band and is the ladder's rank-3 rung.",
+        md_fields=[
+            "mode",
+            "transmitter",
+            "real",
+            "null_mean",
+            "null_sd",
+            "percentile_of_real",
+            "within_tol",
+        ],
+    )
+
+    # ---- T22 + F16: does the instrument work? ------------------------
+    rec = ladder_recovery(
+        strengths=(0.0, 0.5, 1.0, 2.0),
+        n=20 if ctx.fast else 200,
+        seed=ctx.seed,
+    )
+    pw = ladder_power(
+        strengths=(0.0, 0.25, 0.5, 1.0),
+        ns=(20,) if ctx.fast else (50, 200, 1000),
+        replicates=2 if ctx.fast else 8,
+        seed=ctx.seed,
+    )
+    ctx.put("val_recovery_n", int(rec["n"]))
+    ctx.put("val_recovery_nodes", int(rec["n_nodes"]))
+    ctx.put("val_recovery_edges", int(rec["n_edges"]))
+    ctx.put("val_recovery_detected", int(rec["n_detected"]))
+    ctx.put("val_recovery_positive", int(rec["n_positive"]))
+    ctx.put("val_recovery_false_positive", bool(rec["false_positive_on_control"]))
+    ctx.put("val_recovery_smallest", _f(rec["smallest_detected_strength"]))
+    ctx.put("val_recovery_statement", str(rec["statement"]))
+    ctx.put("val_power_replicates", int(pw["replicates"]))
+    ctx.put("val_power_ns", list(pw["ns"]), text=", ".join(str(x) for x in pw["ns"]))
+    ctx.put(
+        "val_power_strengths",
+        list(pw["strengths"]),
+        text=", ".join(f"{x:g}" for x in pw["strengths"]),
+    )
+    ctx.put("val_power_fpr", _f(pw["false_positive_rate"]))
+    controls = [g for g in pw["grid"] if g["is_control"]]
+    ctx.put("val_power_control_hits", int(sum(g["n_detected"] for g in controls)))
+    ctx.put("val_power_control_runs", int(sum(g["replicates"] for g in controls)))
+    for g in pw["grid"]:
+        ctx.put(
+            f"val_power_s{str(g['loop_strength']).replace('.', 'p')}_n{g['n']}",
+            _f(g["detection_rate"]),
+        )
+    full = sorted(
+        {
+            g["loop_strength"]
+            for g in pw["grid"]
+            if not g["is_control"] and g["detection_rate"] == 1.0
+        }
+    )
+    blind = sorted(
+        {
+            g["loop_strength"]
+            for g in pw["grid"]
+            if not g["is_control"] and (g["detection_rate"] or 0.0) == 0.0
+        }
+    )
+    ctx.put("val_power_full_strengths", full, text=", ".join(f"{x:g}" for x in full) or "none")
+    ctx.put("val_power_blind_strengths", blind, text=", ".join(f"{x:g}" for x in blind) or "none")
+    best_n = {}
+    for g in pw["grid"]:
+        if g["is_control"]:
+            continue
+        best_n.setdefault(g["n"], []).append(g["detection_rate"] or 0.0)
+    ctx.put(
+        "val_power_by_n",
+        {str(k): round(sum(v) / len(v), 3) for k, v in sorted(best_n.items())},
+        text=", ".join(
+            f"n={k}: {sum(v) / len(v):.2f}" for k, v in sorted(best_n.items())
+        ),
+    )
+    ctx.note(
+        "instrument validation: %s Detection over the planted grid is %s; the "
+        "empirical false-positive rate on the unplanted control is %d of %d. Effect "
+        "size dominates the permutation count (%s)."
+        % (
+            rec["statement"],
+            ctx.text("val_power_by_n"),
+            int(sum(g["n_detected"] for g in controls)),
+            int(sum(g["replicates"] for g in controls)),
+            ctx.text("val_power_by_n"),
+        )
     )
     save_table(
         ctx,
-        "T12_dependence_landscape",
+        "T22_instrument_validation",
         [
             {
-                "compound": c["compound"],
-                "conc_M": c["conc_M"],
-                "real_effect": c.get("real_effect"),
-                "class": c["class"],
-                "necessary_level": (c.get("necessary_information_level") or {}).get("level"),
-                "p_sign": (c.get("p") or {}).get("p_sign"),
-                "p_weight": (c.get("p") or {}).get("p_weight"),
-                "p_degree": (c.get("p") or {}).get("p_degree"),
-                "p_ER": (c.get("p") or {}).get("p_ER"),
+                "experiment": "recovery",
+                "loop_strength": r["loop_strength"],
+                "n": r["n"],
+                "replicates": 1,
+                "class": r["class"],
+                "necessary_level": r["necessary_information_level"],
+                "real_effect": r["real_effect"],
+                "detection_rate": 1.0 if r["topology_dependent"] else 0.0,
+                "p_weight": (r["p"] or {}).get("p_weight"),
+                "p_degree": (r["p"] or {}).get("p_degree"),
             }
-            for c in cells
+            for r in rec["rows"]
+        ]
+        + [
+            {
+                "experiment": "power",
+                "loop_strength": g["loop_strength"],
+                "n": g["n"],
+                "replicates": g["replicates"],
+                "class": None,
+                "necessary_level": None,
+                "real_effect": None,
+                "detection_rate": g["detection_rate"],
+                "p_weight": None,
+                "p_degree": None,
+            }
+            for g in pw["grid"]
         ],
-        ["compound", "conc_M", "real_effect", "class", "necessary_level", "p_sign", "p_weight", "p_degree", "p_ER"],
-        f"Connectome-dependence landscape: every compound of the library at "
-        f"{len(land['concs_M'])} concentrations, {n_land} shuffles per mode, the same "
-        "shuffled graphs reused by every cell (a paired design). `necessary_level` is "
-        "the weakest graph model on the information ladder that already reproduces the "
-        "effect.",
-        md_fields=["compound", "conc_M", "real_effect", "class", "necessary_level"],
+        [
+            "experiment",
+            "loop_strength",
+            "n",
+            "replicates",
+            "class",
+            "necessary_level",
+            "real_effect",
+            "detection_rate",
+            "p_weight",
+            "p_degree",
+        ],
+        "Ground-truth recovery and power for the dependence ladder. A recurrent "
+        "cholinergic cycle of known strength is planted in a synthetic cut of the same "
+        "size, density and transmitter composition as the `named` cut, and a gain patch "
+        "that collapses `g_ach` removes an amplification that exists only while the "
+        "cycle is intact -- so the drug *contrast*, not merely the rate, depends on the "
+        "wiring. `loop_strength = 0` plants nothing and is the negative control, whose "
+        "detection rate is the empirical false-positive rate. Nothing here touches the "
+        "connectome or the compound library: the experiment is about the instrument.",
+        md_fields=["experiment", "loop_strength", "n", "replicates", "detection_rate", "class"],
+    )
+
+    # ---- the landscapes ----------------------------------------------
+    def landscape(graph: str, n_i: int, tag: str) -> dict[str, Any]:
+        land = dependence_landscape(graph=graph, n=n_i, seed=ctx.seed, n_jobs=jobs, modes=modes)
+        s = land["summary"]
+        counts = s["class_counts"]
+        counts_raw = s["class_counts_raw"]
+        counts_abs = s["class_counts_absolute_floor"]
+        ctx.put(f"dep_{tag}_cells", int(land["n_cells"]))
+        ctx.put(f"dep_{tag}_compounds", len(land["compounds"]))
+        ctx.put(f"dep_{tag}_concs", len(land["concs_M"]))
+        ctx.put(f"dep_{tag}_graph", str(land["graph"]))
+        for label in (
+            "topology-dependent",
+            "mixed",
+            "composition-dominated",
+            "no-effect",
+            "undefined",
+        ):
+            key = label.replace("-", "_")
+            ctx.put(f"dep_{tag}_{key}", int(counts.get(label, 0)))
+            ctx.put(f"dep_{tag}_{key}_raw", int(counts_raw.get(label, 0)))
+            ctx.put(f"dep_{tag}_{key}_absfloor", int(counts_abs.get(label, 0)))
+        ctx.put(f"dep_{tag}_design", str(s["design"]))
+        ctx.put(f"dep_{tag}_statement", str(s["statement"]))
+        ctx.put(f"dep_{tag}_fdr_alpha", _f(s["fdr_alpha"]))
+        ctx.put(f"dep_{tag}_n_structural_tests", int(s["n_structural_tests"]))
+        ctx.put(f"dep_{tag}_n_structural_rejected", int(s["n_structural_rejected_fdr"]))
+        ctx.put(f"dep_{tag}_fdr_can_reject", bool(s["fdr_can_reject"]))
+        ctx.put(f"dep_{tag}_non_monotone", int(s["n_non_monotone_ladders"]))
+        ctx.put(f"dep_{tag}_below_relative_floor", int(s["n_below_relative_effect_floor"]))
+        ctx.put(
+            f"dep_{tag}_below_relative_floor_cells",
+            [f"{r['compound']}@{r['conc_M']:.0e}" for r in s["below_relative_effect_floor"]],
+            text=", ".join(
+                f"{r['compound']} {_fmt_M(r['conc_M'])} ({r['real_effect']:.3g} Hz)"
+                for r in s["below_relative_effect_floor"]
+            )
+            or "none",
+        )
+        ctx.put(
+            f"dep_{tag}_non_monotone_cells",
+            [f"{r['compound']}@{r['conc_M']:.0e}" for r in s["non_monotone_cells"]],
+            text=", ".join(
+                f"{r['compound']} {_fmt_M(r['conc_M'])}" for r in s["non_monotone_cells"]
+            )
+            or "none",
+        )
+        topo = list(s["topology_dependent_compounds"])
+        ctx.put(f"dep_{tag}_topology_compounds", topo, text=", ".join(topo) or "none")
+        ctx.put(
+            f"dep_{tag}_topology_compounds_raw",
+            list(s["topology_dependent_compounds_raw"]),
+            text=", ".join(s["topology_dependent_compounds_raw"]) or "none",
+        )
+        ctx.put(
+            f"dep_{tag}_topology_cells",
+            [
+                f"{c['compound']}@{c['conc_M']:.0e}"
+                for c in land["cells"]
+                if c["class"] == "topology-dependent"
+            ],
+            text=", ".join(
+                f"{c['compound']} {_fmt_M(c['conc_M'])}"
+                for c in land["cells"]
+                if c["class"] == "topology-dependent"
+            )
+            or "none",
+        )
+        verdicts = s["verdict_counts"]
+        for v, k in verdicts.items():
+            ctx.put(f"dep_{tag}_verdicts_{v}", int(k))
+        deltas = land.get("delta_range") or [None, None]
+        ctx.put(f"dep_{tag}_delta_min", _f(deltas[0]), unit="Hz")
+        ctx.put(f"dep_{tag}_delta_max", _f(deltas[1]), unit="Hz")
+        # the cells the paper names one by one
+        for cell in land["cells"]:
+            if abs(cell["conc_M"] - PAPER_CONC) > 1e-18:
+                continue
+            if cell["compound"] not in ("imidacloprid", "fipronil"):
+                continue
+            c = cell["compound"]
+            ctx.put(f"dep_{tag}_{c}_class", cell["class"])
+            ctx.put(f"dep_{tag}_{c}_class_raw", cell["class_raw"])
+            ctx.put(f"dep_{tag}_{c}_q", _f(cell.get("q_value")))
+            ctx.put(f"dep_{tag}_{c}_effect", _f(cell.get("real_effect")))
+            for mode in modes:
+                ctx.put(
+                    f"dep_{tag}_{c}_p_{mode}",
+                    _f((cell.get("p") or {}).get(_P_KEY.get(mode, f"p_{mode}"))),
+                )
+        return land
+
+    land = landscape("named", n_land, "land")
+    land_taste = landscape("taste_motor", n_land_taste, "land_taste")
+    cells = land["cells"]
+    counts = land["summary"]["class_counts"]
+
+    if land["summary"]["n_topology_dependent"] != land["summary"]["n_topology_dependent_raw"]:
+        ctx.note(
+            "multiplicity changes the headline count on the `named` cut: %d cells are "
+            "topology-dependent on the raw permutation p and %d survive "
+            "Benjamini-Hochberg across the %d structural tests of the landscape. The "
+            "corrected count is the one the paper quotes."
+            % (
+                land["summary"]["n_topology_dependent_raw"],
+                land["summary"]["n_topology_dependent"],
+                land["summary"]["n_structural_tests"],
+            )
+        )
+    if land_taste["summary"]["class_counts"].get("composition-dominated", 0) == 0:
+        ctx.note(
+            "the central RQ2 result REVERSES on a cut that has topology: repeated on "
+            "`taste_motor` (%d nodes, %d edges, mean degree %.1f) the landscape returns "
+            "%d composition-dominated cells of %d, against %d of %d on the in-star "
+            "`named` cut. The composition-dominated majority is a property of the "
+            "substrate, not of receptor perturbation on connectomes."
+            % (
+                ctx.get("taste_nodes") or 0,
+                ctx.get("taste_edges") or 0,
+                ctx.get("taste_motor_mean_degree") or 0.0,
+                land_taste["summary"]["class_counts"].get("composition-dominated", 0),
+                land_taste["n_cells"],
+                counts.get("composition-dominated", 0),
+                land["n_cells"],
+            )
+        )
+
+    def landscape_rows(res: dict[str, Any]) -> list[dict[str, Any]]:
+        out = []
+        for c in res["cells"]:
+            by_mode = {r["mode"]: r for r in c["modes"]}
+            out.append(
+                {
+                    "compound": c["compound"],
+                    "conc_M": c["conc_M"],
+                    "real_effect": c.get("real_effect"),
+                    "vehicle": c.get("real_vehicle"),
+                    "effect_floor": c.get("effect_floor"),
+                    "delta": c.get("delta"),
+                    "class": c["class"],
+                    "class_raw": c.get("class_raw"),
+                    "class_absolute_floor": c.get("class_absolute_floor"),
+                    "q_value": c.get("q_value"),
+                    "necessary_level": (c.get("necessary_information_level") or {}).get("level"),
+                    "necessary_level_verdict": (
+                        c.get("necessary_information_level") or {}
+                    ).get("verdict"),
+                    "non_monotone": bool(
+                        (c.get("necessary_information_level") or {}).get("non_monotone")
+                    ),
+                    "p_sign": (c.get("p") or {}).get("p_sign"),
+                    "p_sign_wm": (c.get("p") or {}).get("p_sign_wm"),
+                    "p_weight": (c.get("p") or {}).get("p_weight"),
+                    "p_degree": (c.get("p") or {}).get("p_degree"),
+                    "p_ER": (c.get("p") or {}).get("p_ER"),
+                    "q_weight": (by_mode.get("weight_permute") or {}).get("q_value"),
+                    "q_degree": (by_mode.get("rewire_degree_preserving") or {}).get("q_value"),
+                    "verdict_weight": c["verdicts"].get("weight_permute"),
+                    "verdict_degree": c["verdicts"].get("rewire_degree_preserving"),
+                }
+            )
+        return out
+
+    landscape_fields = [
+        "compound",
+        "conc_M",
+        "real_effect",
+        "vehicle",
+        "effect_floor",
+        "delta",
+        "class",
+        "class_raw",
+        "class_absolute_floor",
+        "q_value",
+        "necessary_level",
+        "necessary_level_verdict",
+        "non_monotone",
+        "p_sign",
+        "p_sign_wm",
+        "p_weight",
+        "p_degree",
+        "p_ER",
+        "q_weight",
+        "q_degree",
+        "verdict_weight",
+        "verdict_degree",
+    ]
+    landscape_md = [
+        "compound",
+        "conc_M",
+        "real_effect",
+        "class",
+        "class_raw",
+        "q_value",
+        "necessary_level",
+        "non_monotone",
+    ]
+    save_table(
+        ctx,
+        "T12_dependence_landscape",
+        landscape_rows(land),
+        landscape_fields,
+        f"Connectome-dependence landscape on the `named` cut: every compound of the "
+        f"library at {len(land['concs_M'])} concentrations, {n_land} shuffles per mode, "
+        "the same shuffled graphs reused by every cell (a paired design). `class` is "
+        "decided on the Benjamini-Hochberg adjusted probabilities across the "
+        "structural tests of the whole landscape and `class_raw` on the uncorrected "
+        "ones; `class_absolute_floor` drops the prespecified relative effect floor (1 % "
+        "of the vehicle readout) so the cost of that convention is visible. "
+        "`necessary_level` is the weakest graph model on the information ladder that "
+        "this test could **not** distinguish from the real cut -- never a claim that "
+        "the model reproduces the effect -- and `non_monotone` marks the cells where a "
+        "richer model on the ladder *was* distinguishable, so the level must be read as "
+        "'the cheapest graph model this test cannot tell apart from the real one' and "
+        "not as 'everything above it is indistinguishable too'.",
+        md_fields=landscape_md,
+    )
+    save_table(
+        ctx,
+        "T12b_dependence_landscape_taste_motor",
+        landscape_rows(land_taste),
+        landscape_fields,
+        f"The same landscape repeated on the denser `taste_motor` cut "
+        f"({ctx.get('taste_nodes')} nodes, {ctx.get('taste_edges')} edges, mean degree "
+        f"{ctx.get('taste_motor_mean_degree') or 0.0:.1f}) at {n_land_taste} shuffles per "
+        "mode. The `named` cut is an in-star (T19) and a degree-preserving rewire of it "
+        "is close to the identity; this table is what the same instrument says about a "
+        "cut that has wiring to destroy. The two do not agree, and that disagreement "
+        "is the paper's main RQ2 result.",
+        md_fields=landscape_md,
     )
 
     # ---- F6: the profile itself --------------------------------------
@@ -1545,10 +2339,13 @@ def step_dependence(ctx: Ctx) -> None:
             if real is not None:
                 ax.axvline(float(real), color=CRIT, lw=2, label="real MaleCNS cut")
             p = sub[mode]["p_two_sided"]
+            verdict = str(sub[mode].get("verdict") or "")
             ax.set_title(
-                f"{mode}\np = {'n/a' if p is None else f'{p:.3f}'}",
-                fontsize=8.5,
-                color=CRIT if (p is not None and p <= 0.05) else TEXT2,
+                f"{mode}\np = {'n/a' if p is None else f'{p:.3f}'}\n{verdict.replace('_', ' ')}",
+                fontsize=7.6,
+                color=CRIT if verdict == "distinguishable" else (
+                    GOOD if verdict == "equivalent_within_tolerance" else TEXT2
+                ),
             )
             ax.tick_params(labelsize=7)
             ax.grid(axis="y", lw=0.4)
@@ -1569,47 +2366,72 @@ def step_dependence(ctx: Ctx) -> None:
         fig,
         "F6_dependence_profile",
         "Histograms are the drug effect (treated minus vehicle on the network mean "
-        f"rate) measured on {n} degraded copies of the 1-hop MN9/DNp01 cut; the red "
-        "line is the same contrast on the real cut. Columns run in increasing order of "
-        "destruction: transmitter labels permuted (E/I histogram preserved exactly), "
-        "synapse weights permuted, degree-preserving double-edge rewiring, "
-        "Erdos-Renyi. Titles carry the empirical two-sided permutation p, not z. "
-        f"Imidacloprid is {named['imidacloprid']['class']['class']} "
-        f"(necessary level: {named['imidacloprid']['level'].get('level')}); fipronil is "
-        f"{named['fipronil']['class']['class']} "
-        f"(necessary level: {named['fipronil']['level'].get('level')}).",
+        f"rate) measured on {n} degraded copies of the 1-hop MN9/DNp01 `named` cut; the "
+        "red line is the same contrast on the real cut. Columns run in increasing order "
+        "of destruction: transmitter labels permuted, synapse weights permuted, "
+        "degree-preserving double-edge rewiring, Erdos-Renyi. Titles carry the "
+        "empirical two-sided permutation p and the three-way verdict against the "
+        f"prespecified equivalence margin (delta = "
+        f"{ctx.text('dep_named_imidacloprid_delta')} Hz, 5 % of the vehicle readout): "
+        "`distinguishable` means the test rejected, `equivalent within tolerance` means "
+        "the gap from the null median is below the margin, and `indeterminate` means "
+        "neither -- a failure to reject is not evidence that the degraded graph gives "
+        "the same effect. Plain label permutation is shown because it is informative, "
+        "but it moves the weighted excitation/inhibition balance as well as transmitter "
+        "identity (T23), so it is a joint null and not a rung of the ladder. "
+        f"Imidacloprid is {imi['class']} (necessary level: "
+        f"{imi['necessary_information_level'].get('level')}, "
+        f"{imi['necessary_information_level'].get('verdict')}); fipronil is "
+        f"{named['fipronil']['class']} (necessary level: "
+        f"{named['fipronil']['necessary_information_level'].get('level')}).",
     )
 
-    # ---- F12: the landscape ------------------------------------------
-    order = sorted({c["compound"] for c in cells})
-    concs = sorted({c["conc_M"] for c in cells})
-    class_idx = {"no-effect": 0, "composition-dominated": 1, "mixed": 2, "topology-dependent": 3, "undefined": 4}
-    grid = np.full((len(order), len(concs)), np.nan)
-    for c in cells:
-        grid[order.index(c["compound"]), concs.index(c["conc_M"])] = class_idx.get(c["class"], np.nan)
+    # ---- F12: the two landscapes side by side -------------------------
     from matplotlib.colors import BoundaryNorm, ListedColormap
     from matplotlib.patches import Patch
 
+    class_idx = {
+        "no-effect": 0,
+        "composition-dominated": 1,
+        "mixed": 2,
+        "topology-dependent": 3,
+        "undefined": 4,
+    }
     cmap = ListedColormap([GRID, SEQ[1], WARN, CRIT, SURFACE])
-    fig, ax = plt.subplots(figsize=(6.2, 7.2))
-    ax.imshow(grid, cmap=cmap, norm=BoundaryNorm(list(range(6)), cmap.N), aspect="auto")
-    ax.set_xticks(range(len(concs)))
-    ax.set_xticklabels([_fmt_M(c) for c in concs], fontsize=8)
-    ax.set_yticks(range(len(order)))
-    ax.set_yticklabels(order, fontsize=7.5)
-    ax.set_xlabel("free concentration")
-    # cell borders: without them adjacent identical rows read as one block
-    ax.set_xticks([x - 0.5 for x in range(1, len(concs))], minor=True)
-    ax.set_yticks([y - 0.5 for y in range(1, len(order))], minor=True)
-    ax.grid(which="minor", color=SURFACE, linewidth=1.2)
-    ax.tick_params(which="minor", length=0)
-    ax.set_title(
-        f"Connectome-dependence landscape\n{len(cells)} cells, {n_land} permutations per mode",
-        fontsize=10,
-    )
-    ax.legend(
+    order = sorted({c["compound"] for c in cells})
+    concs = sorted({c["conc_M"] for c in cells})
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 7.4), sharey=True)
+    for ax, (res, title, n_i) in zip(
+        axes,
+        (
+            (land, f"`named` cut (mean degree {ctx.get('named_mean_degree') or 0.0:.2f})", n_land),
+            (
+                land_taste,
+                f"`taste_motor` cut (mean degree {ctx.get('taste_motor_mean_degree') or 0.0:.1f})",
+                n_land_taste,
+            ),
+        ),
+    ):
+        grid = np.full((len(order), len(concs)), np.nan)
+        for c in res["cells"]:
+            if c["compound"] in order and c["conc_M"] in concs:
+                grid[order.index(c["compound"]), concs.index(c["conc_M"])] = class_idx.get(
+                    c["class"], np.nan
+                )
+        ax.imshow(grid, cmap=cmap, norm=BoundaryNorm(list(range(6)), cmap.N), aspect="auto")
+        ax.set_xticks(range(len(concs)))
+        ax.set_xticklabels([_fmt_M(c) for c in concs], fontsize=8)
+        ax.set_xlabel("free concentration")
+        ax.set_xticks([x - 0.5 for x in range(1, len(concs))], minor=True)
+        ax.set_yticks([y - 0.5 for y in range(1, len(order))], minor=True)
+        ax.grid(which="minor", color=SURFACE, linewidth=1.2)
+        ax.tick_params(which="minor", length=0)
+        ax.set_title(f"{title}\n{n_i} permutations per mode", fontsize=9)
+    axes[0].set_yticks(range(len(order)))
+    axes[0].set_yticklabels(order, fontsize=7.5)
+    axes[1].legend(
         handles=[
-            Patch(facecolor=GRID, label="no effect"),
+            Patch(facecolor=GRID, label="no effect (below the relative floor)"),
             Patch(facecolor=SEQ[1], label="composition-dominated"),
             Patch(facecolor=WARN, label="mixed"),
             Patch(facecolor=CRIT, label="topology-dependent"),
@@ -1618,20 +2440,87 @@ def step_dependence(ctx: Ctx) -> None:
         loc="upper left",
         bbox_to_anchor=(1.02, 1.0),
     )
+    fig.suptitle(
+        "Connectome-dependence landscape on two cuts of the same connectome", y=0.99
+    )
     fig.tight_layout()
+    ct = land_taste["summary"]["class_counts"]
     save_fig(
         ctx,
         fig,
         "F12_dependence_landscape",
-        "Every compound of the library at four concentrations, classified by the "
-        "weakest graph model that reproduces its effect on the neighbourhood mean rate. "
-        f"{counts.get('topology-dependent', 0)} of {len(cells)} cells need the wiring "
-        f"pattern, {counts.get('composition-dominated', 0)} are reproduced by every "
-        f"structure-preserving degradation, {counts.get('no-effect', 0)} move the "
-        "readout at all. The topology-dependent set is exactly the chloride-channel "
-        "blockers: " + ", ".join(topo) + ".",
+        "Every compound of the library at four concentrations, on both committed cuts, "
+        "classified by the weakest graph model the permutation test could **not** "
+        "distinguish from the real cut -- never by a model that reproduces the effect. "
+        "Classes are decided on Benjamini-Hochberg adjusted probabilities across each "
+        "landscape's structural tests, with a prespecified relative effect floor of 1 % "
+        f"of the vehicle readout. Left, the 1-hop `named` cut: "
+        f"{counts.get('topology-dependent', 0)} of {land['n_cells']} cells need the "
+        f"wiring pattern, {counts.get('composition-dominated', 0)} are not "
+        "distinguishable from any structure-preserving degradation, and "
+        f"{counts.get('no-effect', 0)} do not move the readout at all. Right, the "
+        f"denser `taste_motor` cut: {ct.get('topology-dependent', 0)} topology-dependent, "
+        f"{ct.get('composition-dominated', 0)} composition-dominated, "
+        f"{ct.get('no-effect', 0)} no-effect. The composition-dominated majority does "
+        "not survive the change of substrate, and the `named` cut is an in-star whose "
+        "degree-preserving rewire is close to the identity (T19).",
     )
 
+    # ---- F16: the instrument's own power ------------------------------
+    fig, axes = plt.subplots(1, 2, figsize=(10.2, 4.0), gridspec_kw={"width_ratios": [1.0, 1.1]})
+    ax = axes[0]
+    for i, n_i in enumerate(pw["ns"]):
+        xs = [g["loop_strength"] for g in pw["grid"] if g["n"] == n_i]
+        ys = [g["detection_rate"] for g in pw["grid"] if g["n"] == n_i]
+        ax.plot(xs, ys, "o-", color=SEQ[min(i + 1, 4)], lw=1.8, ms=7, label=f"n = {n_i}")
+    ax.axhline(0.05, color=CRIT, ls="--", lw=1)
+    ax.text(0.02, 0.06, "alpha = 0.05", fontsize=7, color=CRIT, transform=ax.get_yaxis_transform())
+    ax.set_xlabel("planted loop strength (0 = nothing planted)")
+    ax.set_ylabel("share classified topology-dependent")
+    ax.set_ylim(-0.05, 1.08)
+    ax.set_title(
+        f"Detection rate, {pw['replicates']} synthetic cuts per cell", fontsize=9.5
+    )
+    ax.legend(fontsize=7.5)
+    ax.grid(lw=0.5)
+    ax.set_axisbelow(True)
+
+    ax2 = axes[1]
+    labels = [f"{r['loop_strength']:g}" for r in rec["rows"]]
+    effects = [abs(float(r["real_effect"] or 0.0)) for r in rec["rows"]]
+    cols = [CRIT if r["topology_dependent"] else SEQ[1] for r in rec["rows"]]
+    ax2.bar(range(len(labels)), effects, color=cols)
+    ax2.set_xticks(range(len(labels)))
+    ax2.set_xticklabels(labels)
+    ax2.set_xlabel("planted loop strength")
+    ax2.set_ylabel("|drug effect| on the synthetic cut (Hz)")
+    ax2.set_title(
+        f"Ground-truth recovery at n = {rec['n']}\n"
+        f"{rec['n_detected']} of {rec['n_positive']} planted effects recovered, "
+        + ("a false positive" if rec["false_positive_on_control"] else "no false positive")
+        + " on the control",
+        fontsize=9.5,
+    )
+    ax2.grid(axis="y", lw=0.5)
+    ax2.set_axisbelow(True)
+    fig.tight_layout()
+    save_fig(
+        ctx,
+        fig,
+        "F16_instrument_validation",
+        "The dependence ladder pointed at a graph whose answer is known in advance. A "
+        "recurrent cholinergic cycle of known strength is planted in a synthetic cut of "
+        "the same size, density and transmitter composition as the `named` cut; a gain "
+        "patch that collapses `g_ach` then removes an amplification that exists only "
+        "while the cycle is intact, so the drug contrast depends on the wiring by "
+        "construction. Left: the share of independently generated graphs the ladder "
+        "classifies topology-dependent, against planted strength and permutation count. "
+        "Right: the recovery experiment itself, with red marking the strengths the "
+        "ladder recovered. The unplanted control is the empirical false-positive rate "
+        f"({ctx.get('val_power_control_hits')} of "
+        f"{ctx.get('val_power_control_runs')}). Without this panel, a negative from the "
+        "ladder would be indistinguishable from an under-powered test.",
+    )
 
 def step_landscape(ctx: Ctx) -> None:
     """F7: receptor selectivity index versus circuit selectivity index."""
@@ -2375,14 +3264,37 @@ def step_expression(ctx: Ctx) -> None:
 
 
 def step_ablation(ctx: Ctx) -> None:
-    """F13 + T13: the ablation ladder -- which layer carries the information?
+    """F13 + T13, T13b, T24, T25: the ablation ladder -- which layer carries it?
 
     Four models of the same prediction: receptor engagement alone, mechanism
-    gains on the graph's transmitter composition alone, the real cut with a
-    generic (mechanism-free) multiplier, and the full model. Each level's
-    *ordering of the whole library* is correlated with the full model's.
+    gains on the graph's transmitter composition alone, the real cut with one
+    generic multiplier, and the full model. Each level's *ordering of the whole
+    library* is correlated with the full model's, with **signed** rho.
+
+    Two corrections from the second referee round change what this step can
+    conclude. Level C's generic multiplier was depression-only, so it could not
+    express disinhibition and no compound could come out positive; it is now
+    direction-aware (generic magnitude, one bit of sign from the mechanism
+    table), with the old rule kept and reported as a floor. And the
+    composition-versus-full correlation is meaningless without a reference
+    distribution, because both levels are functions of the same gain vector:
+    T24 supplies one, and T25 asks whether the verdict survives the engine's
+    row normalisation being changed.
     """
-    from flylab.analysis.baselines import LEVELS, ablation, ablation_table
+    from flylab.analysis.baselines import (
+        C_FLOOR_LEVEL,
+        DEFAULT_GENERIC_RULE,
+        DIRECTION_AWARE_MULTIPLIER_RULE,
+        GENERIC_MULTIPLIER_RULE,
+        GENERIC_RULE_NOTES,
+        LEVELS,
+        REPRODUCES_RHO,
+        ablation,
+        ablation_table,
+        composition_dominance_under_normalisations,
+        composition_reference_distribution,
+        glutamate_sign_reconciliation,
+    )
 
     plt = _plt()
     concs = (1e-6,) if ctx.fast else (1e-8, 1e-7, 1e-6, 1e-5)
@@ -2390,10 +3302,16 @@ def step_ablation(ctx: Ctx) -> None:
     ctx.put("abl_compounds", len(tab["compounds"]))
     ctx.put("abl_concs", len(tab["concs_M"]))
     ctx.put("abl_levels", list(LEVELS), text=", ".join(LEVELS))
+    ctx.put("abl_generic_rule", DIRECTION_AWARE_MULTIPLIER_RULE)
+    ctx.put("abl_generic_rule_name", DEFAULT_GENERIC_RULE)
+    ctx.put("abl_generic_floor_rule", GENERIC_MULTIPLIER_RULE)
+    ctx.put("abl_generic_floor_note", GENERIC_RULE_NOTES["depressant_floor"])
+    ctx.put("abl_reproduces_rho", float(REPRODUCES_RHO))
 
     per_level: dict[str, list[float]] = {lvl: [] for lvl in LEVELS}
     gain_rows: list[dict[str, Any]] = []
     for conc_key, gain in tab["information_gain"].items():
+        cmp_block = gain.get("generic_rule_comparison") or {}
         for lvl in gain["levels"]:
             name = lvl["level"]
             rho = lvl.get("spearman_rho_vs_full")
@@ -2412,6 +3330,21 @@ def step_ablation(ctx: Ctx) -> None:
                     "information_added_vs_previous": lvl.get("information_added_vs_previous"),
                 }
             )
+        floor = cmp_block.get("floor_row") or {}
+        if floor.get("spearman_rho_vs_full") is not None:
+            gain_rows.append(
+                {
+                    "conc_M": float(conc_key),
+                    "level": C_FLOOR_LEVEL,
+                    "unit": floor.get("unit") or "Hz",
+                    "spearman_rho_vs_full": floor.get("spearman_rho_vs_full"),
+                    "pearson_r_vs_full": floor.get("pearson_r_vs_full"),
+                    "residual_rms_standardised": floor.get("residual_rms_standardised"),
+                    "residual_rms_hz": floor.get("residual_rms_hz"),
+                    "reproduces_full_ordering": floor.get("reproduces_full_ordering"),
+                    "information_added_vs_previous": None,
+                }
+            )
     # "A_receptor_only" -> "receptor": the key half of a results.json name, so
     # it must stay an identifier; the axis label spaces it out separately.
     short = {lvl: lvl.split("_", 1)[1].replace("_only", "") for lvl in LEVELS}
@@ -2427,7 +3360,47 @@ def step_ablation(ctx: Ctx) -> None:
     ctx.put("abl_rms_topology_hz", _f(by_name["C_topology_only"].get("residual_rms_hz")), unit="Hz")
     ctx.put("abl_rho_composition_paper", _f(by_name["B_composition_only"].get("spearman_rho_vs_full")))
     ctx.put("abl_rho_receptor_paper", _f(by_name["A_receptor_only"].get("spearman_rho_vs_full")))
+    paper_cmp = paper.get("generic_rule_comparison") or {}
+    ctx.put(
+        "abl_rho_topology_floor_paper",
+        _f((paper_cmp.get("depressant_floor") or {}).get("spearman_rho_vs_full")),
+    )
     ctx.put("abl_statements", tab["statements"], text=" ".join(tab["statements"]))
+
+    # ---- the ladder's ranking is not constant across the dose range ----
+    conc_dep = tab["concentration_dependence"]
+    worst = {r["conc_M"]: r["worst_level"] for r in conc_dep["rows"]}
+    worst_floor = {r["conc_M"]: r["worst_level_with_floor_rule"] for r in conc_dep["rows"]}
+    ctx.put(
+        "abl_worst_level_by_conc",
+        {f"{k:.0e}": v for k, v in worst.items()},
+        text="; ".join(
+            f"{_fmt_M(r['conc_M'])}: {r['worst_level']} ({r['worst_rho']:.3f})"
+            for r in conc_dep["rows"]
+            if r["worst_rho"] is not None
+        ),
+    )
+    ctx.put(
+        "abl_worst_level_by_conc_floor_rule",
+        {f"{k:.0e}": v for k, v in worst_floor.items()},
+        text="; ".join(
+            f"{_fmt_M(r['conc_M'])}: {r['worst_level_with_floor_rule']}"
+            for r in conc_dep["rows"]
+        ),
+    )
+    ctx.put("abl_worst_level_constant", len(set(worst.values())) == 1)
+    ctx.put(
+        "abl_worst_level_constant_floor_rule", len(set(worst_floor.values())) == 1
+    )
+    ctx.put("abl_concentration_statements", conc_dep["statements"], text=" ".join(conc_dep["statements"]))
+    if len(set(worst_floor.values())) > 1:
+        ctx.note(
+            "the ablation ladder's ranking is concentration-dependent: with the "
+            "historical depression-only level-C rule the weakest level is %s. Any "
+            "sentence of the form 'the topology-only level is the worst of the four' "
+            "is true of one column and false of the others."
+            % ctx.text("abl_worst_level_by_conc_floor_rule")
+        )
 
     # within one mechanism class, where the ordering problem is hardest
     one = ablation("imidacloprid", PAPER_CONC)
@@ -2437,31 +3410,215 @@ def step_ablation(ctx: Ctx) -> None:
         ctx.put("abl_nicotinic_n", int(nic_by["B_composition_only"].get("n_compounds") or 0))
         ctx.put("abl_rho_composition_nicotinic", _f(nic_by["B_composition_only"].get("spearman_rho_vs_full")))
         ctx.put("abl_rho_receptor_nicotinic", _f(nic_by["A_receptor_only"].get("spearman_rho_vs_full")))
-    from flylab.analysis.baselines import GENERIC_MULTIPLIER_RULE
 
-    ctx.put("abl_generic_rule", GENERIC_MULTIPLIER_RULE)
-
-    if (ctx.get("abl_rho_composition_paper") or 0) > 0.9:
+    if (ctx.get("abl_rho_topology_paper") or 0) >= (ctx.get("abl_rho_topology_floor_paper") or 0) + 0.3:
         ctx.note(
-            "the composition-only baseline reproduces the full model's ordering of the "
-            "library (Spearman rho = %s at 1 uM): on this readout almost all the "
-            "information is in the mechanism rules and the cut's transmitter "
-            "composition, not in its wiring."
-            % ctx.text("abl_rho_composition_paper")
+            "the level-C conclusion is withdrawn: with a direction-aware generic rule "
+            "the topology-only baseline's rank correlation with the full model at 1 uM "
+            "rises from %s (depression-only floor, which cannot express disinhibition "
+            "and whose every entry is at most zero) to %s. 'The connectome without the "
+            "pharmacology is not a cheap substitute' was a statement about a "
+            "sign-broken baseline."
+            % (
+                ctx.text("abl_rho_topology_floor_paper"),
+                ctx.text("abl_rho_topology_paper"),
+            )
         )
+
+    # ---- T24: what rho would have been unsurprising -------------------
+    ref = composition_reference_distribution(
+        conc_M=PAPER_CONC, n_draws=10 if ctx.fast else 50, seed=ctx.seed
+    )
+    cond = ref["conditions"]
+    sparse = cond["random_single_gain_vectors"]["spearman_rho"] or {}
+    dense = cond["random_gain_vectors"]["spearman_rho"] or {}
+    ctx.put("abl_ref_observed", _f(ref["observed"]["spearman_rho"]))
+    ctx.put("abl_ref_n_draws", int(sparse.get("n") or 0))
+    ctx.put("abl_ref_matched_median", _f(sparse.get("p50")))
+    ctx.put("abl_ref_matched_p05", _f(sparse.get("p05")))
+    ctx.put("abl_ref_matched_p95", _f(sparse.get("p95")))
+    ctx.put("abl_ref_dense_median", _f(dense.get("p50")))
+    ctx.put("abl_ref_observed_percentile", _f(ref["observed_percentile_of_matched_reference"]))
+    ctx.put("abl_ref_shuffled", _f(cond["shuffled_compound_assignment"]["spearman_rho"]))
+    ctx.put(
+        "abl_ref_shuffled_identical",
+        bool(cond["shuffled_compound_assignment"]["identical_to_observed"]),
+    )
+    ctx.put("abl_ref_no_floor", _f(cond["library_no_floor"]["spearman_rho"]))
+    ctx.put("abl_ref_no_floor_n", int(cond["library_no_floor"]["n_compounds"]))
+    ctx.put("abl_ref_statements", ref["statements"], text=" ".join(ref["statements"]))
+    if cond["shuffled_compound_assignment"]["identical_to_observed"]:
+        ctx.note(
+            "the composition-versus-full correlation carries no compound-level "
+            "information: shuffling the compound-to-gain assignment leaves it "
+            "identically %s, and pharmacology-free pseudo-compounds whose gain vectors "
+            "have the shape the mechanism rules produce already reach a median of %s. "
+            "Both levels are functions of the same gain vector, so the number is a "
+            "statement about the map from gains to readouts."
+            % (ctx.text("abl_ref_shuffled"), ctx.text("abl_ref_matched_median"))
+        )
+    save_table(
+        ctx,
+        "T24_composition_reference",
+        [
+            {
+                "condition": "observed (library gain vectors)",
+                "spearman_rho": ref["observed"]["spearman_rho"],
+                "n_compounds": ref["observed"]["n_compounds"],
+                "draws": None,
+                "note": "what the paper used to quote on its own",
+            },
+            {
+                "condition": "library, floor-saturated compounds dropped",
+                "spearman_rho": cond["library_no_floor"]["spearman_rho"],
+                "n_compounds": cond["library_no_floor"]["n_compounds"],
+                "draws": None,
+                "note": cond["library_no_floor"]["note"],
+            },
+            {
+                "condition": "matched reference: one gain moved per pseudo-compound",
+                "spearman_rho": sparse.get("p50"),
+                "n_compounds": ref["n_compounds"],
+                "draws": sparse.get("n"),
+                "note": cond["random_single_gain_vectors"]["note"],
+            },
+            {
+                "condition": "dense reference: every gain moved per pseudo-compound",
+                "spearman_rho": dense.get("p50"),
+                "n_compounds": ref["n_compounds"],
+                "draws": dense.get("n"),
+                "note": cond["random_gain_vectors"]["note"],
+            },
+            {
+                "condition": "compound labels shuffled",
+                "spearman_rho": cond["shuffled_compound_assignment"]["spearman_rho"],
+                "n_compounds": ref["n_compounds"],
+                "draws": 1,
+                "note": cond["shuffled_compound_assignment"]["note"],
+            },
+        ],
+        ["condition", "spearman_rho", "n_compounds", "draws", "note"],
+        "Reference distribution for the composition-versus-full rank correlation. The "
+        "composition level and the full model are not independent models: both are "
+        "functions of the same gain vector, so the correlation has a large structural "
+        "floor and a bare value near 0.99 is not interpretable. The matched reference "
+        "draws pseudo-compounds with the shape the shipped mechanism rules produce "
+        "(one receptor, one transmitter, one gain moved) and no pharmacology at all; "
+        "shuffling the compound labels leaves the observed value unchanged, which is a "
+        "proof rather than a coincidence.",
+        md_fields=["condition", "spearman_rho", "n_compounds", "draws"],
+    )
+
+    # ---- T25: the row normalisation, and the glutamate sign ------------
+    norm = composition_dominance_under_normalisations(conc_M=PAPER_CONC)
+    norm_rows: list[dict[str, Any]] = []
+    for mode, block in norm["by_normalisation"].items():
+        ctx.put(f"abl_rho_composition_{mode}", _f(block["spearman_rho_b_vs_d"]))
+        ctx.put(f"abl_composition_survives_{mode}", bool(block["reproduces_full_ordering"]))
+        norm_rows.append(
+            {
+                "conc_M": PAPER_CONC,
+                "normalisation": mode,
+                "spearman_rho_b_vs_d": block["spearman_rho_b_vs_d"],
+                "pearson_r_b_vs_d": block["pearson_r_b_vs_d"],
+                "reproduces_full_ordering": block["reproduces_full_ordering"],
+            }
+        )
+    if not ctx.fast:
+        low = composition_dominance_under_normalisations(conc_M=1e-8)
+        for mode, block in low["by_normalisation"].items():
+            ctx.put(f"abl_rho_composition_{mode}_1e8", _f(block["spearman_rho_b_vs_d"]))
+            norm_rows.append(
+                {
+                    "conc_M": 1e-8,
+                    "normalisation": mode,
+                    "spearman_rho_b_vs_d": block["spearman_rho_b_vs_d"],
+                    "pearson_r_b_vs_d": block["pearson_r_b_vs_d"],
+                    "reproduces_full_ordering": block["reproduces_full_ordering"],
+                }
+            )
+    survives = [m for m, b in norm["by_normalisation"].items() if b["reproduces_full_ordering"]]
+    ctx.put(
+        "abl_composition_survives_normalisations",
+        survives,
+        text=", ".join(survives) or "none",
+    )
+    ctx.put("abl_normalisation_statements", norm["statements"], text=" ".join(norm["statements"]))
+    if "degree" not in survives:
+        ctx.note(
+            "the composition verdict is not robust to the engine's row normalisation: "
+            "the B-versus-D rank correlation at 1 uM is %s under the shipped `row_abs` "
+            "mode and %s under a degree-corrected one. The normalisation is an "
+            "undocumented modelling choice that makes each cell's recurrent input a "
+            "composition-weighted average of its presynaptic gains."
+            % (
+                ctx.text("abl_rho_composition_row_abs"),
+                ctx.text("abl_rho_composition_degree"),
+            )
+        )
+
+    glu = glutamate_sign_reconciliation(concs_M=concs)
+    ctx.put("abl_glutamate_max_delta_rho", _f(glu["max_abs_delta_rho"]))
+    ctx.put("abl_glutamate_statements", glu["statements"], text=" ".join(glu["statements"]))
+    for r in glu["rows"]:
+        norm_rows.append(
+            {
+                "conc_M": r["conc_M"],
+                "normalisation": "glutamate sign: wholens (B excitatory)",
+                "spearman_rho_b_vs_d": r["rho_wholens"],
+                "pearson_r_b_vs_d": r["r_wholens"],
+                "reproduces_full_ordering": None,
+            }
+        )
+        norm_rows.append(
+            {
+                "conc_M": r["conc_M"],
+                "normalisation": "glutamate sign: rate_engine (B inhibitory)",
+                "spearman_rho_b_vs_d": r["rho_rate_engine"],
+                "pearson_r_b_vs_d": r["r_rate_engine"],
+                "reproduces_full_ordering": None,
+            }
+        )
+    save_table(
+        ctx,
+        "T25_engine_normalisation",
+        norm_rows,
+        [
+            "conc_M",
+            "normalisation",
+            "spearman_rho_b_vs_d",
+            "pearson_r_b_vs_d",
+            "reproduces_full_ordering",
+        ],
+        "The composition-versus-full rank correlation under each of the rate engine's "
+        "row normalisations, and under each of the two glutamate sign conventions the "
+        "two levels of the ablation ladder use. The shipped engine divides every row "
+        "of the signed weight matrix by its own total absolute input, which makes each "
+        "cell's recurrent input a composition-weighted average of its presynaptic "
+        "gains; that is a modelling choice, it was documented nowhere, and it is what "
+        "the composition-dominance verdict is measured on. Levels are not comparable "
+        "across normalisations -- the unnormalised operator is supercritical and the "
+        "r_max clip shapes its rates -- only the orderings are.",
+        md_fields=["conc_M", "normalisation", "spearman_rho_b_vs_d", "reproduces_full_ordering"],
+    )
 
     save_table(
         ctx,
         "T13_ablation",
         tab["rows"],
-        ["compound", "class", "conc_M"] + list(LEVELS),
+        ["compound", "class", "conc_M"] + list(LEVELS) + list(tab["extra_series"]),
         "Ablation ladder. Each level is a prediction for the same "
         "compound-concentration cell from a model that has been denied one layer of "
         "information: receptor engagement only (dimensionless), mechanism gains on the "
         "graph's transmitter composition only (excitation index), the real cut with one "
         "generic multiplier instead of mechanism-specific gains (Hz), and the full "
-        "model (Hz). Levels have different units, so they are compared by ordering, "
-        "never by value.",
+        "model (Hz). The generic multiplier is direction-aware: generic in magnitude, "
+        "with one bit of sign taken from the mechanism table, which is the minimum a "
+        "connectome-without-pharmacology model needs to order a library containing "
+        "disinhibitors. `C_topology_only_floor` is the historical depression-only rule, "
+        "kept as a floor: every one of its entries is at most zero, so it cannot "
+        "express disinhibition and is not a competitive baseline. Levels have "
+        "different units, so they are compared by ordering, never by value.",
         md_fields=["compound", "class", "conc_M"] + list(LEVELS),
     )
     save_table(
@@ -2480,7 +3637,10 @@ def step_ablation(ctx: Ctx) -> None:
             "information_added_vs_previous",
         ],
         "How much of the full model's ordering of the library each ablated level "
-        "recovers, per concentration.",
+        "recovers, per concentration. `reproduces_full_ordering` is applied to the "
+        "**signed** rank correlation: an ordering that is a perfect inversion of the "
+        "full model's reproduces nothing, and the previous absolute-value test would "
+        "have credited it.",
     )
 
     fig, ax = plt.subplots(figsize=(7.4, 4.0))
@@ -2493,12 +3653,23 @@ def step_ablation(ctx: Ctx) -> None:
             xs, [0.0 if y is None else y for y in ys], "o-",
             color=SEQ[min(i + 1, 4)], lw=1.8, ms=7, label=_fmt_M(float(conc_key)),
         )
+        floor_rho = ((gain.get("generic_rule_comparison") or {}).get("depressant_floor") or {}).get(
+            "spearman_rho_vs_full"
+        )
+        if floor_rho is not None:
+            ax.plot(
+                [xs[LEVELS.index("C_topology_only")]], [floor_rho], "x",
+                color=SEQ[min(i + 1, 4)], ms=9, mew=2,
+            )
     ax.axhline(0.0, color=TEXT2, lw=1)
-    ax.axhline(0.9, color=GOOD, lw=1, ls="--")
-    ax.text(0.02, 0.92, "reproduces the full ordering", fontsize=7, color=GOOD, transform=ax.get_yaxis_transform())
+    ax.axhline(REPRODUCES_RHO, color=GOOD, lw=1, ls="--")
+    ax.text(
+        0.02, REPRODUCES_RHO + 0.02, "reproduces the full ordering", fontsize=7,
+        color=GOOD, transform=ax.get_yaxis_transform(),
+    )
     ax.set_xticks(xs)
     ax.set_xticklabels([short.get(lvl, lvl).replace("_", " ") for lvl in LEVELS])
-    ax.set_ylabel("Spearman rho of the library ordering vs the full model")
+    ax.set_ylabel("signed Spearman rho of the library ordering vs the full model")
     ax.set_xlabel("information the level is allowed")
     ax.set_title(f"Ablation ladder over the {len(tab['compounds'])}-compound library")
     ax.legend(fontsize=7.5, title="concentration", title_fontsize=7.5)
@@ -2509,15 +3680,20 @@ def step_ablation(ctx: Ctx) -> None:
         ctx,
         fig,
         "F13_ablation",
-        "Each level predicts the same 21 compounds with one layer of information "
-        "removed, and is scored by how well it reproduces the full model's *ordering* "
-        "of the library (levels have different units, so values are not comparable). "
-        "Receptor engagement alone orders the library backwards; the composition-only "
-        "baseline already reproduces the full ordering; the real cut with a generic, "
-        "mechanism-free multiplier is the worst level of all. The connectome without "
-        "the pharmacology is not a cheap substitute for the connectome with it.",
+        f"Each level predicts the same {len(tab['compounds'])} compounds with one layer "
+        "of information removed, and is scored by how well it reproduces the full "
+        "model's *ordering* of the library (levels have different units, so values are "
+        "not comparable; the correlation is signed, so a perfect inversion scores -1 "
+        "rather than 1). Crosses mark the historical depression-only level-C rule, "
+        "which applied a multiplier of at most 1.0 to every transmitter alike and so "
+        "could not express disinhibition: its poor correlation was structural, not a "
+        "finding about connectomes, and the conclusion drawn from it is withdrawn. "
+        f"With a direction-aware rule level C rises to "
+        f"{ctx.text('abl_rho_topology_paper')} at 1 uM from "
+        f"{ctx.text('abl_rho_topology_floor_paper')}. The composition level's agreement "
+        "with the full model must be read against the matched reference distribution "
+        "of T24, not on its own.",
     )
-
 
 def step_stability(ctx: Ctx) -> None:
     """F14 + T14, T15: specification robustness and threshold sensitivity (RQ3).
@@ -2541,10 +3717,19 @@ def step_stability(ctx: Ctx) -> None:
     ctx.put("stab_default_spec", str(res["default_spec"]))
     ctx.put("stab_n_conclusions", len(res["rows"]))
     ctx.put("stab_n_shuffles", int(res["n_shuffles"]))
+    ctx.put("stab_shuffle_resolution", float(res["shuffle_resolution"]))
+    ctx.put("stab_topology_alpha", float(res["topology_alpha"]))
+    ctx.put("stab_n_structural_tests", int(res["n_structural_tests"]))
+    ctx.put("stab_topology_engine", str(res["topology_engine"]))
+    ctx.put("stab_fdr_can_reject", bool(res["topology_fdr"]["can_reject"]))
+    ctx.put("stab_fdr_min_rejections", res["topology_fdr"].get("min_rejections"))
+    ctx.put("stab_fdr_n_rejected", int(res["topology_fdr"]["n_rejected"]))
     fragile: list[str] = []
     for row in res["rows"]:
         key = row["conclusion"].split("_")[0]
         ctx.put(f"stab_{key}_claim", row["claim"])
+        ctx.put(f"stab_{key}_readout", row.get("readout"))
+        ctx.put(f"stab_{key}_kind", row.get("kind"))
         ctx.put(f"stab_{key}_retained", int(row["n_retained"]))
         ctx.put(f"stab_{key}_lost", int(row["n_lost"]))
         ctx.put(f"stab_{key}_undecidable", int(row["n_undecidable"]))
@@ -2554,8 +3739,31 @@ def step_stability(ctx: Ctx) -> None:
             row["failing_specs"],
             text=", ".join(row["failing_specs"]) or "none",
         )
+        if row.get("n_retained_uncorrected") is not None:
+            ctx.put(f"stab_{key}_retained_uncorrected", int(row["n_retained_uncorrected"]))
+            ctx.put(f"stab_{key}_multiplicity", str(row["multiplicity"]))
+            eq = row.get("equivalence_breakdown") or {}
+            ctx.put(f"stab_{key}_equivalent", int(eq.get("equivalent_within_tolerance", 0)))
+            ctx.put(f"stab_{key}_indeterminate", int(eq.get("indeterminate", 0)))
+            ctx.put(f"stab_{key}_distinguishable", int(eq.get("distinguishable", 0)))
         if row["fragile"]:
             fragile.append(row["conclusion"])
+    if (ctx.get("stab_C3_equivalent") or 0) or (ctx.get("stab_C3_indeterminate") or 0):
+        ctx.note(
+            "the C3 retention rate is no longer vacuous and is no longer uniform: at "
+            "n_shuffles = %d (resolution %.4f, against the previous 6 at which p <= "
+            "0.05 was arithmetically unattainable) the conclusion is retained by %d of "
+            "%d specifications, but only %d of those reach equivalence within the "
+            "prespecified margin; %d are merely indeterminate."
+            % (
+                int(res["n_shuffles"]),
+                float(res["shuffle_resolution"]),
+                ctx.get("stab_C3_retained") or 0,
+                int(res["family_size"]),
+                ctx.get("stab_C3_equivalent") or 0,
+                ctx.get("stab_C3_indeterminate") or 0,
+            )
+        )
     ctx.put("stab_fragile", fragile, text=", ".join(fragile) or "none")
     ctx.put(
         "stab_specification_independent",
@@ -2618,6 +3826,44 @@ def step_stability(ctx: Ctx) -> None:
         (sum(rev_gaps) / len(rev_gaps)) if rev_gaps else None,
     )
     ctx.put("stab_mean_gap_nicotinic_monotone_n", len(rev_gaps))
+    # I11: the aggregate hides the spread, and "never less" is false. Report
+    # the range over the reversing specifications, and whether any of them
+    # buffers *less* than the shipped rule.
+    ctx.put("stab_mean_gap_nicotinic_monotone_min", min(rev_gaps) if rev_gaps else None)
+    ctx.put("stab_mean_gap_nicotinic_monotone_max", max(rev_gaps) if rev_gaps else None)
+    default_gap = ctx.get("stab_mean_gap_nicotinic_default")
+    weaker = (
+        sorted(
+            s0
+            for s0 in reversing
+            if diag.get(s0, {}).get("mean_gap_nicotinic") is not None
+            and default_gap is not None
+            and float(diag[s0]["mean_gap_nicotinic"]) > float(default_gap)
+        )
+        if rev_gaps
+        else []
+    )
+    ctx.put(
+        "stab_monotone_buffer_less",
+        weaker,
+        text=", ".join(weaker) or "none",
+    )
+    ctx.put("stab_monotone_buffer_less_n", len(weaker))
+    if weaker:
+        ctx.note(
+            "the supplement's claim that the monotone rules 'buffer at least as much, "
+            "never less' is false: %d of the %d reversing specifications with a defined "
+            "index buffer LESS than the shipped rule (%s), and the aggregate of %s is "
+            "carried by the extreme of a range running %s to %s."
+            % (
+                len(weaker),
+                len(rev_gaps),
+                ", ".join(weaker),
+                ctx.text("stab_mean_gap_nicotinic_monotone"),
+                ctx.text("stab_mean_gap_nicotinic_monotone_max"),
+                ctx.text("stab_mean_gap_nicotinic_monotone_min"),
+            )
+        )
     save_table(
         ctx,
         "T14b_specification_diagnostics",
@@ -2655,6 +3901,12 @@ def step_stability(ctx: Ctx) -> None:
                 "n_undecidable": r["n_undecidable"],
                 "fraction_retained": r["fraction_retained"],
                 "fraction_retained_decidable": r["fraction_retained_decidable"],
+                "n_retained_uncorrected": r.get("n_retained_uncorrected"),
+                "multiplicity": r.get("multiplicity"),
+                "n_equivalent_within_tolerance": (r.get("equivalence_breakdown") or {}).get(
+                    "equivalent_within_tolerance"
+                ),
+                "n_indeterminate": (r.get("equivalence_breakdown") or {}).get("indeterminate"),
                 "failing_specs": r["failing_specs"],
                 "undecidable_specs": r["undecidable_specs"],
             }
@@ -2670,6 +3922,10 @@ def step_stability(ctx: Ctx) -> None:
             "n_undecidable",
             "fraction_retained",
             "fraction_retained_decidable",
+            "n_retained_uncorrected",
+            "multiplicity",
+            "n_equivalent_within_tolerance",
+            "n_indeterminate",
             "failing_specs",
             "undecidable_specs",
         ],
@@ -2678,8 +3934,27 @@ def step_stability(ctx: Ctx) -> None:
         "(biphasic, monotone-linear and saturating shapes at several coefficient "
         "scales). `n_undecidable` counts specifications under which the readout does "
         "not exist (for example a ratio whose denominator is silenced); the headline "
-        "fraction counts those against the conclusion.",
-        md_fields=["conclusion", "n_specs", "n_retained", "n_lost", "n_undecidable", "fraction_retained"],
+        "fraction counts those against the conclusion. The two topology rows are "
+        f"decided on {res['n_shuffles']} permutations per specification (resolution "
+        f"{res['shuffle_resolution']:.4f}) and on Benjamini-Hochberg adjusted "
+        f"probabilities across the {res['n_structural_tests']} structural tests of the "
+        "run, with the uncorrected count beside them. Until v0.6.1 the specification "
+        "context rebound the gain function on the assay modules but not on the engine "
+        "the permutation path resolves, so every specification fed the *default* gains "
+        "to its nulls and the matrix's topology rows were empty; they are now computed "
+        "per specification. For a conclusion shaped as a failure to reject, "
+        "`n_equivalent_within_tolerance` is the part of the retention that is evidence "
+        "of equivalence and `n_indeterminate` the part that is only a non-rejection.",
+        md_fields=[
+            "conclusion",
+            "n_specs",
+            "n_retained",
+            "n_lost",
+            "n_undecidable",
+            "n_retained_uncorrected",
+            "n_equivalent_within_tolerance",
+            "n_indeterminate",
+        ],
     )
 
     # ---- threshold grid ---------------------------------------------
@@ -2804,22 +4079,66 @@ def step_uncertainty(ctx: Ctx) -> None:
     ctx.put("unc_output_mean", _f(res["output_mean"]), unit="Hz")
     ctx.put("unc_variance", _f(res["output_variance"]), unit="Hz^2")
     ctx.put("unc_interaction_share", _f(res["interaction_share"]))
+    ctx.put("unc_interaction_share_clipped", _f(res["interaction_share_clipped"]))
+    ctx.put("unc_sum_first_order", _f(res["sum_first_order"]))
+    ctx.put("unc_sum_first_order_clipped", _f(res["sum_first_order_clipped"]))
     for r in res["rows"]:
         ctx.put(f"unc_S_{r['factor']}", _f(r["first_order"]))
         ctx.put(f"unc_ST_{r['factor']}", _f(r["total_order"]))
+        ci = r.get("first_order_ci")
+        if ci:
+            ctx.put(
+                f"unc_CI_{r['factor']}",
+                [float(ci[0]), float(ci[1])],
+                text=f"({ci[0]:+.3f}, {ci[1]:+.3f})",
+            )
     ranked = sorted(res["rows"], key=lambda r: -r["first_order"])
     ctx.put("unc_top_factor", ranked[0]["factor"])
     ctx.put("unc_second_factor", ranked[1]["factor"])
+
+    # I5: the noise floor is the largest |negative S1|, not the null factor's
+    # own draw. A true first-order index cannot be negative, so that magnitude
+    # is a measured lower bound on the estimator's error -- and on the shipped
+    # run it is several times the null factor's.
+    resolution = res["resolution"]
+    ctx.put("unc_noise_floor", _f(resolution["noise_floor"]))
+    ctx.put("unc_noise_floor_factor", str(resolution["noise_floor_factor"]))
+    ctx.put("unc_noise_floor_definition", str(resolution["noise_floor_definition"]))
     noise = next((r for r in res["rows"] if r["factor"] == "lif_seed"), None)
     if noise:
-        ctx.put("unc_noise_floor", _f(abs(noise["first_order"])))
-    floor = abs(noise["first_order"]) if noise else 0.0
-    # a first-order index at or below the measured noise floor carries no
-    # information; a negative estimate is noise by construction
-    indistinguishable = sorted(
-        r["factor"] for r in res["rows"] if r["factor"] != "lif_seed" and r["first_order"] <= floor + 1e-9
+        ctx.put("unc_null_factor_S", _f(noise["first_order"]))
+    ctx.put(
+        "unc_resolved",
+        list(resolution["resolved"]),
+        text=", ".join(resolution["resolved"]) or "none",
     )
-    ctx.put("unc_at_noise_floor", indistinguishable, text=", ".join(indistinguishable) or "none")
+    ctx.put("unc_n_resolved", len(resolution["resolved"]))
+    ctx.put(
+        "unc_at_noise_floor",
+        list(resolution["unresolved"]),
+        text=", ".join(resolution["unresolved"]) or "none",
+    )
+    ctx.put(
+        "unc_null_control_factors",
+        list(resolution["null_control"]),
+        text=", ".join(resolution["null_control"]) or "none",
+    )
+    ctx.put("unc_resolution_statement", str(resolution["statement"]))
+    if resolution["noise_floor_factor"] and resolution["noise_floor_factor"] != "lif_seed":
+        ctx.note(
+            "the estimator's noise floor is %s, set by the most negative first-order "
+            "estimate (%s), not by the declared null factor lif_seed at %s. Only %s "
+            "%s a first-order confidence interval that excludes zero; every other "
+            "factor is unresolved at this sample size, and a negative point estimate "
+            "is estimator error rather than a negative contribution."
+            % (
+                ctx.text("unc_noise_floor"),
+                resolution["noise_floor_factor"],
+                ctx.text("unc_null_factor_S"),
+                ctx.text("unc_resolved"),
+                "has" if len(resolution["resolved"]) == 1 else "have",
+            )
+        )
     conv = res["convergence"][-1]
     ctx.put("unc_max_delta_first", _f(conv.get("max_abs_delta_first")))
 
@@ -2918,11 +4237,32 @@ def step_uncertainty(ctx: Ctx) -> None:
     y = np.arange(len(order))
     ax.barh(y + 0.19, [r["total_order"] for r in order], height=0.36, color=SEQ[1], label="total order (ST)")
     ax.barh(y - 0.19, [r["first_order"] for r in order], height=0.36, color=SEQ[3], label="first order (S1)")
-    if noise:
-        ax.axvline(floor, color=CRIT, lw=1, ls="--")
-        ax.text(floor, len(order) - 0.4, " estimator noise floor", fontsize=7, color=CRIT, va="top")
+    for r, yy in zip(order, y):
+        ci = r.get("first_order_ci")
+        if ci:
+            ax.plot(
+                [float(ci[0]), float(ci[1])], [yy - 0.19, yy - 0.19],
+                color=TEXT1, lw=1.0, solid_capstyle="butt", zorder=3,
+            )
+    floor = float(resolution["noise_floor"])
+    ax.axvline(floor, color=CRIT, lw=1, ls="--")
+    ax.text(
+        floor,
+        len(order) - 0.4,
+        f" estimator noise floor ({resolution['noise_floor_factor']})",
+        fontsize=7,
+        color=CRIT,
+        va="top",
+    )
+    ax.axvline(0.0, color=TEXT2, lw=0.8)
     ax.set_yticks(y)
-    ax.set_yticklabels([r["factor"] for r in order], fontsize=8)
+    ax.set_yticklabels(
+        [
+            r["factor"] + ("" if resolution["by_factor"].get(r["factor"]) == "resolved" else " *")
+            for r in order
+        ],
+        fontsize=8,
+    )
     ax.set_xlabel("share of the variance of the neighbourhood mean rate")
     ax.set_title(f"Uncertainty budget ({res['n_evaluations']} evaluations)", fontsize=10)
     ax.legend(fontsize=7.5)
@@ -2946,12 +4286,20 @@ def step_uncertainty(ctx: Ctx) -> None:
         "F15_uncertainty_voi",
         "Left: the share of the variance of the neighbourhood mean rate attributable to "
         "each assumption, first-order and total-order, from a Saltelli cross-sample "
-        "with Jansen estimators. A deliberately null factor (the spiking seed, which "
-        "the deterministic rate engine ignores) marks the estimator's noise floor: any "
-        "index of that size is indistinguishable from zero. Right: the same shares "
+        "with Jansen estimators, with bootstrap first-order confidence intervals. A "
+        "factor is **resolved** only when its interval excludes zero; the starred rows "
+        "are not, and a factor's index exceeding the noise floor does not resolve it. "
+        "The dashed line is that floor, defined as the largest magnitude among the "
+        "*negative* first-order estimates: a true first-order index cannot be negative, "
+        "so that magnitude is a measured lower bound on the estimator's error, and on "
+        "this run it is several times the declared null factor's own draw "
+        f"({ctx.text('unc_noise_floor')} set by {ctx.get('unc_noise_floor_factor')}, "
+        f"against lif_seed at {ctx.text('unc_null_factor_S')}). Right: the same shares "
         "scaled back into the readout's variance and mapped onto the experiment that "
-        "would resolve each assumption. Green marks a factor that needs no experiment "
-        "at all, only a re-analysis of data already held.",
+        "would resolve each assumption; a negative estimate is clipped to zero for the "
+        "decision value, because a value of information cannot be negative. Green marks "
+        "a factor that needs no experiment at all, only a re-analysis of data already "
+        "held.",
     )
 
 
