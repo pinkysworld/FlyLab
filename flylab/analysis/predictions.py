@@ -1,4 +1,4 @@
-"""Pre-registered predictions and the sample size they would need.
+"""Prospective predictions and the sample size they would need.
 
 Every row this module produces is a **software prediction**: what the FlyLab
 model says should happen if the hypothesis is tested in a real fly, written
@@ -65,7 +65,7 @@ BASE_WARNINGS = [
 
 
 # --------------------------------------------------------------------------
-# the pre-registered hypotheses
+# the prospective hypotheses
 # --------------------------------------------------------------------------
 def _h(**kw: Any) -> dict[str, Any]:
     row = {
@@ -191,7 +191,7 @@ for _k, _v in HYPOTHESES.items():
 
 
 def hypothesis(h_id: str) -> dict[str, Any]:
-    """One pre-registered hypothesis by id (``"H1"`` ... ``"H7"``)."""
+    """One prospective hypothesis by id (``"H1"`` ... ``"H7"``)."""
     key = str(h_id).upper().strip()
     if key not in HYPOTHESES:
         raise KeyError(f"unknown hypothesis {h_id!r}; known: {', '.join(HYPOTHESES)}")
@@ -660,7 +660,7 @@ def _suggested_n(pred: dict[str, Any], baseline: dict[str, Any]) -> dict[str, An
 
 def prediction_table(n_rep: int = 6, seed: int = 0, h_ids: Iterable[str] | None = None,
                      **kw: Any) -> dict[str, Any]:
-    """Run every pre-registered hypothesis and return the pre-registration table."""
+    """Run every prospective hypothesis and return the prospective-prediction table."""
     t0 = time.perf_counter()
     ids = list(h_ids) if h_ids is not None else list(HYPOTHESES)
     baseline = behavioral_baseline()
@@ -686,6 +686,11 @@ def prediction_table(n_rep: int = 6, seed: int = 0, h_ids: Iterable[str] | None 
                 "d_meaning": pred["d_meaning"],
                 "endpoint": pred["endpoint"],
                 "live_protocol": pred["live_protocol"],
+                # Illustrative planning minimum, NOT a study sample size: the
+                # model has no biological variance, so its effect sizes are
+                # unrealistically large and d is capped before this is computed.
+                # See the supplement. The old key is kept as an alias.
+                "illustrative_n_per_group": power.get("n_per_group"),
                 "suggested_n_per_group": power.get("n_per_group"),
                 "power_method": power.get("method"),
                 "status": "software_prediction",

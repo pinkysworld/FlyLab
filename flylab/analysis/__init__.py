@@ -1,6 +1,6 @@
 """Analysis layer: dose-response fits, drug impact maps, viewer layout,
 connectome null models, Connectome-Dependence Analysis, the model ablation
-ladder, circuit selectivity and pre-registered predictions."""
+ladder, circuit selectivity and prospective predictions."""
 from flylab.analysis.baselines import (
     LEVELS,
     ablation,

@@ -1371,6 +1371,14 @@ def connectome_information_score(
     ``None`` the panel is computed first.  ``assay`` filters the rows to one
     assay arm (default: all rows).  1.0 means the connectome mattered against
     every null; 0.0 means a shuffled graph reproduced the drug effect.
+    
+
+    .. deprecated:: 0.6
+        Superseded by :func:`flylab.analysis.dependence.dependence_profile`
+        and :func:`~flylab.analysis.dependence.necessary_information_level`,
+        which report an empirical permutation p per mode and name the weakest
+        graph model that already reproduces the effect. This single score
+        collapses that into one number and is no longer used by the paper.
     """
     if panel is None:
         panel = null_panel(compound, conc_M, modes=modes, n=n, seed=seed, **kw)

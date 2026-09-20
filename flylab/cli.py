@@ -676,7 +676,7 @@ def stability(
     estimate: bool = typer.Option(False, "--estimate", help="Print the runtime estimate only."),
     json_out: bool = JSON_OPT,
 ):
-    """Every pre-registered conclusion, re-derived under every admissible rule."""
+    """Every prospective conclusion, re-derived under every admissible rule."""
     out = _bridge(
         "/api/robustness/stability",
         {"fast": fast, "conc_M": conc, "estimate_only": estimate},

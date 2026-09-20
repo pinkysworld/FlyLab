@@ -1193,7 +1193,7 @@ def ablation(req: AblationRequest):
 
 @app.post("/api/robustness/stability")
 def robustness_stability(req: StabilityRequest):
-    """Every pre-registered conclusion re-derived under every admissible rule."""
+    """Every prospective conclusion re-derived under every admissible rule."""
     return _bridged("/api/robustness/stability", req.model_dump())
 
 

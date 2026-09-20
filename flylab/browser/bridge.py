@@ -2391,7 +2391,7 @@ def _h_robustness_stability(p: dict[str, Any]) -> dict[str, Any]:
         "estimate_s": 20.0 if fast else 240.0,
         "fast": fast,
         "note": (
-            "Re-derives every pre-registered conclusion under every admissible mechanism "
+            "Re-derives every prospective conclusion under every admissible mechanism "
             "specification. The browser build defaults to the fast family."
         ),
     }
