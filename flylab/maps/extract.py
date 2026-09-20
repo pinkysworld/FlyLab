@@ -1,14 +1,32 @@
-"""Cut named-cell neighborhoods from MaleCNS weights via Arrow batches."""
+"""Cut named-cell neighborhoods from MaleCNS weights via Arrow batches.
+
+Two products live here:
+
+* :func:`extract_neighborhood` -- the original hops-limited cut that produced
+  the committed ``named`` and ``taste_motor`` graphs.  Unchanged.
+* :func:`extract_scaled_cut` / :func:`extract_ladder` -- a **ladder** of
+  nested cuts at prescribed node budgets, built so that the only thing that
+  differs between rungs is how many cells were kept.  See
+  :data:`LADDER_RECIPE` for the rule and why it is that rule.
+"""
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable, Sequence
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from flylab.maps.malecns import FILES, MAP_CITATION, MAP_ID, default_dir
+from flylab.maps.malecns import (
+    FILES,
+    MAP_CITATION,
+    MAP_ID,
+    default_dir,
+    edge_arrays,
+    traced_body_ids,
+)
 
 DEFAULT_TYPES = ("MN9", "DNp01")
 GUSTATORY_TYPES = ("LB1a", "LB1b", "LB1c", "LB1d", "LB3b", "LB3c")
@@ -145,3 +163,380 @@ def extract_neighborhood(dest=None, types=DEFAULT_TYPES, hops=1, min_weight=5, o
     dest_out.write_text(json.dumps(payload))
     payload["path"] = str(dest_out)
     return payload
+
+
+# ==========================================================================
+# the scale ladder
+# ==========================================================================
+#: Node budgets the ladder targets.  The rungs are **nested**: the node set of
+#: a smaller rung is a prefix of the next one's, so the ladder is a sequence of
+#: views of one object rather than five unrelated graphs.
+LADDER_SIZES: tuple[int, ...] = (1000, 5000, 10000, 25000, 50000)
+
+#: Seeds the ladder grows from.  Deliberately the ``taste_motor`` seed set:
+#: MN9 and DNp01 keep ``mn9_hz`` / ``dnp01_hz`` defined at every rung, and the
+#: labellar GRNs keep the taste drive defined, so the *readout* is the same
+#: quantity all the way up and only the surrounding graph changes.
+LADDER_SEED_TYPES: tuple[str, ...] = DEFAULT_TYPES + GUSTATORY_TYPES
+
+#: Synapse-count floor held fixed across the whole ladder.  5 is the floor the
+#: committed cuts use.
+LADDER_MIN_WEIGHT = 5
+
+LADDER_RECIPE = """\
+How a cut is grown, and why this way
+------------------------------------
+A rung is the **induced subgraph on the first K cells of one fixed,
+deterministic growth order** out of the seed set.  The order is:
+
+1. rank 0: the seed cells themselves (all traced cells whose MaleCNS type
+   matches ``seed_types``), in ascending bodyId;
+2. rank r+1: every traced cell not yet selected that shares at least one
+   edge of weight >= ``min_weight`` with the set selected after rank r,
+   sorted by the **total synaptic weight joining it to that set**
+   (descending, summed over both directions), ties broken by ascending
+   bodyId;
+3. stop when K cells have been taken.
+
+The cut is then every edge of weight >= ``min_weight`` whose two ends are
+both selected (an induced subgraph, the same closure rule the committed
+``taste_motor`` cut uses).
+
+Why not the alternatives:
+
+* **More hops.**  The traced-to-traced MaleCNS graph has 25 563 197 edges
+  at weight 1 (mean degree 155) and 6 235 682 at weight 5 (mean degree 38).
+  One hop from the 76 seeds already reaches 1 304 cells and two hops reach
+  55 127.  Hop count is not a dial that can be set to 5 000 or 25 000, and
+  the jump from one hop to two changes the cut by a factor of 42.
+* **A lower weight floor.**  Growing by admitting weaker synapses changes
+  the *edge* population as well as the node population, so mean degree and
+  the topology/composition balance would move for two reasons at once and
+  a verdict change could not be attributed to scale.  The floor is
+  therefore frozen at ``min_weight`` for every rung.
+* **A whole neuropil.**  Well defined, but the resulting cuts are not
+  nested, do not contain the same seed cells, and have no size dial.
+
+What the rule does *not* fix: mean degree is not constant along the ladder
+(the growth order takes the densely connected core first), and each cut's
+census is recorded in its metadata precisely so that a reader can see the
+structural change alongside the verdict change.
+
+Determinism: the order is a function of the weight matrix, the seed types
+and the floor only.  No RNG, no iteration over Python sets, no
+platform-dependent sort -- ``np.lexsort`` on (bodyId asc, -score) is a
+stable total order.  The one residual is float summation order inside
+``np.bincount``, which can in principle tie two cells whose scores differ
+by <1 ulp; scores are integer synapse counts summed in float64 and the
+largest is ~1e5, so this cannot happen below 2**53.
+"""
+
+
+def _growth_order(
+    pre: "np.ndarray",
+    post: "np.ndarray",
+    w: "np.ndarray",
+    bodies: "np.ndarray",
+    seed_bodies: "np.ndarray",
+    budget: int,
+) -> tuple["np.ndarray", list[int]]:
+    """Indices into ``bodies``, in ladder order, plus the size of each rank.
+
+    ``bodies`` must be sorted; ``pre``/``post`` are body ids.  See
+    :data:`LADDER_RECIPE`.
+    """
+    n = int(bodies.size)
+    ip = np.searchsorted(bodies, pre)
+    iq = np.searchsorted(bodies, post)
+    wf = np.asarray(w, dtype=np.float64)
+    sel = np.zeros(n, dtype=bool)
+    pos = np.searchsorted(bodies, seed_bodies)
+    pos = np.clip(pos, 0, max(n - 1, 0))
+    seed_idx = pos[bodies[pos] == seed_bodies]
+    sel[seed_idx] = True
+    order: list[int] = sorted(int(i) for i in seed_idx)
+    ranks = [len(order)]
+    while len(order) < int(budget):
+        touch = sel[ip] | sel[iq]
+        if not touch.any():
+            break
+        score = np.bincount(ip[touch], weights=wf[touch], minlength=n)
+        score += np.bincount(iq[touch], weights=wf[touch], minlength=n)
+        score[sel] = -1.0
+        cand = np.nonzero(score > 0)[0]
+        if cand.size == 0:
+            break
+        # descending score, ascending bodyId: lexsort's last key is primary
+        ring = cand[np.lexsort((bodies[cand], -score[cand]))]
+        take = ring[: int(budget) - len(order)]
+        sel[take] = True
+        order.extend(int(i) for i in take)
+        ranks.append(int(take.size))
+    return np.asarray(order, dtype=np.int64), ranks
+
+
+def _node_records(
+    body_ids: "np.ndarray", ann: pd.DataFrame, nt: pd.DataFrame
+) -> list[dict[str, Any]]:
+    """``bodyId``/``type``/``superclass``/``consensus_nt`` rows, sorted by bodyId."""
+    want = pd.DataFrame({"bodyId": np.asarray(body_ids, dtype="int64")})
+    a = ann[["bodyId", "type", "superclass"]].drop_duplicates("bodyId")
+    t = nt[["body", "consensus_nt"]].drop_duplicates("body")
+    m = want.merge(a, on="bodyId", how="left").merge(
+        t, left_on="bodyId", right_on="body", how="left"
+    )
+    out: list[dict[str, Any]] = []
+    for r in m.itertuples():
+        out.append(
+            {
+                "bodyId": int(r.bodyId),
+                "type": None if pd.isna(r.type) else str(r.type),
+                "superclass": None if pd.isna(r.superclass) else str(r.superclass),
+                "consensus_nt": None if pd.isna(r.consensus_nt) else str(r.consensus_nt),
+            }
+        )
+    return out
+
+
+def _composition(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> dict[str, Any]:
+    """Transmitter composition of a cut, by cell count and by outgoing weight.
+
+    The weighted shares are the ones the drug actually acts through: the gain
+    patch multiplies a presynaptic cell's outgoing edges, so what matters is
+    each transmitter's share of total *outgoing synaptic weight*, not its share
+    of cells.  Referee finding B2 turns on exactly this distinction.
+    """
+    nt_of = {nd["bodyId"]: (nd.get("consensus_nt") or "unclear") for nd in nodes}
+    counts: dict[str, int] = {}
+    for v in nt_of.values():
+        counts[v] = counts.get(v, 0) + 1
+    out_w: dict[str, float] = {}
+    total = 0.0
+    for e in edges:
+        k = nt_of.get(e["pre"], "unclear")
+        wt = float(e["weight"])
+        out_w[k] = out_w.get(k, 0.0) + wt
+        total += wt
+    n = max(len(nodes), 1)
+    return {
+        "n_nodes": len(nodes),
+        "cell_counts": dict(sorted(counts.items())),
+        "cell_shares": {k: v / n for k, v in sorted(counts.items())},
+        "out_weight": dict(sorted(out_w.items())),
+        "out_weight_shares": (
+            {k: v / total for k, v in sorted(out_w.items())} if total > 0 else {}
+        ),
+        "total_out_weight": total,
+        "note": (
+            "out_weight_shares is the composition the gain patch acts through "
+            "(gains scale a presynaptic cell's outgoing edges); cell_shares is "
+            "the histogram a label permutation preserves."
+        ),
+    }
+
+
+def _census_of_payload(path: Path, seed_types: Sequence[str]) -> dict[str, Any] | None:
+    """:func:`flylab.analysis.dependence.cut_census` on a just-written cut.
+
+    Imported lazily (the analysis package pulls in the whole engine) and the
+    memo caches are dropped afterwards so the file can be rewritten with the
+    census inside it without leaving a stale graph cached in-process.
+    """
+    try:
+        from flylab.analysis.dependence import cut_census
+    except Exception:  # pragma: no cover - analysis layer optional at extract time
+        return None
+    try:
+        census = cut_census(str(path), seed_types=list(seed_types))
+    except Exception:  # pragma: no cover
+        return None
+    finally:
+        _forget_cached_graph(path)
+    census.pop("graph", None)
+    return census
+
+
+def _forget_cached_graph(path: Path) -> None:
+    from flylab.circuit.rate import forget_graph
+
+    forget_graph(path)
+    key = str(Path(path).resolve())
+    try:
+        from flylab.analysis import nullmodels as nm
+
+        nm._STATE_CACHE.pop(key, None)
+    except Exception:  # pragma: no cover
+        pass
+
+
+def ladder_filename(n_target: int) -> str:
+    """Committed/artifact filename for a rung (``malecns_scale_5k.json``)."""
+    k = int(n_target)
+    label = f"{k // 1000}k" if k >= 1000 and k % 1000 == 0 else str(k)
+    return f"malecns_scale_{label}.json"
+
+
+def extract_scaled_cut(
+    n_target: int,
+    dest: Path | None = None,
+    types: Sequence[str] = LADDER_SEED_TYPES,
+    min_weight: int = LADDER_MIN_WEIGHT,
+    out: Path | str | None = None,
+    census: bool = True,
+    _cache: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """One rung of the scale ladder: the induced cut on the first ``n_target`` cells.
+
+    The rule and its justification are in :data:`LADDER_RECIPE`, and the
+    payload records it verbatim under ``recipe`` together with the cut's
+    :func:`~flylab.analysis.dependence.cut_census` statistics and its
+    transmitter composition, so a reader of the scaling table can see *how*
+    the cut was made and *what changed structurally* beside the verdict.
+
+    ``_cache`` is an opaque dict reused by :func:`extract_ladder` so the 1.0 GB
+    weight matrix is streamed once for the whole ladder instead of once a rung.
+    """
+    dest = Path(dest) if dest else default_dir()
+    cache = _cache if _cache is not None else {}
+    if "edges" not in cache:
+        ann_all = pd.read_feather(dest / FILES["annotations"])
+        cache["ann"] = ann_all[ann_all["status"] == "Traced"]
+        cache["nt"] = pd.read_feather(dest / FILES["neurotransmitters"])
+        traced = traced_body_ids(dest)
+        cache["edges"] = edge_arrays(dest, min_weight=int(min_weight), keep=traced)
+        cache["min_weight"] = int(min_weight)
+    if cache.get("min_weight") != int(min_weight):
+        raise ValueError(
+            f"cached edges were filtered at min_weight={cache.get('min_weight')}, "
+            f"not {int(min_weight)}"
+        )
+    ann, nt = cache["ann"], cache["nt"]
+    pre, post, w = cache["edges"]
+
+    seeds = seed_ids(ann, types)
+    seed_bodies = np.array(
+        sorted({int(i) for ids in seeds.values() for i in ids}), dtype=np.int64
+    )
+    if seed_bodies.size == 0:
+        raise ValueError(f"no traced seeds for types={list(types)}")
+    if "bodies" not in cache:
+        cache["bodies"] = np.union1d(np.union1d(pre, post), seed_bodies)
+    bodies = cache["bodies"]
+
+    order, ranks = _growth_order(pre, post, w, bodies, seed_bodies, int(n_target))
+    keep_bodies = np.sort(bodies[order])
+    from flylab.maps.malecns import _in_sorted
+
+    mask = _in_sorted(pre, keep_bodies) & _in_sorted(post, keep_bodies)
+    ep, eq, ew = pre[mask], post[mask], w[mask]
+    edges = [
+        {"pre": int(a), "post": int(b), "weight": int(round(float(c)))}
+        for a, b, c in zip(ep.tolist(), eq.tolist(), ew.tolist())
+    ]
+    nodes = _node_records(keep_bodies, ann, nt)
+    kept_seeds = {}
+    for t, ids in seeds.items():
+        arr = np.asarray(sorted(int(i) for i in ids), dtype=np.int64)
+        kept_seeds[t] = (
+            [int(x) for x in arr[_in_sorted(arr, keep_bodies)]] if arr.size else []
+        )
+    payload: dict[str, Any] = {
+        "map": MAP_ID,
+        "citation": MAP_CITATION,
+        "cut": "scale_ladder",
+        "n_target": int(n_target),
+        "types": list(types),
+        "min_weight": int(min_weight),
+        "hops": None,
+        "closure_min_weight": int(min_weight),
+        "growth": "ranked_bfs_induced",
+        "recipe": LADDER_RECIPE,
+        "rank_sizes": ranks,
+        "n_ranks": len(ranks),
+        "n_nodes": len(nodes),
+        "n_edges": len(edges),
+        "seeds": kept_seeds,
+        "nodes": nodes,
+        "edges": edges,
+    }
+    payload["composition"] = _composition(nodes, edges)
+    out_path = Path(out) if out is not None else Path("data/derived") / ladder_filename(n_target)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(payload))
+    if census:
+        c = _census_of_payload(out_path, list(kept_seeds))
+        if c is not None:
+            payload["census"] = c
+            out_path.write_text(json.dumps(payload))
+    payload["path"] = str(out_path)
+    payload["bytes"] = out_path.stat().st_size
+    return payload
+
+
+def ladder_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    """The payload without ``nodes``/``edges``: what a manifest or a log wants."""
+    return {k: v for k, v in payload.items() if k not in ("nodes", "edges", "recipe")}
+
+
+def extract_ladder(
+    sizes: Sequence[int] = LADDER_SIZES,
+    dest: Path | None = None,
+    types: Sequence[str] = LADDER_SEED_TYPES,
+    min_weight: int = LADDER_MIN_WEIGHT,
+    out_dir: Path | str = Path("data/derived"),
+    census: bool = True,
+) -> dict[str, Any]:
+    """Build the whole ladder, streaming the weight matrix once.
+
+    Returns ``{"cuts": [summary, ...], "recipe": ..., "sizes": ...}``; each cut
+    is written to ``out_dir / ladder_filename(size)``.  Only the rungs small
+    enough to belong in git should be committed -- see ``bytes`` in each
+    summary and the ``COMMIT_BYTE_BUDGET`` the workflow applies.
+    """
+    cache: dict[str, Any] = {}
+    out_dir = Path(out_dir)
+    cuts = []
+    for k in sorted(int(s) for s in sizes):
+        p = extract_scaled_cut(
+            k,
+            dest=dest,
+            types=types,
+            min_weight=min_weight,
+            out=out_dir / ladder_filename(k),
+            census=census,
+            _cache=cache,
+        )
+        cuts.append(ladder_summary(p))
+    return {
+        "sizes": [int(s) for s in sizes],
+        "seed_types": list(types),
+        "min_weight": int(min_weight),
+        "recipe": LADDER_RECIPE,
+        "map": MAP_ID,
+        "citation": MAP_CITATION,
+        "cuts": cuts,
+        "nested": True,
+        "label": "model_derived",
+    }
+
+
+#: A cut above this many bytes of JSON is a CI artifact, not a git object.
+COMMIT_BYTE_BUDGET = 1_400_000
+
+
+__all__ = [
+    "DEFAULT_TYPES",
+    "GUSTATORY_TYPES",
+    "TASTE_MOTOR_TYPES",
+    "seed_ids",
+    "extract_neighborhood",
+    "LADDER_SIZES",
+    "LADDER_SEED_TYPES",
+    "LADDER_MIN_WEIGHT",
+    "LADDER_RECIPE",
+    "COMMIT_BYTE_BUDGET",
+    "ladder_filename",
+    "ladder_summary",
+    "extract_scaled_cut",
+    "extract_ladder",
+]

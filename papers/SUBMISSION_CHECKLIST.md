@@ -6,50 +6,89 @@ Manuscript: `papers/IJRC_FlyLab_draft.md` (rendered from `IJRC_FlyLab_draft.md.i
 Regenerate everything before checking anything:
 
 ```bash
-python scripts/reproduce_paper.py      # ~8-10 min, no downloads
+python scripts/reproduce_paper.py      # ~35-45 min, no downloads
 python -m pytest -q                    # must be green
 ```
 
-## R. Response to the Major Revision review
+## R. Response to the **second-round** referee report
 
-Ten comments, what changed, and where. Every number cited below is generated into `papers/results.json` by the step named in its row.
+Point by point against `papers/reviews/round2_referee_report.md`, by its own item numbers. Every number cited is generated into `papers/results.json` by the step named in its row; nothing below was typed by hand into the prose.
 
-| # | Reviewer comment | What changed | Where |
+### Blocking
+
+| # | Referee's finding | What changed | Where |
 |---|---|---|---|
-| 1 | A Hill curve on an EC50 is not "receptor occupancy". | The evidence is **typed**. `param_type` (what the source measured) and `relation` (its distance from this compound/receptor/species) jointly decide the transformation: `binding_occupancy` for a measured Kd/Ki, `functional_engagement` for EC50/IC50/Kb, `not_modelled` otherwise. The manuscript says **engagement** throughout and reserves *occupancy* for the single row that earns it (imidacloprid at `insect_nAChR_beta1`, Kd 8.3e-11 M). | §2.1, §3.1; F11, T10; supplement S6; step `evidence` |
-| 2 | Missing evidence must not become a small quantitative response. | Unsupported rows return **N/A** and are excluded from every numeric result and from the selectivity block. This is enforced by the type system — `EvidenceTypeError` — not by convention, and the library validator rejects a placeholder that carries a value. Diazepam at insect RDL is now N/A, not 1e-4. 56 of 101 rows are not modelled. | §2.1, §3.1; supplement S6 |
-| 3 | The gain rule may be doing the work attributed to the integration. | A **conclusion-stability matrix** over 25 prespecified specifications is now a first-class result, and the paper states plainly that the suppression conclusion is specification-dependent: retained 15/25 and reversed by all ten monotone rules, where the same compound at the same engagement *excites* the network. The topology conclusions, RDL disinhibition and the map bitter-veto direction are 25/25. | §2.4, §3.4, §4; F14, T14; supplement S1.1; step `stability` |
-| 4 | "Validation" is used for things that are not validation. | Evaluation is split into **implementation consistency**, **literature concordance** and **independent out-of-sample validation**, and the paper states that it has none of the third at circuit level. The pipeline computes, from DOIs/PMIDs, which rank comparisons share a source with the library and therefore cannot be out-of-sample. The honeybee mixture test is reframed as a limited qualitative concordance check (non-*Drosophila* reference organism, two substituted compounds, three-valued endpoint). | §2.5, §3.6; T4; step `validation` |
-| 5 | Null-model strength: lead with the empirical p and report a count sweep. | The dependence analysis reports the empirical two-sided permutation *p* first with its resolution `1/(n+1)`; *z* is explicitly secondary. n = 1000 on the `named` cut, 300 on `taste_motor`, 100 per landscape cell. The permutation-count sweep is computed inside the same draws and reported: verdicts settle early, a quotable mid-range *p* does not. | §2.3, §3.2; F6, T6, T11; supplement S2; step `dependence` |
-| 6 | The selectivity thresholds are conventions. | The amplify/buffer split is recomputed on the full 3×3 grid (25/40/50 % circuit change × 10/20/30 % vertebrate engagement). Overall `stable = False`; nicotinic buffering holds 9/9 (gap −0.362 to −1.224), Nav/AChE amplification 8/9 and flips at the strictest corner (gap −0.075). The paper quotes ranges, never the point estimate. | §2.4, §3.4; T15; step `stability` |
-| 7 | Novelty positioning overstates the gap. | "Two bodies of software sit next to each other and do not touch" and every "no tool has" claim are **deleted** (a test fails if they return). FlyBrainLab [68] and receptor-informed whole-brain models [69], [70] are cited; the paper discusses that Mindlin *et al.* [69] likewise found the effect dominated by overall receptor presence rather than placement, and treats that convergence as support. Novelty is stated narrowly with a comparison table; exposure, mixtures and genotypes are demoted to supporting capabilities in the supplement. | §1.1, Table I, §4; supplement S4 |
-| 8 | A mutable GitHub repository is not a registry. | "Pre-registered" is replaced by **prospective** everywhere, with an explicit statement of what would change that (an externally archived, timestamped release). A test fails the manuscript if the word returns. | §4, supplement S5; `tests/test_reproduce.py` |
-| 9 | The capped-d sample sizes are not a power analysis. | Removed from the main text and demoted to the supplement as an **illustrative planning minimum**, with the reasons it must not size a study (no biological variance; vial-based protocols violate independence). | supplement S5 |
-| 10 | A Research Article needs a Discussion. | §4 Discussion added: what was learned computationally; model-generated observations separated from encoded assumptions; comparison to adjacent work; intended use; **what the software cannot support**; and the four model-specific caveats (glutamate signed inhibitory, receptor effects applied across transmitter-defined synapses, 20.5 % expression coverage with MN9 unresolved, the rate-vs-LIF discrepancy as direction-only agreement) discussed rather than listed. | §4 |
-| + | Word count (8350 body words against a 5000–7000 target). | Mechanism rationale, null-model definitions, runtime calibration, supporting capabilities and the prospective predictions moved to `papers/SUPPLEMENT.md`. The body count is **generated** (`values.paper_words_body`) and a test fails outside the target. | §all; supplement |
-| + | Organise around research questions. | The paper is organised around RQ1 (evidence without losing provenance or semantics), RQ2 (which effects need MaleCNS topology), RQ3 (which conclusions survive, which assumptions dominate), RQ4 (identical reproduction natively and in-browser). | §1, §3 |
-| + | Separate model-generated observations from encoded assumptions. | Done in prose in §4 **and generated**: `flylab.analysis.claims` audits the dependency chain behind a readout (Table T18) and labels each link OBSERVED / LITERATURE-DERIVED / MODEL-ASSUMPTION / COMPUTED, with a companion fact / model-inference / unknown split. Exactly one link of nine is a measurement of the system being simulated. | §4; T18; step `claims` |
-| + | AI declaration. | Replaced with a precise statement separating AI-assisted implementation and drafting from the author's scientific responsibility: the author defined the questions and methods, verified the source literature, executed and reviewed the analyses, and accepts responsibility for the scientific content. | Statements |
+| **B1** | The rate engine row-normalises its weight matrix, this is documented nowhere, and it makes "composition-dominated" close to a built-in property of the readout RQ2 tests. | The normalisation is now **documented** in §2.2, §S3 and T2, with the consequence stated plainly: each cell's recurrent input is a composition-weighted average of its presynaptic gains. The dependence and ablation results are **re-run under three normalisations** (`row_abs`, `none`, `degree`), and §3.3 reports that the composition verdict survives removing the normalisation but **not** replacing it with a degree-corrected one (ρ falls to `abl_rho_composition_degree` at 1 µM and `abl_rho_composition_degree_1e8` at 10 nM). §3.3 and §4 now say the result is a property of *this engine's readout* at least as much as of receptor perturbation on connectomes. | §2.2, §3.3, §4; T2, T25, §S3; step `ablation` |
+| **B2** | `sign_permute` does not preserve the weighted excitation/inhibition balance; the supplement claimed it did so "exactly", and that claim justified the flagship interpretation. | The false sentence is **deleted**. A **weight-matched transmitter null** (`sign_permute_weight_matched`) is now the ladder's rank-3 rung: a constrained shuffle holding each transmitter's share of total outgoing weight within `bal_tol`. The plain permutation is kept and **relabelled a joint target-set-and-sign null**, off the ladder. T23 measures both rather than asserting either: real cholinergic out-weight share `bal_real_ach_share` against `bal_plain_ach_mean` ± `bal_plain_ach_sd` over `bal_n` permutations, real graph at the `bal_plain_ach_percentile`th percentile of its own null. The substitution does not move imidacloprid's probability but shrinks its equivalence gap from `dep_named_imidacloprid_gap_sign_permute` Hz to `dep_named_imidacloprid_gap_sign_permute_weight_matched` Hz. | §2.3, §3.2, §S2; T6, T23; step `dependence` |
+| **B3** | The `named` cut has almost no topology, so RQ2's negatives are close to guaranteed on it — and the paper generalised from it anyway. | **The central claim is reversed and the generalisation withdrawn.** §2.2 and T19 now print both cuts' degree and recurrence statistics. The landscape is **repeated on `taste_motor`** (T12b): `dep_land_composition_dominated` of `dep_land_cells` composition-dominated on `named` against `dep_land_taste_composition_dominated` of `dep_land_taste_cells` on `taste_motor`, where every cell with an effect above the floor is topology-dependent, imidacloprid at 1 µM included. The honest finding is now the **substrate dependence of the method's own verdict**, and §3.2, §4 and §5 say so. | §2.2, §3.2, §4, §5; T12, T12b, T19; step `dependence` |
+| **B4** | The committed record could not be regenerated by the shipped code, and the "specification-independent" claim that licensed the topology results was computed under a criterion that could not fail. | Two faults, both stated plainly in §3.4 and §S1.1. At 6 shuffles `p ≤ 0.05` was unattainable; **and** the specification context rebound `compute_gains` on the assay modules but not on the engine the permutation path resolves, so every specification fed **default** gains to its nulls. The earlier evidence was empty. Recomputed at `stab_n_shuffles` shuffles with the specification pushed into the null engine and FDR across `stab_n_structural_tests` tests, both topology conclusions hold `stab_C3_retained`/`stab_family_size` and `stab_C4_retained`/`stab_family_size` — with the new nuance that only `stab_C3_equivalent` of C3's retentions reach equivalence and `stab_C3_indeterminate` are indeterminate. A test now asserts **every statistical parameter in the committed record equals the shipped default**. | §3.4, §S1.1, §3.7; T14; `tests/test_reproduce.py::test_committed_record_was_produced_at_the_shipped_effort` |
+| **B5** | The abstract, §2.3 and the generated captions assert "reproduces", which the shipped code contains explicit comments refusing to say. | Every live instance is gone, including from the **caption generator** (`scripts/reproduce_paper.py`) and the rendered PNGs. The abstract's "reproduced by any graph with the same transmitter composition" is **deleted outright**. The necessary level is now described as "the weakest graph model the test could not distinguish from the real cut", and each mode carries an explicit three-way verdict against a prespecified margin (§2.3, §S2.1). | abstract, §2.3, §3.2, F6/F12/T12 captions; step `dependence` |
+
+### Important
+
+| # | Referee's finding | What changed | Where |
+|---|---|---|---|
+| **I1** | "the real cut with a generic multiplier is the worst level of the four" is false at the concentration it quotes. | The claim is replaced by a per-concentration statement generated from the table: `abl_worst_level_by_conc` with the direction-aware rule and `abl_worst_level_by_conc_floor_rule` with the historical one, and the sentence says which column each is true of. | §3.3; T13b; step `ablation` |
+| **I2** | Level C is not a fair ablation: it cannot represent disinhibition, so its poor ρ is structural. | Level C is now **direction-aware** — generic magnitude, one bit of sign from the mechanism table — and its rank correlation at 1 µM rises from `abl_rho_topology_floor_paper` to `abl_rho_topology_paper`. The old rule is retained as `C_topology_only_floor` and labelled a floor. **"The connectome without the pharmacology is not a cheap substitute" is withdrawn.** | §2.4, §3.3, §S1; T13, T13b; step `ablation` |
+| **I3** | The B-vs-D ablation result is close to an algebraic identity; no expectation was ever stated. | T24 supplies the **matched reference distribution**: pharmacology-free pseudo-compounds with the gain shape the shipped rules produce reach a median of `abl_ref_matched_median` (5th–95th `abl_ref_matched_p05`–`abl_ref_matched_p95`), and shuffling compound labels leaves the observed value **identically** `abl_ref_shuffled`. §3.3 states what would have been evidence for a substantive finding and withdraws the generalisation. | §2.4, §3.3; T24; step `ablation` |
+| **I4** | `reproduces_full_ordering` and `information_added_vs_previous` use \|ρ\|, so a perfect inversion would count as reproduction. | Both now use the **signed** ρ, and §2.4 says why. | §2.4; T13b; `flylab/analysis/baselines.py` |
+| **I5** | The uncertainty budget's noise floor is misstated and the third-ranked factor sits inside it. | The floor is redefined as the **largest \|negative S1\|** (`unc_noise_floor`, set by `unc_noise_floor_factor`) rather than the null factor's own draw (`unc_null_factor_S`). Only factors whose bootstrap interval excludes zero are ranked (`unc_resolved`); `drive` is **removed from the narrative** and reported as unresolved with its interval. The interaction share is given raw (`unc_interaction_share`) and with negatives clipped (`unc_interaction_share_clipped`). | §2.6, §3.5; T16, T17, F15; step `uncertainty` |
+| **I6** | Eight of the twenty topology-dependent cells carry a necessary level that contradicts their class, and the manuscript never mentions it. | The non-monotone count is **reported rather than hidden**, with the code's own warning reproduced: `dep_land_non_monotone` of `dep_land_cells` on `named` and `dep_land_taste_non_monotone` of `dep_land_taste_cells` on `taste_motor`, the cells named in T12 and listed in §S2.1. | §2.3, §3.2, §S2.1; T12, T12b |
+| **I7** | No practical-significance floor, so "topology-dependent" admits numerical noise. | A prespecified **relative effect floor** of 1 % of the vehicle readout sits above the absolute one. Landscapes report both sets of counts, and the cells the floor removes are named (`dep_land_below_relative_floor_cells`). | §2.3, §3.2, §S2.2; T12 |
+| **I8** | The library's composition biases the counts, and one "no-effect" verdict is a substrate artefact reported as pharmacology. | T19 prints each cut's **transmitter census by cell**. §2.2 and §3.6 state that neither cut contains an octopaminergic cell, so chlordimeform cannot move either readout for substrate reasons rather than pharmacological ones, and that `named_share_unclear_cells` of `named` cells are presynaptically inert. | §2.2, §3.6; T19; step `graph` |
+| **I9** | Two levels of the same ablation ladder use opposite signs for glutamate. | The disagreement is **documented and quantified**: `glutamate_sign_reconciliation` reports the composition-versus-full correlation under both conventions at every concentration, moving it by at most `abl_glutamate_max_delta_rho`. | §3.3, §S9(i); T25; step `ablation` |
+| **I10** | The documented sign convention is not the implemented one; five transmitter signs are undocumented and uncited. | The **full sign table is published** as T21 with an `evidence` column, and §2.2, §4 and §S9(i) state that `sign_asserted` of the seven magnitudes are asserted, exempt from the specification family, and **not** bounded by the label-permuting null. | §2.2, §4, §S9; T21; step `mechanisms` |
+| **I11** | "The monotone rules buffer *more*, not less" is contradicted by T14b. | **Replaced by the actual range.** §3.4 and §S1.1 now report `stab_mean_gap_nicotinic_monotone_max` to `stab_mean_gap_nicotinic_monotone_min` over the `stab_mean_gap_nicotinic_monotone_n` reversing specifications with a defined index, name the `stab_monotone_buffer_less_n` that buffer *less* (`stab_monotone_buffer_less`), and say the aggregate is carried by the extreme. | §3.4, §S1.1; T14b; step `stability` |
+| **I12** | T8 and T15 disagree on how many compounds the circuit buffers at the same thresholds. | They measure different sets, and the paper now says so: T15 covers the `thr_n_compounds` compounds of the two mechanism classes, T8 the whole library on both cuts, and the compound in T8 but outside T15's scope is named (`thr_outside_t15_scope`). Both captions state their scope. | §3.4; T8, T15; step `stability` |
+| **I13** | The literature-concordance headline is a mean over comparisons half of which are degenerate. | The **mean is no longer quoted bare**. §3.6 reports ρ per entry with its *n*, excludes the `rank_n_degenerate` two-compound entries from any mean (`rank_mean_rho_informative` over `rank_n_informative`), and gives a concordance count with its binomial tail (`rank_concordant`/`rank_discordant`, *p* = `rank_binomial_p`). | §2.5, §3.6; T4; step `validation` |
+| **I14** | The cross-species binding fix empties one branch of the type system. | It would have, and instead a **verified *Drosophila* binding constant** now fills it: Tomizawa, Latli and Casida 1996, 1–2 nM on fly head membranes, recorded at the weaker end, subunits unresolved [77]. The aphid row is correctly demoted to `binding_engagement_proxy`. §3.1 gives the post-fix counts and says what we would have reported without the row. | §2.1, §3.1, §S6; T10, T20; step `evidence` |
+| **I15** | The suppression result the paper disowns is still relied on, unflagged, in the prospective predictions. | **H2 and H3 now carry the specification-dependence caveat H6 already had**, with the signed interval over the family given explicitly. §4's caveat (i) no longer restates a failure to reject as a property of the model. | §S5, §4 |
+
+### Minor
+
+| # | Referee's finding | What changed |
+|---|---|---|
+| **M1** | The F12 caption inverts its own finding. | Fixed in the caption generator; F12 now covers both cuts and states each class count in the right direction. |
+| **M2** | The chloride-channel list is chemically wrong, not only in its quantifier, and appears in six files. | The claim is **withdrawn entirely** — it does not survive B3 — and the sentence is gone from the draft, `figures/captions.md`, `README.md`, `HANDOFF.md`, `docs/NOVELTY.md`, `docs/RESEARCH_MAP.md`, `papers/STATUS.md` and this file. |
+| **M3** | Template pluralisation, and a misleading total in §4. | The renderer emits agreeing phrases (`claims_inference_phrase`, `claims_facts_phrase`, `claims_unknown_phrase`), and §4 says the fact/inference/unknown split is a **different decomposition**, not a repartition of the nine links. |
+| **M4** | The abstract's arithmetic does not match its own list. | Rewritten: the type system is named as the coupling, and **three** tests of the predictions are listed as such. |
+| **M5** | Subject-verb agreement from the template. | `rank_shared_source_verb` / `rank_shared_source_be` / `rank_source_disjoint_be` are generated with the count. |
+| **M6** | The title over-promises the substrate. | Title now reads "… on **Cuts of** a Synapse-Resolution *Drosophila* Connectome". |
+| **M7** | Table I's browser row will outrun the narrowed claim. | Now "endpoint parity verified", and §3.7 says it is route-level equality rather than a whole-analysis claim. |
+| **M8** | Submission blockers unrelated to the review. | Still open; see §A. |
+
+### Questions to the authors
+
+| Q | Answer |
+|---|---|
+| 1 (B1) | Inherited, not deliberate. It is now documented, and §3.3 shows the composition verdict does not survive a degree-corrected engine, so we no longer read it as a statement about connectomes. |
+| 2 (B2) | Yes. T23 reproduces the referee's measurement from the shipped code; the mode is relabelled a joint null and replaced on the ladder. |
+| 3 (B3) | We do not have a defensible expectation for the seed share, which is itself the point. The conclusions do **not** hold on `taste_motor`, and §3.2 reports the reversal as the paper's main RQ2 result. |
+| 4 (B4) | Yes, at 6. The 25/25 was vacuous and we say so. Evidence *against* C3 would be a specification under which either structural null becomes distinguishable after correction; at `stab_n_shuffles` shuffles that is now attainable, and the equivalence breakdown separates the part of the retention that is evidence from the part that is not. |
+| 5 (I3) | Stated in §3.3 and computed in T24: a matched reference near zero would have been surprising; the reference median is `abl_ref_matched_median`. |
+| 6 (I5) | It should not have been. The floor is now the largest negative first-order estimate, and `drive` does **not** survive as a ranked factor under it. |
+| 7 (I7) | Yes — 1 % of the vehicle readout, prespecified, with both sets of counts reported. |
+| 8 (I10/I9) | Convention and assertion respectively; T21 gives the provenance of each, §S9(i) says why they are exempt, and the glutamate disagreement between levels B and D is quantified in T25. |
+| 9 (I12) | None: the two tables score different compound sets, which both captions and §3.4 now state. |
+| 10 (I15) | Yes; H2 and H3 carry it. |
+| 11 (§1.1/§4) | Softened to a noted parallel. Our version of the result survives neither a change of substrate nor a change of normalisation, which we state as making a shared modelling artefact at least as plausible. |
+| 12 (Contribution) | Yes. The soundness invariant is stated in §2.1 and §S6 and checked exhaustively over every library row and every entry point; the manuscript claims the invariant, not the lookup table. |
 
 ## A. What the journal needs
 
 | Item | State | Where |
 |---|---|---|
 | Title, author block, affiliations | **missing** — authors are "FlyLab contributors" | needs real names, ORCIDs, affiliations, a corresponding author and an email |
-| Abstract | done — numbers stripped, architecture + one topology result + one reproducibility result + the central limitation | draft §Abstract |
-| Index terms / keywords | done (10) | draft §Index terms |
-| Numbered IEEE-style references with DOIs | done — 76 entries | draft §References |
-| In-text citation of every reference | done | check with the grep in §D |
-| Figures, 300 dpi, captions | done — 15 figures, PNG (+SVG for F1) | `papers/figures/`, `figures/captions.md` |
-| Tables | done — 21 tables as CSV and Markdown | `papers/tables/` |
-| Word count | **done** — inside the 5000–7000 target, generated and test-enforced | `values.paper_words_body` |
-| Required section structure (Intro/Methods/Results/Discussion/Conclusion/References) | done | draft §1–§5 |
-| Supplementary material | done | `papers/SUPPLEMENT.md` |
-| Data availability statement | done | draft §Statements |
-| Code availability statement | done | draft §Statements |
-| Ethics / animal statement | done — no animal experiments, `live_lab` null everywhere | draft §Statements |
-| AI-assistance disclosure | done — precise, responsibility-assigning | draft §Statements |
-| Competing interests, funding | done (none / none) | draft §Statements |
+| Abstract | done — the reversed claim, both cuts, the central limitation | draft §Abstract |
+| Index terms / keywords | done | draft §Index terms |
+| Numbered IEEE-style references with DOIs | done — 77 entries | draft §References |
+| In-text citation of every reference | check with the grep in §D | — |
+| Figures, 300 dpi, captions | done — 16 figures (F16 is the instrument validation) | `papers/figures/`, `figures/captions.md` |
+| Tables | done — T0–T25 as CSV and Markdown | `papers/tables/` |
+| Word count | done — inside the 5000–7000 target, generated and test-enforced | `values.paper_words_body` |
+| Required section structure | done | draft §1–§5 |
+| Supplementary material | done — S1–S9 | `papers/SUPPLEMENT.md` |
+| Data / code / ethics / AI statements | done | draft §Statements |
 | Archival DOI | **placeholder** — Zenodo deposit not created | draft §3.7, `CITATION.cff` |
 | Submission format (LaTeX/Word template) | **not done** — the draft is Markdown | convert once the venue's template is confirmed |
 | Cover letter | **not written** | — |
@@ -58,22 +97,20 @@ Ten comments, what changed, and where. Every number cited below is generated int
 ## B. What is still missing for a **results** paper
 
 1. **One live *Drosophila* assay.** Climbing first: a complete published protocol and control statistics exist. Until a real table is imported by hand into `live_lab`, H1–H7 stay prospective software predictions.
-2. **The one fitted parameter.** The variance budget names it: the engagement→gain transformation (S1 0.410, VOI 1.29 of 3.149 Hz²), not a potency value, which the model cannot see at a saturating dose.
-3. **Expression coverage above 0.205**, with adult motor-neuron receptor expression sourced or the bound declared permanent.
-4. **An externally archived release**, without which "prospective" may not become "pre-registered".
+2. **The one fitted parameter.** The variance budget names it: the engagement→gain transformation, not a potency value, which the model cannot see at a saturating dose.
+3. **A cut that is neither an in-star nor hops-limited.** §3.2's reversal is the reason: the dependence verdict is substrate-dependent, and two cuts are not a trend.
+4. **Expression coverage above its current value**, with adult motor-neuron receptor expression sourced or the bound declared permanent.
+5. **An externally archived release**, without which "prospective" may not become "pre-registered".
 
 ## C. Known weaknesses a reviewer will find first
 
-Have an answer ready for each. All are already stated in the manuscript.
-
-1. **Most predictions do not need the connectome.** Answer: that is the finding, it is measured per prediction rather than argued, and the topology-dependent minority is chemically coherent (the chloride-channel blockers). An independent parallel exists in human whole-brain receptor-map models [69].
-2. **The suppression result depends on the gain rule.** Answer: stated as a first-class result (§3.4), quantified over 25 specifications, and nominated by the variance budget as the experiment to do next. The conclusions we do quote are 25/25 specification-independent.
-3. **The gain rules are asserted coefficients.** Answer: yes — and the paper says which of its own claims that costs it, rather than defending them.
-4. **Every effect size is model-internal.** Answer: §2.5 and §4; the planning minima are demoted to the supplement and labelled illustrative.
-5. **No independent validation.** Answer: stated explicitly in §2.5 and §3.6, with the shared-source rank comparisons flagged by the pipeline.
-6. **The LIF background Poisson drive is a modelling choice.** Answer: supplement S3, stated plainly; the engines agree on direction only and the paper says so.
-7. **Two rank inversions.** Answer: recorded, explained as receptor-parameter versus whole-animal potency, deliberately not fixed.
-8. **`--fast` is not the paper.** Answer: a test refuses a committed `results.json` that came from a fast run.
+1. **The central RQ2 result reverses between the two cuts.** Answer: that *is* the result, it is measured rather than argued, the instrument is validated against planted ground truth (F16, T22) so the reversal is not an artefact of power, and the structural difference between the cuts is reported in advance (T19).
+2. **The composition-versus-full correlation is nearly an algebraic identity.** Answer: stated, with a matched reference distribution (T24) and a normalisation sweep (T25); the generalisation drawn from it is withdrawn.
+3. **The suppression result depends on the gain rule.** Answer: a first-class result (§3.4), quantified over `stab_family_size` specifications, and nominated by the variance budget as the experiment to do next.
+4. **The gain rules and five transmitter signs are asserted coefficients.** Answer: published (T2, T21) and named as such; the paper says which of its own claims that costs it.
+5. **No independent validation.** Answer: stated in §2.5 and §3.6, with shared-source rank comparisons flagged by the pipeline. The ground-truth experiment validates the instrument, not the biology, and the paper says so.
+6. **Two of the instruments were broken.** Answer: found by us, published in §3.4, §S1.1 and §S2, and both fixed with the corrected numbers in the text.
+7. **`--fast` is not the paper.** Answer: one test refuses a committed record from a fast run, another asserts the record's statistical knobs equal the shipped defaults.
 
 ## D. Pre-submission mechanical checks
 
@@ -81,7 +118,7 @@ Have an answer ready for each. All are already stated in the manuscript.
 # every figure and table referenced by the draft exists
 grep -o 'F[0-9]\+\b' papers/IJRC_FlyLab_draft.md | sort -u
 ls papers/figures/*.png
-grep -o '\bT[0-9]\+\b' papers/IJRC_FlyLab_draft.md | sort -u
+grep -o '\bT[0-9]\+[a-z]\?\b' papers/IJRC_FlyLab_draft.md | sort -u
 ls papers/tables/*.csv
 
 # no unresolved template placeholders, no missing keys, in either document
@@ -93,6 +130,7 @@ python -c "import json;print(json.load(open('papers/results.json'))['values']['p
 
 # the retracted framings must not have come back
 grep -in 'pre-registered\|preregistered\|do not touch\|no public tool' papers/IJRC_FlyLab_draft.md
+grep -in 'exactly the chloride-channel\|reproduces the effect\|preserved exactly' papers/IJRC_FlyLab_draft.md papers/SUPPLEMENT.md
 
 # every reference is cited at least once
 python - <<'EOF'
@@ -109,8 +147,9 @@ print('declared but never cited:', sorted(declared - cited))
 print('cited but not declared :', sorted(cited - declared))
 EOF
 
-# the record came from a full (not --fast, not partial) run
+# the record came from a full (not --fast, not partial) run at the shipped effort
 python -c "import json;d=json.load(open('papers/results.json'));print('fast',d['fast'],'partial',d.get('partial'))"
+python -m pytest -q tests/test_reproduce.py
 ```
 
 ## E. Final pass before sending
@@ -122,4 +161,4 @@ python -c "import json;d=json.load(open('papers/results.json'));print('fast',d['
 - [ ] `python -m pytest -q` green; `pytest -m slow` green.
 - [ ] GitHub Pages bench live, and the link works from a private window.
 - [ ] Body word count inside the venue's limit (generated value, not an estimate).
-- [ ] Confirm that no sentence in the manuscript asserts a live-animal result, or that a prediction needs the connectome without naming its permutation *p*.
+- [ ] Confirm that no sentence asserts a live-animal result, that no dependence claim is stated without the cut it was measured on, and that no non-rejection is described as a reproduction.

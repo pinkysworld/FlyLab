@@ -96,11 +96,18 @@ measured on a cat-flea/chicken hybrid receptor and reads 0.991 as a
 Three numbers, three different quantities, one receptor family. Say which one
 you mean.
 
-**One more thing worth knowing.** In the shipped library of 102 receptor rows,
-exactly **one** row reaches `binding_occupancy`. 56 are `not_modelled`, 35 are
-`functional_engagement_proxy`, 9 are `functional_engagement`, 1 is
+**One more thing worth knowing.** Of the shipped library's 102 receptor rows,
+exactly **one** reaches `binding_occupancy` (imidacloprid at
+`insect_nAChR_native_dmel`). 56 are `not_modelled`, 35 are
+`functional_engagement_proxy`, 9 are `functional_engagement`, and 1 is
 `binding_engagement_proxy`. If you are about to write the word "occupancy",
-there is a 1-in-102 chance you are entitled to it.
+there is exactly one row in the whole library that entitles you to it.
+
+That imbalance is itself a caveat about the type system, and the referee raised
+it (item **I14**): a three-way distinction with one branch taken once is close
+to a two-way distinction with extra vocabulary. It is still the right
+distinction to record — but do not read the vocabulary as evidence that the
+library is full of binding data.
 
 Use the umbrella word **engagement** in prose, and let the detailed output
 expose the specific model.
@@ -120,6 +127,8 @@ engagement maxima that feed the mechanism layer, and from the ablation
 orderings. The ablation output says so out loud:
 
 ```
+$ flylab ablation imidacloprid --conc 1e-6
+...
 ! 1 insect receptor row(s) for imidacloprid carry no modellable value
   (engagement is None); they were skipped, never read as an engagement of 0.
 ```
@@ -199,11 +208,13 @@ three verdicts in one cell:
 
 (`delta = 0.3316`, five per cent of the vehicle `mean_hz` of 6.631.)
 
-`sign_permute` has the *largest* p of the three structure-preserving modes
-except `weight_permute`, and it is the one mode that is **not** equivalent: its
-gap from the null median is eight times the margin. The permutation
-probability, on its own, told you nothing about which of those two answers you
-had. That is the whole point of the three-way verdict.
+Look at `sign_permute`. Its permutation probability, 0.2747, sits comfortably
+between the two modes that *did* reach equivalence — and it is the one
+structure-preserving mode that is **not** equivalent, because its gap from the
+null median is eight times the margin. Ordering the modes by `p` would have put
+it in the middle of the equivalent ones. The permutation probability, on its
+own, could not tell you which of the two non-rejection answers you had. That is
+the whole point of the three-way verdict.
 
 > **A note about this document and NOVELTY.md.** NOVELTY.md states that
 > imidacloprid's sign, weight and degree modes at a thousand permutations are
@@ -272,6 +283,15 @@ graph effect was not distinguishable from the degree-preserving null ensemble at
 n = 1000" — and if you are making a negative claim, repeat it on `taste_motor`
 first.
 
+NOVELTY.md now treats this reversal as the result rather than a caveat ("The
+verdict is substrate-dependent, and that is now the result"), and withdraws
+"most predictions do not need the connectome" along with it. The instrument is
+not what is in doubt: `synthetic_cut`, `ladder_recovery` and `ladder_power` in
+`dependence.py` plant a recurrent loop of known strength in a synthetic graph of
+matched size, density and composition, check that the ladder recovers it and
+that the unplanted control is not called, and map detection rate against effect
+size and permutation count. The reversal is about the graphs.
+
 **Always name four things with a dependence verdict**: the compound, the
 concentration, the readout, and the cut.
 
@@ -295,9 +315,12 @@ correction. Everything else is **exploratory** and says so:
   FDR-controlled dependence_landscape instead.
 ```
 
-`dependence_landscape()` runs 21 compounds × 4 concentrations × 4 modes — 84
-cells — applies Benjamini–Hochberg across the structural tests, classifies on
-the adjusted probabilities and keeps the raw ones beside them.
+`dependence_landscape()` runs 21 compounds × 4 concentrations = **84 cells**,
+each against the null modes, applies Benjamini–Hochberg across the run's
+*structural* tests (`weight_permute` and `rewire_degree_preserving`, so 168 of
+them), classifies on the adjusted probabilities and keeps the raw ones beside
+them. It reports both counts, so the change in the headline number is visible
+rather than silent.
 
 **What it does not mean.** Failing correction inside the landscape does not
 retract the prespecified test. They are different objects answering different
@@ -306,8 +329,8 @@ questions:
 - The **confirmatory profile** asks: *does this one prespecified effect differ
   from this null ensemble?* One test, no correction owed.
 - The **landscape** asks: *how many of 84 screened cells are topology-dependent?*
-  Eighty-four tests; an uncorrected count is inflated, so BH is applied and the
-  count drops.
+  168 structural tests; an uncorrected count is inflated, so BH is applied and
+  the count drops.
 
 **The real fipronil example.** Run both and compare the *same cell*.
 
@@ -364,9 +387,10 @@ Any count taken from a landscape must be quoted with its `design` label.
 (`1 + 0.4t - 1.6t²`, `1 + 1.5t`, `1 + 2t`) are **asserted**, never fitted. The
 robustness layer re-derives each of seven qualitative conclusions under a
 prespecified family of alternative rules and reports the fraction of the family
-that retains it. `flylab stability --fast` (9 specifications, 25 shuffles):
+that retains it, here with the 9-member fast family at 25 shuffles:
 
 ```
+$ flylab stability --fast --conc 1e-6
   C4_fipronil_topology_exceeds       retained 0/9 FRAGILE
   C1_nicotinic_suppression           retained 3/9 FRAGILE
   C5_nicotinic_buffering             retained 7/9 FRAGILE
@@ -382,11 +406,13 @@ single result, a 93% drop in `mean_hz`. It is retained by **3 of 9** members of
 the fast family. Under monotone alternatives to the default biphasic rule, the
 sign flips.
 
-That means the suppression is a property of the *gain rule*, not of the
-pharmacology or of the connectome. It is one of the most useful things this
-project has produced about itself, and it must be stated whenever the
-suppression is quoted. Referee item **I15**: the paper disowned this result in
-§3.4 and then relied on it, unflagged, in the prospective predictions.
+So the **sign** of the bench's most visible result is a property of the
+engagement-to-gain rule at least as much as of the pharmacology or the
+connectome. That is one of the most useful things this project has found out
+about itself, and it has to travel with the result: quoting the 93% suppression
+without it turns a rule-dependent conclusion into a prediction. Referee item
+**I15** is exactly that failure — the paper disowned this result in §3.4 and
+then relied on it, unflagged, in the prospective predictions.
 
 **What it does not mean.** A stability fraction is **not** a posterior
 probability over models. It is the fraction of one finite, prespecified family
@@ -434,15 +460,19 @@ Three labels matter, and the output prints all three:
   zero. Only these get a number you may quote.
 - **unresolved at this sample size** — the CI includes zero. The sample cannot
   separate the effect from nothing. This is a statement about the sample, not
-  about the factor, and the factor is given a decision VOI of 0 and no ranking
-  claim.
+  about the factor, and it carries no ranking claim. Note that the CLI still
+  *prints* a number for such a factor: `voi_fraction` in `voi.py` is
+  `max(0, S_j)` for every row, and it is the `status` field — not the number —
+  that tells you whether the number means anything. Read the status line before
+  the table.
 - **null control** — `lif_seed` has no effect at all on the deterministic rate
   engine. Its index is therefore a *direct read of the estimator's own error* on
   a factor that is exactly zero.
 
-Here is `flylab voi imidacloprid --conc 1e-6 --n-base 64`:
+Here is the real ranking:
 
 ```
+$ flylab voi imidacloprid --conc 1e-6 --n-base 64
   1. gain_transform       variance removed   0.516  calibration of receptor engagement against synaptic gain
   2. weight_threshold     variance removed   0.474  no experiment: a reconstruction-confidence analysis
   3. drive                variance removed   0.238  in vivo baseline firing rates of the driven cell classes
@@ -465,6 +495,12 @@ floor.
 That is the same fact the tornado in [Lesson 3](TUTORIAL.md#lesson-3) shows
 directly: at a saturating dose a two-fold error in the EC50 moves `mean_hz` by
 0.000 Hz.
+
+This run also prints `! not converged: doubling n_base moved a first-order index
+by 0.23`, so the *ordering* below `gain_transform` is not yet stable. The shape
+of the finding — one resolvable model assumption, everything else at the
+estimator's noise floor — survives the convergence warning; the individual
+shares do not.
 
 **What it does not mean.**
 
@@ -497,11 +533,17 @@ own confidence interval.
 
 > These shares are the answer.
 
-Check for `! not converged`. At `n_base = 32` the budget ranks
-`weight_threshold` first with a share of 0.734 and reports nine factors as
-mutually indistinguishable; at `n_base = 128` it ranks `gain_transform` first at
-0.362 and resolves only that one. Both runs print `not converged`. The paper
-uses 128 or more; raise `n_base` before quoting a share.
+Check for `! not converged` first. `flylab uncertainty imidacloprid --conc 1e-6`
+at the browser's default `n_base = 32` ranks `weight_threshold` first with a
+share of 0.734, puts `potency` at 0.481 — and the null-control `lif_seed`, whose
+true index is zero, at **0.480**. Seven of the nine factors have confidence
+intervals excluding zero at that sample size, which is the estimator being
+confident about its own noise. At `n_base = 128` the same call ranks
+`gain_transform` first at 0.362, puts `potency` at 0.054 and `lif_seed` at
+0.052, and resolves only `gain_transform`. Both runs print `not converged`
+(a first-order index moved by 0.33 and 0.19 respectively when `n_base` was
+doubled). The paper uses 128 or more; raise `n_base` before quoting a share, and
+read the null control every time.
 
 ---
 
@@ -533,9 +575,13 @@ composition-only ablation level and the full model, quoted as a finding about
 the connectome. Two reasons it is not:
 
 1. **It has a structural floor.** `composition_reference_distribution()` draws
-   pharmacology-free pseudo-compounds as arbitrary gain vectors and finds they
-   already reach a median rank correlation around 0.8. The observed value is
-   that floor plus a small excess.
+   pharmacology-free pseudo-compounds as arbitrary gain vectors — compounds that
+   do not exist and that no pharmacology connects — and NOVELTY.md records that
+   they already reach a median rank correlation around 0.8. The observed value
+   is that floor plus a small excess. The same function also shows that
+   permuting the gain vectors across compound labels leaves the correlation
+   *provably unchanged*, which is the sharpest form of the point: the number
+   carries no compound-level information at all.
 2. **It does not survive a different normalisation.**
    `composition_dominance_under_normalisations()` re-runs the same comparison
    under each of the three modes:
@@ -603,11 +649,12 @@ vertebrate receptor in the teaching library fills.
 They rank compounds differently, and the bench will tell you when:
 
 ```
-$ flylab compare imidacloprid deltamethrin --conc 1e-6
-Imidacloprid     insect_nAChR_beta1       1.000   0.091    2.70    1.79   -0.91
-Deltamethrin     insect_Nav               0.959   0.167    2.07    2.28    0.22
-  * The highest receptor selectivity (Imidacloprid, 2.70 log10) is NOT the
-    highest circuit selectivity (Deltamethrin, 2.28 log10).
+$ flylab compare imidacloprid deltamethrin --conc 1e-6 --no-occupancy
+compound         target                  insect    vert   recSI   cirSI     gap  circuit d%  topology
+Imidacloprid     insect_nAChR_beta1       1.000   0.091    2.70    1.79   -0.91       -93.1  composition-dominated
+Deltamethrin     insect_Nav               0.959   0.167    2.07    2.28    0.22       560.4  composition-dominated
+  * The highest receptor selectivity (Imidacloprid, 2.70 log10) is NOT the highest circuit selectivity (Deltamethrin, 2.28 log10).
+  ! Receptor selectivity and circuit selectivity are different quantities; a large receptor ratio does not buy a wide circuit window.
 ```
 
 **What it does not mean.** Neither index is a safety margin, a therapeutic
@@ -722,13 +769,14 @@ CSV. `null` means no measurement has ever been attached to this claim.
 | `vertebrate_GABA_A` | IC50 | 1.10e-06 | `exact_compound_exact_receptor_other_species` | 0.476 |
 | `insect_RDL` | IC50 | 3.00e-08 | `exact_compound_exact_receptor_exact_species` | 0.985 |
 
-*Read:* this claim rests on **one** row. `insect_RDL` is an IC50 measured in
-*Drosophila* (Hosie et al. 1995) at E0 — so it is `functional_engagement`, a
-normalised functional response, and **not** an occupancy even though it is
-on-target and reads 0.985. The vertebrate row is the same parameter type at E1
-(human recombinant receptors), so it is a proxy. The two N/A rows are absences,
-not zeros. See sections [1](#1-engagement-is-not-occupancy) and
-[2](#2-not-modelled-is-not-zero).
+*Read:* two rows are sourced and only **one** of them can move a circuit.
+`insect_RDL` is an IC50 measured in *Drosophila* (Hosie et al. 1995) at E0 — so
+it is `functional_engagement`, a normalised functional response, and **not** an
+occupancy even though it is on-target and reads 0.985. `vertebrate_GABA_A` is
+the same parameter type at E1 (human recombinant receptors), so it is a proxy,
+and it is scored rather than simulated: the vertebrate side never patches a
+circuit. The two N/A rows are absences, not zeros. See sections
+[1](#1-engagement-is-not-occupancy) and [2](#2-not-modelled-is-not-zero).
 
 **4. Measured, not assumed.** "Exactly one link of the nine-link chain behind
 this number is a measurement of the system being simulated: the synaptic
@@ -738,8 +786,11 @@ wiring."
 observation; everything downstream is assertion or computation.
 
 **5. Assumptions introduced.** Transmitter sign, gain mapping, free
-concentration, uniform expression, plus nine more from the audit chain — each
-with a sentence on how it could change the sign or size of the claim.
+concentration and uniform expression, followed by ten more drawn from the audit
+chain (the Hill relation itself, the discarded assay conditions behind an
+EC50/IC50, the mechanism rule and its uniform application, the weight floor on
+the cut, the predicted transmitter labels, the hand-set drive) — each with a
+sentence on how it could change the sign or the size of the claim.
 
 *Read:* `gain_mapping` is flagged here as "the single assumption worth an
 experiment", which is the VOI ranking in section

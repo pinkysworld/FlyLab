@@ -58,6 +58,19 @@ from flylab.analysis.selectivity import (
     receptor_selectivity_table,
     selectivity_landscape,
 )
+from flylab.analysis.scale import (
+    DEFAULT_CUTS,
+    DEFAULT_FRONTIER_SCALES,
+    FUTURE_WORK,
+    available_cuts,
+    dependence_vs_scale,
+    estimate_scale_runtime,
+    feasibility_frontier,
+    permutation_budget,
+    run_cost_s,
+    scale_report,
+    verdict_stability,
+)
 from flylab.analysis.robustness import (
     CONCLUSIONS,
     MECHANISM_FAMILY,
@@ -116,6 +129,18 @@ __all__ = [
     "benjamini_hochberg",
     "cut_census",
     "balance_report",
+    # scaling study: does the dependence verdict settle, and where
+    "dependence_vs_scale",
+    "verdict_stability",
+    "scale_report",
+    "available_cuts",
+    "permutation_budget",
+    "estimate_scale_runtime",
+    "feasibility_frontier",
+    "run_cost_s",
+    "DEFAULT_CUTS",
+    "DEFAULT_FRONTIER_SCALES",
+    "FUTURE_WORK",
     "synthetic_cut",
     "ladder_recovery",
     "ladder_power",

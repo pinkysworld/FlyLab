@@ -338,6 +338,19 @@ def load_graph(path: str | Path | None = None) -> dict[str, Any]:
     return _GRAPH_CACHE[key]
 
 
+def forget_graph(path: str | Path) -> None:
+    """Drop one graph (and every normalisation of it) from the memo caches.
+
+    Needed when a file is written, read back and then rewritten in the same
+    process -- the extractor does this to fold a cut's census into its own
+    metadata.
+    """
+    key = str(Path(path).resolve())
+    _GRAPH_CACHE.pop(key, None)
+    for k in [k for k in _NET_CACHE if k and k[0] == key]:
+        _NET_CACHE.pop(k, None)
+
+
 def seed_ids(graph: dict[str, Any]) -> list[int]:
     out: list[int] = []
     for ids in graph.get("seeds", {}).values():
@@ -753,6 +766,232 @@ def readout_under_normalisations(
     }
 
 
+# --------------------------------------------------------------------------
+# sparse (edge-list) runtime, for cuts too large for a dense N x N matrix
+# --------------------------------------------------------------------------
+#: Default number of edges processed per scatter chunk.  The recurrent step
+#: builds two temporaries of this length; 4M edges is ~64 MB of float64, which
+#: keeps the whole-CNS run inside a few GB instead of tens.
+SPARSE_CHUNK = 4_000_000
+
+
+def sparse_memory_gb(n_nodes: int, n_edges: int, chunk: int = SPARSE_CHUNK) -> float:
+    """Resident bytes (GB) :class:`SparseRateNetwork` needs, as a formula.
+
+    Per edge, 32 B: ``pre`` and ``post`` as int32 (8 B), the raw weight, the
+    signed weight and the gain-scaled ``weff`` as float64 (24 B).  Per node,
+    40 B: five float64 vectors (rates, drive, scale, denominator, scratch).
+    Plus two ``chunk``-length float64 temporaries for the scatter.
+
+    This is the engine's own footprint.  A whole-CNS *load* peaks higher
+    (measured 1.9 GB against 0.9 GB here) because the streaming reader holds
+    int64 body-id arrays and the annotation frames before it hands them over;
+    :func:`flylab.assays.fullcns.run_fullcns_assay` reports the measured
+    ``ru_maxrss`` beside this prediction rather than instead of it.
+    """
+    return float(32 * int(n_edges) + 40 * int(n_nodes) + 16 * int(chunk)) / 1e9
+
+
+class SparseRateNetwork:
+    r"""The same rate model as :class:`RateNetwork`, on an edge list.
+
+    :class:`RateNetwork` materialises a dense ``N x N`` matrix, which is fine
+    for the committed 1-2k-node cuts (10 MB) and impossible at whole-CNS scale
+    (165 122 nodes would be 218 TB).  This class holds the connectome as the
+    three arrays the null-model fast path already uses -- ``pre``, ``post``,
+    ``weight`` -- and writes the recurrent step as a ``bincount`` scatter::
+
+        rec[j] = sum_{e: post[e] == j} weff[e] * r[pre[e]]
+        r     <- clip((1 - alpha) * r + alpha * g_nav * (drive + rec), 0, r_max)
+
+    with ``weff[e] = sign(nt[pre[e]]) * w[e] * scale[pre[e]] / denom[post[e]]``:
+    identical arithmetic to the dense engine, differing only in summation
+    order (agreement is ~1e-12 Hz; ``tests/test_circuit_rate.py`` pins it).
+
+    **This is an addition, not a change.**  Nothing in the shipped pipeline
+    routes through it; :class:`RateNetwork` is untouched and remains the
+    default everywhere, so the frozen numerical regression is unaffected.
+
+    Args:
+        n: number of nodes.
+        pre / post: edge endpoint *indices* (not body ids).
+        weight: synapse counts, unsigned.
+        nt: per-node consensus transmitter labels (object or str array).
+        body_ids: optional per-node body ids, for ``rates_by_body``.
+        seeds: optional ``{type: [bodyId, ...]}`` as the graph JSON has it.
+        normalise: one of :data:`NORMALISATIONS`; the same three modes and the
+            same denominators as the dense engine.
+        chunk: edges per scatter chunk (bounds the temporaries).
+    """
+
+    def __init__(
+        self,
+        n: int,
+        pre: np.ndarray,
+        post: np.ndarray,
+        weight: np.ndarray,
+        nt: np.ndarray | list[Any],
+        body_ids: np.ndarray | list[int] | None = None,
+        seeds: dict[str, list[int]] | None = None,
+        sign: dict[str, float] | None = None,
+        normalise: str = DEFAULT_NORMALISATION,
+        chunk: int = SPARSE_CHUNK,
+    ) -> None:
+        if normalise not in NORMALISATIONS:
+            raise ValueError(
+                f"unknown normalise={normalise!r}; expected one of {NORMALISATIONS}"
+            )
+        self.n = int(n)
+        self.pre = np.asarray(pre, dtype=np.int32)
+        self.post = np.asarray(post, dtype=np.int32)
+        self.w = np.asarray(weight, dtype=np.float64)
+        self.nt = np.asarray(list(nt), dtype=object)
+        self.body_ids = (
+            np.arange(self.n, dtype=np.int64)
+            if body_ids is None
+            else np.asarray(body_ids, dtype=np.int64)
+        )
+        self.node_index = {int(b): i for i, b in enumerate(self.body_ids.tolist())}
+        self.seeds = {k: [int(v) for v in vals] for k, vals in (seeds or {}).items()}
+        self.sign = dict(sign or SIGN)
+        self.normalise = normalise
+        self.chunk = int(chunk)
+        sign_vec = np.array(
+            [self.sign.get(x, 0.0) for x in self.nt.tolist()], dtype=np.float64
+        )
+        self.sw = sign_vec[self.pre] * self.w
+        # the dense engine counts a presynaptic *partner* only when its signed
+        # contribution is non-zero (a transmitter absent from SIGN contributes
+        # 0), so the degree normalisation must count the same thing
+        self.in_degree = np.bincount(
+            self.post[self.sw != 0.0], minlength=self.n
+        ) if self.sw.size else np.zeros(self.n, dtype=np.int64)
+        self.row_denominator = self._denominator()
+
+    # -- construction -----------------------------------------------------
+    @classmethod
+    def from_graph(
+        cls,
+        graph: dict[str, Any],
+        normalise: str = DEFAULT_NORMALISATION,
+        chunk: int = SPARSE_CHUNK,
+    ) -> "SparseRateNetwork":
+        """Build from a committed neighborhood graph dict."""
+        nodes = graph["nodes"]
+        body_ids = np.array([int(nd["bodyId"]) for nd in nodes], dtype=np.int64)
+        index = {int(b): i for i, b in enumerate(body_ids.tolist())}
+        nt = [nd.get("consensus_nt") or "unclear" for nd in nodes]
+        pre, post, w = [], [], []
+        for e in graph["edges"]:
+            i, j = index.get(int(e["pre"])), index.get(int(e["post"]))
+            if i is None or j is None:
+                continue
+            pre.append(i)
+            post.append(j)
+            w.append(float(e["weight"]))
+        return cls(
+            n=len(nodes),
+            pre=np.asarray(pre, dtype=np.int32),
+            post=np.asarray(post, dtype=np.int32),
+            weight=np.asarray(w, dtype=np.float64),
+            nt=nt,
+            body_ids=body_ids,
+            seeds=graph.get("seeds") or {},
+            normalise=normalise,
+            chunk=chunk,
+        )
+
+    # -- helpers ----------------------------------------------------------
+    def __len__(self) -> int:
+        return self.n
+
+    def _denominator(self) -> np.ndarray:
+        if self.normalise == "none":
+            return np.ones(self.n, dtype=np.float64)
+        if self.normalise == "degree":
+            return np.maximum(self.in_degree.astype(np.float64), 1.0)
+        return np.maximum(
+            np.bincount(self.post, weights=np.abs(self.sw), minlength=self.n), 1.0
+        )
+
+    def scale_vector(self, gains: dict[str, float] | None) -> np.ndarray:
+        g = dict(DEFAULT_GAINS)
+        g.update({k: float(v) for k, v in (gains or {}).items() if k in DEFAULT_GAINS})
+        out = np.ones(self.n, dtype=np.float64)
+        for idx, nt in enumerate(self.nt.tolist()):
+            key = NT_GAIN_KEY.get(nt)
+            if key is None:
+                continue
+            val = g[key]
+            if nt == "acetylcholine":
+                val *= g["ach_tone"]
+            out[idx] = val
+        return out
+
+    def drive_vector(
+        self, drive: dict[int, float] | None, default_hz: float = 0.0
+    ) -> np.ndarray:
+        d = np.full(self.n, float(default_hz), dtype=np.float64)
+        for body_id, hz in (drive or {}).items():
+            i = self.node_index.get(int(body_id))
+            if i is not None:
+                d[i] = float(hz)
+        return d
+
+    def seed_indices(self, types: Any = None) -> list[int]:
+        names = list(self.seeds) if types is None else list(types)
+        out: list[int] = []
+        for t in names:
+            for b in self.seeds.get(t, []):
+                i = self.node_index.get(int(b))
+                if i is not None and i not in out:
+                    out.append(i)
+        return out
+
+    def seed_drive(self, drive_hz: float, types: Any = None) -> dict[int, float]:
+        idx = self.seed_indices(types)
+        return {int(self.body_ids[i]): float(drive_hz) for i in idx}
+
+    def memory_gb(self) -> float:
+        return sparse_memory_gb(self.n, int(self.pre.size), self.chunk)
+
+    # -- run --------------------------------------------------------------
+    def run(
+        self,
+        drive: dict[int, float] | np.ndarray,
+        gains: dict[str, float] | None = None,
+        steps: int = 80,
+        alpha: float = 0.3,
+        r_max: float = 300.0,
+    ) -> np.ndarray:
+        """Iterate the leaky rate update and return per-node rates (Hz)."""
+        g = dict(DEFAULT_GAINS)
+        g.update({k: float(v) for k, v in (gains or {}).items() if k in DEFAULT_GAINS})
+        d = drive if isinstance(drive, np.ndarray) else self.drive_vector(drive)
+        scale = self.scale_vector(g)
+        weff = self.sw * scale[self.pre] / self.row_denominator[self.post]
+        g_nav = g["g_nav"]
+        pre, post, n = self.pre, self.post, self.n
+        m = int(pre.size)
+        chunk = max(int(self.chunk), 1)
+        r = np.zeros(n, dtype=np.float64)
+        for _ in range(int(steps)):
+            if m <= chunk:
+                rec = np.bincount(post, weights=weff * r[pre], minlength=n)
+            else:
+                rec = np.zeros(n, dtype=np.float64)
+                for a in range(0, m, chunk):
+                    b = min(a + chunk, m)
+                    rec += np.bincount(
+                        post[a:b], weights=weff[a:b] * r[pre[a:b]], minlength=n
+                    )
+            r = np.clip((1.0 - alpha) * r + alpha * (g_nav * (d + rec)), 0.0, r_max)
+        return r
+
+    def rates_by_body(self, rates: np.ndarray) -> dict[int, float]:
+        return {int(b): float(rates[i]) for i, b in enumerate(self.body_ids.tolist())}
+
+
 def by_superclass(net: RateNetwork, rates: np.ndarray) -> dict[str, float]:
     """Mean rate per MaleCNS superclass (``unknown`` for unannotated cells)."""
     acc: dict[str, list[float]] = {}
@@ -803,6 +1042,10 @@ __all__ = [
     "resolve_graph",
     "DEFAULT_GAINS",
     "RateNetwork",
+    "SparseRateNetwork",
+    "SPARSE_CHUNK",
+    "sparse_memory_gb",
+    "forget_graph",
     "rate_network",
     "load_graph",
     "graph_path",

@@ -60,6 +60,7 @@ COMMANDS = [
     ["extract-subgraph"],
     ["download-malecns"],
     ["serve"],
+    ["tutorial"],
 ]
 
 
@@ -73,6 +74,22 @@ def test_help_works_for_every_command(cmd):
 def test_no_args_shows_help():
     result = runner.invoke(app, [])
     assert "Usage" in result.output
+
+
+def test_tutorial_lists_lessons_and_runs_one():
+    """`flylab tutorial` is the executable half of docs/TUTORIAL.md.
+
+    The full contract (every documented command exists, two lessons run end to
+    end) lives in tests/test_tutorial.py; this is the CLI-level smoke test.
+    """
+    listing = runner.invoke(app, ["tutorial", "--list"])
+    assert listing.exit_code == 0, listing.output
+    assert "docs/TUTORIAL.md" in listing.output
+
+    lesson = runner.invoke(app, ["tutorial", "7"])
+    assert lesson.exit_code == 0, lesson.output
+    assert "EvidenceTypeError" in lesson.output
+    assert "what this does NOT tell you" in lesson.output
 
 
 # --------------------------------------------------------------------------

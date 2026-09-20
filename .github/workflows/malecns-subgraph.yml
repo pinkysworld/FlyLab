@@ -12,6 +12,9 @@ on:
       closure_min_weight:
         description: "Taste-motor graph: keep partner-partner edges at or above this weight"
         default: "10"
+      ladder_sizes:
+        description: "Scale-ladder node budgets (comma separated); empty skips the ladder"
+        default: "1000,5000,10000,25000,50000"
   schedule:
     - cron: "17 4 * * 1"
 
@@ -22,7 +25,7 @@ permissions:
 jobs:
   extract:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,7 +34,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install
-        run: python -m pip install pandas pyarrow pyyaml
+        run: python -m pip install numpy pandas pyarrow pyyaml
       - name: Download MaleCNS atlas + weights
         env:
           B: https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome
@@ -70,16 +73,80 @@ jobs:
           print("taste_motor: nodes", payload["n_nodes"], "edges", payload["n_edges"],
                 "seeds", {k: len(v) for k, v in payload["seeds"].items()})
           PY
+      # ------------------------------------------------------------------
+      # The scale ladder: nested cuts at 1k / 5k / 10k / 25k / 50k cells,
+      # built by one deterministic rule (flylab.maps.extract.LADDER_RECIPE)
+      # so a dependence verdict can be compared across sizes without the
+      # construction changing underneath it.  Only the smallest rung is
+      # small enough to belong in git; the rest are artifacts.
+      # ------------------------------------------------------------------
+      - name: Build the scale ladder
+        if: ${{ github.event.inputs.ladder_sizes != '' }}
+        env:
+          SIZES: ${{ github.event.inputs.ladder_sizes || '1000,5000,10000,25000,50000' }}
+          MINW: ${{ github.event.inputs.min_weight || '5' }}
+        run: |
+          export FLYLAB_MALECNS="$HOME/.flylab/malecns_v1"
+          export PYTHONPATH="$GITHUB_WORKSPACE"
+          mkdir -p ladder
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from flylab.maps.extract import COMMIT_BYTE_BUDGET, extract_ladder
+
+          sizes = [int(s) for s in os.environ["SIZES"].split(",") if s.strip()]
+          res = extract_ladder(
+              sizes=sizes,
+              min_weight=int(os.environ.get("MINW", "5")),
+              out_dir=Path("ladder"),
+          )
+          Path("ladder/ladder_summary.json").write_text(json.dumps(res, indent=1))
+          keep = []
+          for cut in res["cuts"]:
+              cen = cut.get("census") or {}
+              print(
+                  f"{cut['n_target']:>6}  nodes={cut['n_nodes']:>6}  edges={cut['n_edges']:>8}"
+                  f"  mean_degree={cen.get('mean_degree', 0):7.2f}"
+                  f"  onto_seeds={cen.get('share_onto_seeds', 0):.4f}"
+                  f"  with_input={cen.get('share_nodes_with_in_degree', 0):.3f}"
+                  f"  in_star={cen.get('in_star')}"
+                  f"  bytes={cut['bytes']}"
+              )
+              if cut["bytes"] <= COMMIT_BYTE_BUDGET:
+                  keep.append(Path(cut["path"]).name)
+          # only the rungs under the byte budget are copied where git can see them
+          for name in keep:
+              Path("data/derived", name).write_bytes(Path("ladder", name).read_bytes())
+          Path("ladder/committed.txt").write_text("\n".join(keep))
+          print("committing:", keep or "(nothing: every rung is over the byte budget)")
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: malecns-neighborhoods
           path: data/derived/malecns_*_neighborhood.json
+      - name: Upload the scale ladder (every rung, including the large ones)
+        if: ${{ github.event.inputs.ladder_sizes != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: malecns-scale-ladder
+          path: |
+            ladder/malecns_scale_*.json
+            ladder/ladder_summary.json
+          retention-days: 30
+          compression-level: 9
       - name: Commit subgraphs if changed
         run: |
           git config user.name "flylab-ci"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/derived/malecns_named_neighborhood.json data/derived/malecns_taste_motor_neighborhood.json
+          # the ladder rungs small enough for git (see COMMIT_BYTE_BUDGET); the
+          # larger ones stay in the malecns-scale-ladder artifact
+          if [ -f ladder/committed.txt ]; then
+            while read -r f; do
+              [ -n "$f" ] && git add "data/derived/$f"
+            done < ladder/committed.txt
+          fi
           if git diff --cached --quiet; then echo "no change"; exit 0; fi
-          git commit -m "chore: refresh MaleCNS neighborhoods from CI"
+          git commit -m "chore: refresh MaleCNS neighborhoods and scale ladder from CI"
           git pull --rebase origin main
           git push

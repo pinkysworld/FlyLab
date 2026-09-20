@@ -4242,12 +4242,9 @@
     body.innerHTML =
       `<div class="prov-head"><span class="name">${esc(k)}</span>${chip(k, null, k.toLowerCase())}</div>` +
       `<p>${esc(CHIP_NOTE[k])}</p>` +
-      `<dt>the whole vocabulary</dt><dd><ul>` +
-      CHIPS.map(
-        (c) =>
-          `<li><b>${esc(c)}</b> — ${esc(CHIP_NOTE[c])}</li>`
-      ).join("") +
-      `</ul></dd>` +
+      `<dl><dt>the whole vocabulary</dt><dd><ul>` +
+      CHIPS.map((c) => `<li><b>${esc(c)}</b> — ${esc(CHIP_NOTE[c])}</li>`).join("") +
+      `</ul></dd></dl>` +
       `<p>Chips carrying a provenance record open the source instead. ` +
       `<a href="${TOUR_GUIDE_URL}" target="_blank" rel="noreferrer noopener">How to read this &rarr;</a></p>`;
     drawer.dataset.open = "true";

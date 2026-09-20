@@ -23,18 +23,24 @@ Full research plan: `docs/RESEARCH_MAP.md`. Numbers: `papers/results.json` (rege
 | 5h Reproduction | `scripts/reproduce_paper.py` | **done in v0.5**, extended in v0.6 |
 | 5i Static bench | same wheel on Pyodide via GitHub Pages | **done in v0.5** (`docs/PAGES.md`) |
 | **6a Typed evidence** | schema v3: param type + source relation decide the transformation; unsupported rows return N/A | **done in v0.6** |
-| **6b Connectome dependence** | permutation *p* first, dependence class, necessary information level, landscape over the library | **done in v0.6** |
+| **6b Connectome dependence** | permutation *p* first, dependence class, necessary information level, landscape over the library | **done in v0.6**, reworked in v0.6.1 |
 | **6c Ablation ladder** | receptor-only / composition-only / topology-only / full | **done in v0.6** |
-| **6d Specification robustness** | 25 prespecified gain specifications × 7 conclusions, plus the 3×3 threshold grid | **done in v0.6** |
+| **6d Specification robustness** | 25 prespecified gain specifications × 7 conclusions, plus the 3×3 threshold grid | **done in v0.6**; the topology rows were vacuous until v0.6.1 |
 | **6e Global uncertainty + VOI** | Sobol' budget with a validated estimator, ranked experiments | **done in v0.6** |
 | **6f Subunit-resolved nicotinic keys** | α6 (spinosad) and β1 (imidacloprid) split out; the rest stay on a documented aggregate | **done in v0.6** |
 | 6g IJRC research article | Intro / Methods / Results / **Discussion** / Conclusion, inside the word target | **done in v0.6** — drafted, not submitted |
+| **6h Second-round referee revision** | weight-matched transmitter null, three-way equivalence verdicts, FDR with confirmatory/exploratory labelling, a relative effect floor, a direction-aware ablation baseline with a matched reference distribution, the engine's row normalisation documented and swept, the transmitter sign table published, ground-truth validation of the dependence ladder, and the landscape repeated on the denser cut | **done in v0.6.1** — and it **reversed** the central RQ2 claim |
 | 7 Expression coverage | adult motor-neuron receptor expression, or a declared permanent bound | **open** — coverage 0.205, MN9 unresolved |
 | 8 Live fly | one PER or climbing table in `live_lab` | **blocked — protocol only** |
 | 9 Archival | Zenodo deposit; only then may "prospective" become "pre-registered" | **open** |
 
+## What v0.6.1 changed about the plan
+
+The dependence verdict turned out to be **substrate-dependent**: the same landscape, with the same instrument and no parameter changed, classifies most cells composition-dominated on the sparse 1-hop `named` cut and none of them on the denser `taste_motor` cut. The generalisation "most predictions do not need the connectome" is withdrawn. Two consequences for the roadmap: (a) a third cut, neither an in-star nor hops-limited, is now a research gate rather than a nicety, and (b) no dependence result may be quoted without the structural statistics of the graph it was measured on (`flylab.analysis.dependence.cut_census`, T19).
+
 ## v0.7, in order
 
+0. **A third cut (new).** The two committed cuts disagree, and two points are not a trend. Until a third substrate exists, every dependence claim is a claim about one graph.
 1. **Expression coverage (gate 7).** Either source per-cell-type receptor expression for adult leg/labellar motor neurons or declare the 0.205 coverage a permanent bound. A data problem, not a modelling one.
 2. **The one allowed fit.** The uncertainty budget now names it without ambiguity: the engagement→gain transformation (S1 0.410, VOI 1.29 of 3.149 Hz²), not a potency value, which the model cannot see at a saturating dose.
 3. **The free win.** `weight_threshold` carries S1 0.294 and needs **no experiment**: re-run the dependence and selectivity analyses against synapse-confidence strata of data already held.
@@ -46,5 +52,5 @@ Not v0.7: a 166k LIF, a second connectome, a 3D viewer, or more than one fitted 
 ## Routine maintenance
 
 - Refresh a motor graph: Actions → `extract-malecns-subgraph` (never commit a feather).
-- Rebuild the paper: `python scripts/reproduce_paper.py` (~8–10 min; `--fast` ~2 min is a sanity check, not the paper), then commit `papers/`.
+- Rebuild the paper: `python scripts/reproduce_paper.py` (~35–45 min; `--fast` ~4 min is a sanity check, not the paper), then commit `papers/`. A test refuses a committed record that came from `--fast` **or** that was produced at any statistical effort other than the shipped defaults.
 - Publish the static bench: push to `main` (Actions → `pages`).

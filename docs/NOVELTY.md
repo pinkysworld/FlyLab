@@ -73,6 +73,17 @@ over:
 
 Only the equivalent-within-tolerance verdict licenses the word "reproduces". Imidacloprid's sign, weight and degree modes at a thousand permutations are indeterminate, not equivalent, and must not be written up as though the shuffle had given the same effect.
 
+### The verdict is substrate-dependent, and that is now the result
+
+The single most important thing to know before writing any dependence sentence: **the same analysis, with the same instrument and no parameter changed, gives opposite answers on the repository's two committed cuts.** On the sparse 1-hop `named` cut — an in-star, most of whose edges terminate on four seed cells and most of whose nodes receive no input at all — most cells come back composition-dominated. Repeated on the denser `taste_motor` cut, none of them does: every cell whose effect clears the relative floor is topology-dependent.
+
+A degree-preserving rewire of an in-star is close to the identity, so a negative topology verdict on such a cut is weak evidence rather than a finding. Two consequences:
+
+1. **Never state a dependence class without the cut it was measured on**, and prefer to quote `flylab.analysis.dependence.cut_census` (mean degree, share of edges onto seeds, share of nodes with any input, recurrence budget) beside it.
+2. **"Most predictions do not need the connectome" is withdrawn**, along with "the topology-dependent set is exactly the chloride-channel blockers". What replaces them is a methodological claim: the dependence verdict is a joint property of the prediction and the substrate, and a validated instrument that reverses between two cuts of one connectome is the more transferable result.
+
+The instrument itself is not in doubt here: `ladder_recovery` and `ladder_power` plant a recurrent loop of known strength in a synthetic graph of matched size, density and composition, recover it, and give an empirical false-positive rate on the unplanted control. The reversal is therefore about the graphs, not about power.
+
 ## Current headline comparisons
 
 ### Imidacloprid
@@ -221,6 +232,6 @@ FlyLab can accurately be described as:
 
 For the paper or a project summary:
 
-> FlyLab combines typed pharmacological evidence with compound-specific perturbation of named, synapse-resolution Drosophila circuits and adds a model-auditing layer that tests which network information and modelling assumptions each computed conclusion actually depends on.
+> FlyLab combines typed pharmacological evidence with compound-specific perturbation of named, synapse-resolution Drosophila circuits and adds a validated model-auditing layer that tests which network information and modelling assumptions each computed conclusion actually depends on — and which shows that the answer depends on the cut of the connectome it is asked about.
 
 That sentence is deliberately narrower than the software's full feature list.

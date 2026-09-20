@@ -1,4 +1,4 @@
-**T15_threshold_grid.** Threshold sensitivity of the amplify/buffer split. Both thresholds entering the circuit selectivity index are conventions: the relative circuit change that defines C_circuit and the vertebrate engagement that defines C_vert. The mechanism-level verdict is recomputed on every cell of the grid.
+**T15_threshold_grid.** Threshold sensitivity of the amplify/buffer split. Both thresholds entering the circuit selectivity index are conventions: the relative circuit change that defines C_circuit and the vertebrate engagement that defines C_vert. The mechanism-level verdict is recomputed on every cell of the grid. The counts are over the compounds of the two mechanism classes the conclusion is about and not over the whole library, which is why they are smaller than T8's at the same thresholds; a compound with no circuit threshold inside the tested ladder is reported unscored here, never as buffered.
 
 | circuit_frac | vert_limit | n_amplify | n_buffer | n_unscored | mean_gap_nicotinic | verdict_nicotinic | mean_gap_nav_ache | verdict_nav_ache |
 |---|---|---|---|---|---|---|---|---|

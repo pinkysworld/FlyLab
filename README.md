@@ -68,7 +68,9 @@ The analysis asks whether the real-graph effect is distinguishable from null ens
 
 A plain label permutation is also run, but it moves the weighted excitation/inhibition balance as well as transmitter identity, so it is reported as a joint null rather than as a rung of the ladder.
 
-This makes it possible to separate effects that are sensitive to detailed wiring from effects that are already explained by much coarser network information.
+This makes it possible to separate effects that are sensitive to detailed wiring from effects that are already explained by much coarser network information. Failing to distinguish an effect from a null is reported as exactly that: each mode carries a three-way verdict against a prespecified equivalence margin, and "not distinguishable" is never rendered as "the degraded graph reproduces the effect".
+
+The ladder itself is validated rather than assumed to work. A recurrent loop of known strength is planted in a synthetic graph of the same size, density and transmitter composition as a real cut, and the analysis is asked to find it; the unplanted control gives an empirical false-positive rate, and a power surface maps detection against effect size and permutation count. **The verdict this analysis returns is substrate-dependent**, and the repository's two committed cuts disagree: the same landscape classifies most cells as composition-dominated on the sparse 1-hop `named` cut and none of them on the denser `taste_motor` cut. A dependence result is therefore only quotable together with the structure of the graph it was measured on.
 
 ### 3. Model conclusions are stress-tested
 
@@ -167,6 +169,32 @@ Explore a derived circuit:
 ~~~bash
 flylab graph info --graph taste_motor
 ~~~
+
+## Declarative runs, claim cards and the artifact manifest
+
+A single assay answers one question. A **spec** describes a whole run, and `flylab run` turns it into a self-describing directory: the resolved spec, one notebook per cell, the analyses requested, figures, claim cards and a manifest recording the spec hash, the code and library hashes, the seeds, the timings and two hashes per artifact. The same spec and the same seed reproduce it byte for byte, and the keys that legitimately vary are declared, stripped from the content hash and listed per file.
+
+~~~bash
+flylab spec-schema --example > experiment.yaml   # a starter spec
+flylab run experiment.yaml --dry-run             # validate, resolve, estimate the runtime
+flylab run experiment.yaml --outdir runs/demo    # write the run directory
+~~~
+
+A **claim card** is the answer to "what is this number, and what is it worth?" for one readout. It states the claim, that it is a simulation rather than an observation, the typed evidence behind it with each row's distance from the modelled target, which single link of the provenance chain is a measurement, the assumptions that could change its sign, its connectome-dependence verdict, how much of the specification family retains it, that there is no independent biological validation, and the unknowns it does not paper over with a plausible number.
+
+~~~bash
+flylab card imidacloprid --conc 1e-6              # one card, printed
+flylab card --run runs/demo --markdown            # every card of a finished run
+~~~
+
+The **artifact manifest** hashes the code, the compound library, the derived graphs, the literature datasets and the paper artifacts, so a checkout can prove it is the one a result came from. The release workflow gates a tag on it.
+
+~~~bash
+flylab manifest --check                           # verify the committed manifest
+flylab manifest --write --lock                    # rewrite it, and the dependency lockfile
+~~~
+
+The full workflow — spec fields, what each analysis block runs, what the run directory contains and how the determinism digest is computed — is in [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
 ## Data and provenance
 

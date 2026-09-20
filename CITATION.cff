@@ -24,8 +24,9 @@ abstract: >-
   functional engagement, or nothing at all, so unsupported receptors return
   N/A rather than a small number. Around that it ships the analyses that test
   its own predictions: connectome-dependence analysis (empirical permutation
-  probabilities against four degraded graph models, with the weakest graph
-  model that still reproduces the effect), an ablation ladder over the
+  probabilities against degraded graph models, with a three-way verdict
+  against a prespecified equivalence margin and the weakest graph model the
+  test could not distinguish from the real cut), an ablation ladder over the
   pipeline's layers, a conclusion-stability matrix over a prespecified family
   of gain specifications, a variance-based uncertainty budget with a
   value-of-information ranking, a receptor-versus-circuit selectivity

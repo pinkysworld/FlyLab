@@ -41,6 +41,28 @@ def test_static_assets_are_mounted(client):
         assert client.get(path).status_code == 200, path
 
 
+def test_the_bench_ships_the_guided_tour_and_the_interpretation_link(client):
+    """The tour lives inside app.js, with no library and no extra file.
+
+    scripts/build_pages.py copies exactly app.js and styles.css, so anything the
+    static build must also have has to be in one of those two.
+    """
+    html = client.get("/static/index.html").text
+    assert 'id="btn-tour"' in html, "no way to replay the tour from the top bar"
+    assert 'id="btn-tour-inline"' in html, "no way to start the tour from the dashboard"
+    assert "docs/INTERPRETATION.md" in html, "the dashboard must link the interpretation guide"
+
+    js = client.get("/static/app.js").text
+    assert "TOUR_STEPS" in js and "function tourStart" in js
+    assert "tourSeen" in js, "the tour must remember its own dismissal"
+    assert "explainChip" in js, "a chip with no provenance must still explain its label"
+    # a non-rejection is not a reproduction: the badge may never say otherwise
+    assert "shuffle reproduces it</span>" not in js
+
+    css = client.get("/static/styles.css").text
+    assert ".tour-ring" in css and "pointer-events: none" in css, "the tour must not block the page"
+
+
 def test_health(client):
     body = client.get("/api/health").json()
     assert body == {"ok": True, "version": VERSION}

@@ -1,4 +1,4 @@
-# FlyLab handoff (v0.6, 2026-09-19)
+# FlyLab handoff (v0.6.1, 2026-09-20)
 
 Read this first if you are Claude, GPT, or another agent continuing the repo.
 Owner: https://github.com/pinkysworld/FlyLab
@@ -9,6 +9,8 @@ Package version: **0.6.0** in `CITATION.cff` and in the paper. **`flylab/__init_
 A **virtual pharmacology bench** on the public **MaleCNS v1.0** adult male *Drosophila* CNS (brain + ventral nerve cord). One compound + one free concentration → a **typed** insect engagement panel + a vertebrate panel at the same dose → gain patch on named MaleCNS cells → circuit readouts → one notebook JSON with provenance.
 
 Since v0.6 it is also, and mainly, **a method for disbelieving its own predictions**: connectome-dependence analysis, an ablation ladder, a conclusion-stability matrix over alternative gain specifications, and a variance-based uncertainty budget that names the next experiment.
+
+**v0.6.1 pointed those instruments at themselves and the central empirical claim reversed.** Two of them were broken in ways that flattered the conclusions (a transmitter null that moved the weighted excitation/inhibition balance; a specification family whose alternative gain rules never reached the engine its topology predicates ran on), the dependence ladder is now validated against planted ground truth, and repeating the landscape on the denser `taste_motor` cut gives the opposite verdict to the sparse `named` cut. Read "Findings that constrain what you may claim" below before writing any new claim.
 
 It is **not** a new connectome, not GLP tox, not a 166k-cell LIF product, and not live-animal results.
 
@@ -30,21 +32,21 @@ git pull
 python -m pip install -e ".[dev,viz]"
 python -m pytest -q                        # fast suite; `-m slow` adds the long checks
 flylab occupancy imidacloprid --conc 1e-6
-python scripts/reproduce_paper.py --fast   # ~2 min sanity check of the whole pipeline
+python scripts/reproduce_paper.py --fast   # ~4 min sanity check of the whole pipeline (a default run is ~35-45 min)
 flylab serve                               # http://127.0.0.1:8765
 ```
 
-## What changed in v0.6
+## What changed in v0.6 and v0.6.1
 
 **Pharmacology — the evidence is typed (schema v3)**
 - Every row records `param_type` (what the source measured: `Kd`/`Ki`/`EC50`/`IC50`/`Kb`/`relative_potency`/`class_order`/`unknown`) and `relation` (how far the source is from this compound/receptor/species). The relation is graded as an ordered **evidence distance** (`E0` exact compound+receptor+species, `E1` other species, `E2` related receptor, `E3` class extrapolation, `E4` unsupported), and the two together decide the **engagement model**: `binding_occupancy` (Kd/Ki at E0 only), `binding_engagement_proxy` (Kd/Ki at E1/E2), `functional_engagement` (a potency at E0), `functional_engagement_proxy` (any transferred number), or `not_modelled`. Proxy rows carry a `provenance_warning` naming what was transferred; `flylab.pharm.occupancy.evidence_distance_table()` is the census by distance.
 - **Unsupported rows return N/A**, never a small number, and `flylab.pharm.evidence.check_transformation` *raises* if asked anyway. Diazepam at insect RDL is N/A, not 1e-4.
-- Say **engagement**, not occupancy, unless the row carries a measured Kd. Exactly one does: imidacloprid at `insect_nAChR_beta1` (Kd 8.3e-11 M, Bass 2011 saturation binding).
+- Say **engagement**, not occupancy, unless the row carries a Kd measured on *this* compound, receptor **and** species. Exactly one does, and it is not the aphid row: Tomizawa, Latli and Casida 1996 on *Drosophila* head membranes, on the preparation-resolved key `insect_nAChR_native_dmel`. The aphid `insect_nAChR_beta1` Kd is a **cross-species proxy** — same number, different name, provenance warning attached.
 - Library: 101 rows / 21 compounds / 14 receptor keys. 34 EC50, 10 IC50, 1 Kd, 56 not modelled. Relations: 9 exact/exact/exact, 15 other-species, 10 related-receptor, 11 class-extrapolation, 56 unsupported.
 - Nicotinic key split by subunit: spinosad → α6, imidacloprid → β1; the rest stay on a documented aggregate because their sources used hybrid Dα/chicken-β2 constructs. Source correction: **Dederer 2011 is a cat-flea α1/α2 + chicken β2 hybrid, not a *Drosophila* receptor**, and the row now says so.
 
 **Analysis — five new modules**
-- `analysis/dependence.py` — connectome-dependence analysis: permutation *p* first, the four-mode profile, the dependence class, and the **necessary information level** (the weakest degraded graph that still reproduces the effect), plus a landscape over the whole library.
+- `analysis/dependence.py` — connectome-dependence analysis: permutation *p* first, the profile, the dependence class, and the **necessary information level** (the weakest degraded graph the test could **not** distinguish from the real cut — never "reproduces"). v0.6.1 adds a three-way verdict against a prespecified equivalence margin, a weight-matched transmitter null on the ladder's rank-3 rung, a relative effect floor, Benjamini-Hochberg across a landscape's structural tests with confirmatory/exploratory labelling, `cut_census` for the substrate's own statistics, and `synthetic_cut` / `ladder_recovery` / `ladder_power` for ground-truth validation of the instrument.
 - `analysis/baselines.py` — the ablation ladder: receptor-only / composition-only / topology-only / full, compared by ordering.
 - `analysis/robustness.py` — 25 prespecified gain specifications × 7 conclusions, and the 3×3 amplify/buffer threshold grid.
 - `analysis/uncertainty_global.py` — Sobol' budget with Jansen estimators, a null factor that measures the noise floor, and Ishigami validation.
@@ -53,22 +55,28 @@ flylab serve                               # http://127.0.0.1:8765
 
 **Paper and pipeline**
 - The manuscript is now a **research article** (Introduction / Methods / Results / **Discussion** / Conclusion) organised around four research questions, with `papers/SUPPLEMENT.md` holding the mechanism rationale, the null-model definitions, the LIF calibration, the supporting capabilities and the prospective predictions. Body is inside the 5000–7000 target and a test enforces it.
-- `scripts/reproduce_paper.py` gained `evidence`, `dependence` (replacing `nulls`), `ablation`, `stability`, `uncertainty` and `claims` steps: 15 figures, 21 tables. Default ~8–10 min, `--fast` ~2 min. `--jobs` backgrounds the two dominant analyses; results are identical at any value.
+- `scripts/reproduce_paper.py` now produces 16 figures and T0–T25, including T12b (the landscape on `taste_motor`), T19 (both cuts' structure), T20 (the transformation rule), T21 (the transmitter signs), T22 (instrument validation), T23 (transmitter-null balance), T24 (the composition reference distribution) and T25 (the normalisation sweep). Default ~35–45 min, `--fast` ~4 min. A test asserts the committed record was produced at the shipped statistical effort, not merely that it is self-consistent.
 - "Pre-registered" is gone everywhere: the predictions are **prospective** until a tagged release is externally archived.
 
 ## Findings that constrain what you may claim
 
 Read these before writing any new claim into the paper, the README or a PR description.
 
-1. **Most predictions do not need the connectome.** Landscape over 21 compounds × 4 concentrations: 20 topology-dependent, 51 composition-dominated, 13 no-effect, 0 mixed. The topology-dependent set is exactly the chloride-channel blockers. Imidacloprid at 1 µM is composition-dominated (p = 0.275 / 0.586 / 0.472 at n = 1000; necessary level `degree_sequence`); fipronil is topology-dependent (p = 0.0060 / 0.0070; necessary level `wiring_without_transmitter_identity`). Never say "the connectome matters" without the compound, the concentration, the readout and the *p*.
+1. **The dependence verdict is substrate-dependent, and that is the headline.** The same landscape, same instrument, no parameter changed: on the 1-hop `named` cut (mean degree 1.208, 85% of edges onto four seed cells, 184 of 1126 nodes with any input) 11 of 84 cells are topology-dependent, 42 composition-dominated and 31 no-effect at n = 1000 with Benjamini-Hochberg and a 1 % relative effect floor. On `taste_motor` (mean degree 10.4) the same cells give 54 / 0 / 30: **every cell with an effect above the floor is topology-dependent**, imidacloprid at 1 µM included (p_degree = 0.003). "Most predictions do not need the connectome" and "the topology-dependent set is exactly the chloride-channel blockers" are **withdrawn**. Never state a dependence result without the cut, the compound, the concentration, the readout, the *p* and the correction.
+   1a. **Non-rejection is not equivalence.** Each mode carries a three-way verdict against a prespecified margin (0.332 Hz, 5% of the vehicle readout on `named`). For imidacloprid at n = 1000: equivalent within tolerance for rewire_degree_preserving, sign_permute_weight_matched, weight_permute, indeterminate for sign_permute. Never write "reproduces".
+   1b. **The transmitter null was biased.** Plain label permutation moves the cholinergic share of out-weight from 0.619 to 0.544 ± 0.027, putting the real graph at the 100th percentile of its own null. It is now reported as a joint target-set-and-sign null; the ladder's rank-3 rung is the weight-matched shuffle.
+   1c. **The instrument is validated.** Planted ground truth on a synthetic cut: the ladder recovered 2 of 3 planted topology-dependent effects at n = 200 and returned no false positive on the unplanted control. False-positive rate 0 of 18; detection by permutation count n=50: 0.61, n=200: 0.61, n=1000: 0.67, so effect size dominates.
 2. **The bitter-veto arm is a properly powered negative** (n = 300: p = 0.42 / 0.88 / 0.20 / 0.24, all |z| < 0.25). H6 is a pharmacology prediction, not a wiring prediction. Imidacloprid's veto ratio there is **undefined** (MN9 silenced), not zero.
-3. **The suppression result is a property of the gain rule.** "A nicotinic agonist suppresses circuit activity" survives 15/25 specifications and is reversed by all ten monotone ones, where the same drug at the same engagement *excites* the network. Do not lead with it. RDL disinhibition, both topology conclusions and the map bitter-veto direction are 25/25 and may be quoted freely.
-4. **Nearly all ordering information is in the mechanism rules**, not the wiring: composition-only reproduces the full model's ordering (ρ 0.906–0.989), topology-only with a generic multiplier is the worst level (ρ 0.24, 11.7 Hz rms).
-5. **The uncertainty lives in two assumptions**: `gain_transform` (S1 0.410) and `weight_threshold` (S1 0.294). Potency and Hill *n* are invisible at a saturating dose. The one allowed fit is therefore the gain transformation, and `weight_threshold` can be reduced with **no experiment at all**.
+3. **The suppression result is a property of the gain rule — and the old stability matrix was vacuous.** "A nicotinic agonist suppresses circuit activity" survives 15/25 specifications and is reversed by all 10 monotone ones, where the same drug at the same engagement *excites* the network. The v0.6 topology rows were computed at 6 shuffles (p ≤ 0.05 unattainable) **and** under a context that never rebound the gain function on the engine the permutation path resolves, so every specification fed default gains to its nulls. Recomputed at 100 shuffles with the specification pushed into the null engine and FDR across 100 tests, C3 holds 25/25 and C4 25/25 — but only 17 of C3's retentions reach equivalence and 8 are indeterminate. Retained by every specification: C2_rdl_disinhibition, C3_imidacloprid_topology_not_distinguishable, C4_fipronil_topology_exceeds, C7_map_bitter_veto.
+4. **The ablation conclusion is withdrawn, and the composition correlation needs its reference.** Level C's old generic multiplier could only depress, so it could not express disinhibition; with a direction-aware rule its rank correlation at 1 µM rises from 0.242 to 0.961, and "the connectome without the pharmacology is not a cheap substitute" is retracted. The composition-versus-full correlation is 0.988, but pharmacology-free pseudo-compounds already reach a median of 0.847 and shuffling compound labels leaves it identically 0.988 — it carries no compound-level information. It is also not robust to the engine: 0.666 at 1 µM and -0.372 at 10 nM under a degree-corrected denominator. Never quote it without its reference distribution and the normalisation it was computed under.
+5. **The uncertainty lives in two assumptions**: gain_transform, weight_threshold are the only factors whose bootstrap first-order interval excludes zero (S1 0.410 and 0.294). The estimator's noise floor is 0.046, set by gain_coef and **not** by the declared null factor `lif_seed` (-0.007); `drive` sits inside it and is no longer a ranked finding. Potency and Hill *n* are invisible at a saturating dose. Interactions carry 0.344 raw and 0.272 with negative estimates clipped.
 6. **The amplify/buffer split is threshold-sensitive** (`stable = False`): quote the range over the 3×3 grid, never the point estimate.
 7. **The rate and LIF engines agree on direction only** (sugar-driven MN9 ≈ 0.29 Hz vs ≈ 105 Hz). That is not cross-model validation and must not be called one.
 8. **There is no independent out-of-sample validation of the circuit model.** Rank comparisons are literature *concordance*, and the pipeline flags which of them share a source with the library.
 9. **`data/literature/README.md` lists ten literature-vs-library contradictions.** Report them; do not silently edit the library to match.
+10. **Five transmitter sign magnitudes are asserted** (glutamate -0.4, histamine -0.5, dopamine +0.2, serotonin +0.2, octopamine +0.2), vary in no specification family, and are not bounded by the label-permuting null. They are published as T21; quote them as assertions.
+11. **The rate engine row-normalises its weight matrix** (`row_abs`), so each cell's recurrent input is a composition-weighted average of its presynaptic gains. Any composition-versus-topology statement must name the normalisation it was computed under.
+12. **The literature-concordance mean is not quotable bare**: 4 of 8 comparisons order two compounds. Use the mean over the 4 informative ones (0.756) or the concordance count (8 vs 0, binomial p = 0.008).
 
 ## Issues
 
@@ -120,7 +128,7 @@ flylab selectivity --conc 1e-6
 flylab predictions
 
 # paper
-python scripts/reproduce_paper.py              # full, ~8-10 min, 15 figures / 21 tables
+python scripts/reproduce_paper.py              # full, ~35-45 min, 16 figures / T0-T25
 python scripts/reproduce_paper.py --fast       # ~2 min sanity check, NOT the paper
 python scripts/reproduce_paper.py --only dependence --outdir /tmp/x
 python scripts/reproduce_paper.py --only paper # re-render prose from results.json

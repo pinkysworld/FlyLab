@@ -20,6 +20,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.reproduce_paper import (  # noqa: E402
+    DEFAULT_EFFORT,
+    LIBRARY_DEFAULTS,
     PAPER_KEYS,
     RESULTS_SCHEMA,
     STEP_NAMES,
@@ -32,7 +34,7 @@ SUPPLEMENT_TEMPLATE = PAPERS / "SUPPLEMENT.md.in"
 COMMITTED_RESULTS = PAPERS / "results.json"
 
 #: figures a full run must produce
-EXPECTED_FIGURES = 15
+EXPECTED_FIGURES = 16
 
 #: two steps that touch no circuit runtime, so the fast run stays well under a
 #: second: one writes a table, the other writes a figure.
@@ -233,6 +235,39 @@ def test_declared_paper_keys_are_actually_used() -> None:
 def test_committed_run_was_not_a_fast_run() -> None:
     doc = json.loads(COMMITTED_RESULTS.read_text())
     assert doc["fast"] is False, "papers/results.json came from a --fast run; rebuild it"
+
+
+@pytest.mark.skipif(not COMMITTED_RESULTS.exists(), reason="papers/results.json not built yet")
+def test_committed_record_was_produced_at_the_shipped_effort() -> None:
+    """Every statistical knob in the record equals the shipped default.
+
+    The second-round referee found that the committed record carried
+    ``stab_n_shuffles = 6`` while the code shipped 100, which made the
+    conclusion-stability matrix's topology rows a non-rejection under a test
+    that could not reject -- and that nothing in the suite noticed, because
+    determinism and the ``--fast`` guard both compare a record against itself.
+    This compares it against the code.
+    """
+    values = json.loads(COMMITTED_RESULTS.read_text())["values"]
+    wrong = []
+    for key, expected in DEFAULT_EFFORT.items():
+        row = values.get(key)
+        if row is None:
+            wrong.append(f"{key}: absent from the record")
+        elif int(row["value"]) != int(expected):
+            wrong.append(f"{key}: record {row['value']!r} != shipped default {expected!r}")
+    assert not wrong, "the committed record was not produced at the shipped effort: " + "; ".join(wrong)
+
+
+def test_shipped_effort_matches_the_library_constants() -> None:
+    """...and the pipeline's own table has not drifted from ``flylab``."""
+    import importlib
+
+    for key, (module, attr) in LIBRARY_DEFAULTS.items():
+        got = getattr(importlib.import_module(module), attr)
+        assert int(got) == int(DEFAULT_EFFORT[key]), (
+            f"DEFAULT_EFFORT[{key!r}] = {DEFAULT_EFFORT[key]} but {module}.{attr} = {got}"
+        )
 
 
 @pytest.mark.skipif(not COMMITTED_RESULTS.exists(), reason="papers/results.json not built yet")

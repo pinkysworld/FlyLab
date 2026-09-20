@@ -8,14 +8,15 @@ Goal: one lab that feels like software on Windows and macOS (Linux comes free), 
 |---|---|---|
 | Science core | Python 3.11+ | Connectome loaders, typed engagement, permutation analyses, pytest; every fly sim already lives here |
 | Numerics | numpy only (no scipy) | Spearman, Kendall, Nelder–Mead and the bootstrap are ~200 lines each; scipy has no WebAssembly guarantee and the browser build has to import the same package |
-| Circuit kernel | numpy rate model + numpy LIF | the rate model is deterministic and ~50 ms per run, which is what makes 400 null-model shuffles affordable; Brian2 stays optional and unused |
+| Circuit kernel | numpy rate model + numpy LIF | the rate model is deterministic and ~50 ms per run, which is what makes a 1000-shuffle permutation profile and an 84-cell FDR-corrected landscape on two cuts affordable; Brian2 stays optional and unused. The engine row-normalises its weight matrix by default (`normalise="row_abs"`, with `none` and `degree` selectable) and that choice is load-bearing for the composition-versus-topology question, so it is swept rather than assumed |
 | API | FastAPI + pydantic | local server, OpenAPI, one place to hang the UI and the browser bridge; the browser bridge mirrors every route |
 | Browser | Pyodide + `flylab/browser/bridge.py` | the *same wheel* answers the same routes in a tab; no second implementation (`docs/PAGES.md`) |
 | UI | plain HTML + `app.js`, CDN libs, no build step | one file serves both the local server and the static site |
 | Plots | Plotly.js + cytoscape.js (UI) / matplotlib (paper figures) | the paper needs 300 dpi PNG+SVG from the same numbers the UI shows |
 | Packaging | `flylab serve` opens the browser; GitHub Pages for the zero-install bench | no Electron, no Tauri yet |
 | Data | user-downloaded Feather; only small derived JSON in git | CC-BY maps stay off git; the 1.1 GB matrix is never needed to reproduce the paper |
-| Reproduction | `scripts/reproduce_paper.py` (argparse, named steps, `--fast`, `--only`, `--outdir`) | one command regenerates every figure, table and number; `papers/results.json` is the machine-readable record |
+| Reproduction | `scripts/reproduce_paper.py` (argparse, named steps, `--fast`, `--only`, `--outdir`) | one command regenerates every figure, table and number; `papers/results.json` is the machine-readable record, and a test asserts the committed record was produced at the shipped statistical effort rather than merely being self-consistent |
+| Declarative runs | `flylab run` over a YAML spec (`flylab/spec.py`) | a whole run as one file: resolved spec, notebooks, analyses, figures, claim cards and a manifest with two hashes per artifact; the same spec and seed reproduce it byte for byte (`docs/WORKFLOW.md`) |
 | CI | GitHub Actions: `tests.yml`, `pages.yml`, `malecns-subgraph.yml` | tests on push, static bench on `main`, the 1.1 GB cut on demand |
 
 Ship Gate 3 as **localhost in the default browser**. That is already cross-platform, and since v0.5 there is a second, zero-install route: the same wheel on Pyodide, published from GitHub Pages. Wrap in [Tauri](https://tauri.app/) only when someone asks for a Dock / Start-menu icon.
@@ -61,7 +62,7 @@ Streamlit is allowed as a *throwaway* Gate-3 spike if FastAPI+React slips. It mu
 python -m pip install -e ".[dev,viz]"
 python -m pytest -q                  # fast suite; `-m slow` adds the end-to-end checks
 flylab serve                         # http://127.0.0.1:8765
-python scripts/reproduce_paper.py    # ~8-10 min: 15 figures, 21 tables, results.json
+python scripts/reproduce_paper.py    # ~35-45 min: 16 figures, T0-T25, results.json
 ```
 
 Same command on Windows PowerShell and macOS Terminal. Python from python.org or conda-forge, not the Windows Store stub.

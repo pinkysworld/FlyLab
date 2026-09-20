@@ -140,6 +140,37 @@ TIER_HATCH = {"literature_order": "", "measured_fit": "..", "class_placeholder":
 PANEL4 = ("imidacloprid", "fipronil", "deltamethrin", "ivermectin")
 PAPER_CONC = 1e-6
 
+#: The statistical effort of a **default** (non-``--fast``) run, in one place.
+#: The referee's B4 was that the committed record had been produced at a
+#: shuffle count the shipped code no longer used and that nothing detected it,
+#: so ``tests/test_reproduce.py`` asserts that every one of these knobs, as
+#: recorded in ``papers/results.json``, equals the value here -- and that the
+#: ones that mirror a library default still equal that default.
+DEFAULT_EFFORT: dict[str, int] = {
+    "dep_n": 1000,
+    "dep_n_taste": 300,
+    "dep_n_landscape": 1000,
+    "dep_n_landscape_taste": 300,
+    "bal_n": 1000,
+    "val_recovery_n": 200,
+    "val_power_replicates": 6,
+    "stab_n_shuffles": 100,
+    "stab_family_size": 25,
+    "abl_ref_n_draws": 50,
+    "unc_n_base": 1024,
+    "ish_n_base": 16384,
+    "ic50_n_boot": 200,
+    "pred_n_rep": 6,
+}
+
+#: knobs above that must also equal a constant shipped inside ``flylab``
+LIBRARY_DEFAULTS: dict[str, tuple[str, str]] = {
+    "dep_n": ("flylab.analysis.dependence", "PAPER_N"),
+    "dep_n_landscape": ("flylab.analysis.dependence", "PAPER_N"),
+    "stab_n_shuffles": ("flylab.analysis.robustness", "DEFAULT_SHUFFLES"),
+}
+
+
 #: null mode -> the key a dependence result files its probability under.
 #: ``sign_permute_weight_matched`` is the ladder's rank-3 rung; the plain
 #: ``sign_permute`` beside it is a joint target-set-and-sign null (T23).
@@ -397,7 +428,7 @@ def _bg_sobol(fast: bool, seed: int) -> dict[str, Any]:
         compound="imidacloprid",
         conc_M=PAPER_CONC,
         readout="mean_hz",
-        n_base=64 if fast else 1024,
+        n_base=64 if fast else DEFAULT_EFFORT["unc_n_base"],
         n_boot=50 if fast else 200,
         seed=seed,
     )
@@ -1632,10 +1663,10 @@ def step_dependence(ctx: Ctx) -> None:
     plt = _plt()
     # leave a core for each job still running in the background
     jobs = max(1, ctx.jobs - len(ctx.background))
-    n = 20 if ctx.fast else 1000
-    n_taste = 20 if ctx.fast else 300
-    n_land = 20 if ctx.fast else 1000
-    n_land_taste = 20 if ctx.fast else 300
+    n = 20 if ctx.fast else DEFAULT_EFFORT["dep_n"]
+    n_taste = 20 if ctx.fast else DEFAULT_EFFORT["dep_n_taste"]
+    n_land = 20 if ctx.fast else DEFAULT_EFFORT["dep_n_landscape"]
+    n_land_taste = 20 if ctx.fast else DEFAULT_EFFORT["dep_n_landscape_taste"]
     #: fractions of n at which the permutation p is recomputed on the same
     #: draws -- a free permutation-count sweep (25, 50, 100, 200, 400, n).
     sweep = (0.025, 0.05, 0.1, 0.2, 0.4, 1.0)
@@ -1916,7 +1947,11 @@ def step_dependence(ctx: Ctx) -> None:
     ctx.put("dep_p_within_0p02_worst_n", int(max(settle)) if settle else None)
 
     # ---- T23: what each transmitter null does to the weighted E/I balance --
-    bal = balance_report(graph="named", n=min(n, 1000), seed=ctx.seed)
+    bal = balance_report(
+        graph="named",
+        n=20 if ctx.fast else DEFAULT_EFFORT["bal_n"],
+        seed=ctx.seed,
+    )
     bal_rows: list[dict[str, Any]] = []
     for mode, per_nt in bal["modes"].items():
         for nt, r in per_nt.items():
@@ -1991,13 +2026,13 @@ def step_dependence(ctx: Ctx) -> None:
     # ---- T22 + F16: does the instrument work? ------------------------
     rec = ladder_recovery(
         strengths=(0.0, 0.5, 1.0, 2.0),
-        n=20 if ctx.fast else 200,
+        n=20 if ctx.fast else DEFAULT_EFFORT["val_recovery_n"],
         seed=ctx.seed,
     )
     pw = ladder_power(
         strengths=(0.0, 0.25, 0.5, 1.0),
         ns=(20,) if ctx.fast else (50, 200, 1000),
-        replicates=2 if ctx.fast else 6,
+        replicates=2 if ctx.fast else DEFAULT_EFFORT["val_power_replicates"],
         seed=ctx.seed,
     )
     ctx.put("val_recovery_n", int(rec["n"]))
@@ -2688,7 +2723,7 @@ def step_dose(ctx: Ctx) -> None:
     from flylab.assays.ensemble import circuit_ic50, sensitivity
 
     plt = _plt()
-    n_boot = 40 if ctx.fast else 200
+    n_boot = 40 if ctx.fast else DEFAULT_EFFORT["ic50_n_boot"]
     n_rep = 2 if ctx.fast else 4
     ctx.put("ic50_n_boot", n_boot)
     ctx.put("ic50_n_rep", n_rep)
@@ -3196,10 +3231,10 @@ def _model_ranks(compounds: list[dict[str, Any]]) -> list[float]:
 
 
 def step_predictions(ctx: Ctx) -> None:
-    """T3: the pre-registered predictions with effect sizes and suggested n."""
+    """T3: the prospective predictions with effect sizes and a planning minimum."""
     from flylab.analysis.predictions import prediction_table
 
-    n_rep = 2 if ctx.fast else 6
+    n_rep = 2 if ctx.fast else DEFAULT_EFFORT["pred_n_rep"]
     ctx.put("pred_n_rep", n_rep)
     tab = prediction_table(n_rep=n_rep, seed=ctx.seed)
     rows = []
@@ -3236,7 +3271,7 @@ def step_predictions(ctx: Ctx) -> None:
     mismatched = [r["id"] for r in rows if r["observed_direction"] and r["predicted_direction"] != r["observed_direction"] and r["predicted_direction"] != "none"]
     ctx.put("pred_direction_mismatches", mismatched, text=", ".join(mismatched) or "none")
     if mismatched:
-        ctx.note("pre-registered direction not reproduced by the model for: " + ", ".join(mismatched))
+        ctx.note("prospective direction not reproduced by the model for: " + ", ".join(mismatched))
     save_table(
         ctx,
         "T3_predictions",
@@ -3517,7 +3552,9 @@ def step_ablation(ctx: Ctx) -> None:
 
     # ---- T24: what rho would have been unsurprising -------------------
     ref = composition_reference_distribution(
-        conc_M=PAPER_CONC, n_draws=10 if ctx.fast else 50, seed=ctx.seed
+        conc_M=PAPER_CONC,
+        n_draws=10 if ctx.fast else DEFAULT_EFFORT["abl_ref_n_draws"],
+        seed=ctx.seed,
     )
     cond = ref["conditions"]
     sparse = cond["random_single_gain_vectors"]["spearman_rho"] or {}
@@ -3614,7 +3651,7 @@ def step_ablation(ctx: Ctx) -> None:
                 "reproduces_full_ordering": block["reproduces_full_ordering"],
             }
         )
-    if not ctx.fast:
+    if True:
         low = composition_dominance_under_normalisations(conc_M=1e-8)
         for mode, block in low["by_normalisation"].items():
             ctx.put(f"abl_rho_composition_{mode}_1e8", _f(block["spearman_rho_b_vs_d"]))
@@ -4196,11 +4233,18 @@ def step_stability(ctx: Ctx) -> None:
         "Each row is a conclusion this paper could state; each column is one "
         "prespecified, admissible way of turning receptor engagement into synaptic "
         "gain. Green retains the conclusion, red reverses it, amber means the readout "
-        "does not exist under that specification. The topology conclusions, the RDL "
-        "disinhibition and the map bitter-veto direction survive every specification; "
-        "the nicotinic suppression conclusion is reversed by every monotone rule, which "
-        "is how a result that depends on a modelling choice looks when it is tested "
-        "rather than asserted.",
+        "does not exist under that specification. The topology rows are decided on "
+        f"{res['n_shuffles']} permutations per specification and on Benjamini-Hochberg "
+        f"adjusted probabilities across the {res['n_structural_tests']} structural "
+        "tests of the run; until v0.6.1 the specification never reached the engine "
+        "those rows were computed on, so their uniformity was guaranteed by "
+        "construction rather than measured. Retained by every specification: "
+        + (", ".join(r["conclusion"] for r in res["rows"] if not r["fragile"]) or "none")
+        + ". The nicotinic suppression conclusion is reversed by every monotone rule, "
+        "which is how a result that depends on a modelling choice looks when it is "
+        "tested rather than asserted; and for a conclusion shaped as a failure to "
+        "reject, the fraction retained is only as strong as the equivalence behind it "
+        "(T14's `n_equivalent_within_tolerance` against `n_indeterminate`).",
     )
 
 
@@ -4293,7 +4337,7 @@ def step_uncertainty(ctx: Ctx) -> None:
     ctx.put("unc_max_delta_first", _f(conv.get("max_abs_delta_first")))
 
     # estimator validation against an analytic benchmark
-    n_ish = 1024 if ctx.fast else 16384
+    n_ish = 1024 if ctx.fast else DEFAULT_EFFORT["ish_n_base"]
     ish = sobol_analysis(
         model=ishigami_unit, factor_names=["x1", "x2", "x3"], n_base=n_ish, seed=ctx.seed, n_boot=0
     )
@@ -4636,9 +4680,9 @@ def step_architecture(ctx: Ctx) -> None:
         "to a gain patch on transmitter classes of a named MaleCNS cut; the vertebrate "
         "side is scored at the same dose and never touches a circuit. The circuit "
         "runtime (rate or LIF) produces named-cell readouts, which the analysis and "
-        "validation layers turn into null-model z-scores, selectivity indices, rank "
-        "correlations and pre-registered predictions. Everything lands in one notebook "
-        "JSON with a provenance block.",
+        "validation layers turn into empirical permutation probabilities with their "
+        "three-way verdicts, selectivity indices, rank correlations and prospective "
+        "predictions. Everything lands in one notebook JSON with a provenance block.",
         svg=True,
     )
 
@@ -4743,161 +4787,351 @@ BACKGROUND_STEPS: dict[str, tuple[str, Callable[..., dict[str, Any]]]] = {
 }
 STEP_NAMES = [s[0] for s in STEPS]
 
-#: keys the paper template is allowed to reference; tests assert they all exist
-#: after a full run.  Keep in sync with papers/IJRC_FlyLab_draft.md.in.
+#: Every key the manuscript or the supplement substitutes.  A test asserts
+#: each one exists in the committed record after a full run, and another that
+#: none has rotted into a wish list; regenerate this tuple from the two
+#: templates whenever their prose changes.
 PAPER_KEYS: tuple[str, ...] = (
-    "flylab_version",
-    "git_sha",
-    "library_sha256",
-    "map_id",
-    "ev_rows",
+    "abl_composition_survives_normalisations",
+    "abl_compounds",
+    "abl_concs",
+    "abl_generic_floor_note",
+    "abl_generic_floor_rule",
+    "abl_generic_rule",
+    "abl_glutamate_max_delta_rho",
+    "abl_ref_matched_median",
+    "abl_ref_matched_p05",
+    "abl_ref_matched_p95",
+    "abl_ref_n_draws",
+    "abl_ref_no_floor",
+    "abl_ref_shuffled",
+    "abl_rho_composition_degree",
+    "abl_rho_composition_degree_1e8",
+    "abl_rho_composition_none",
+    "abl_rho_composition_paper",
+    "abl_rho_composition_row_abs",
+    "abl_rho_receptor_max",
+    "abl_rho_receptor_min",
+    "abl_rho_topology_floor_paper",
+    "abl_rho_topology_paper",
+    "abl_worst_level_by_conc",
+    "abl_worst_level_by_conc_floor_rule",
+    "bal_matched_max_deviation",
+    "bal_n",
+    "bal_plain_ach_max",
+    "bal_plain_ach_mean",
+    "bal_plain_ach_min",
+    "bal_plain_ach_percentile",
+    "bal_plain_ach_sd",
+    "bal_real_ach_share",
+    "bal_tol",
+    "claims_chain_links",
+    "claims_computed",
+    "claims_facts_phrase",
+    "claims_inference_phrase",
+    "claims_literature_derived",
+    "claims_model_assumption",
+    "claims_observed_phrase",
+    "claims_unknown_phrase",
+    "dep_land_below_relative_floor",
+    "dep_land_below_relative_floor_cells",
+    "dep_land_cells",
+    "dep_land_composition_dominated",
+    "dep_land_composition_dominated_absfloor",
+    "dep_land_composition_dominated_raw",
+    "dep_land_compounds",
+    "dep_land_concs",
+    "dep_land_fdr_can_reject",
+    "dep_land_fipronil_class",
+    "dep_land_fipronil_class_raw",
+    "dep_land_fipronil_q",
+    "dep_land_mixed",
+    "dep_land_n_structural_tests",
+    "dep_land_no_effect",
+    "dep_land_no_effect_absfloor",
+    "dep_land_no_effect_raw",
+    "dep_land_non_monotone",
+    "dep_land_non_monotone_cells",
+    "dep_land_taste_cells",
+    "dep_land_taste_composition_dominated",
+    "dep_land_taste_imidacloprid_class",
+    "dep_land_taste_imidacloprid_p_rewire_degree_preserving",
+    "dep_land_taste_imidacloprid_q",
+    "dep_land_taste_n_structural_tests",
+    "dep_land_taste_no_effect",
+    "dep_land_taste_non_monotone",
+    "dep_land_taste_topology_dependent",
+    "dep_land_topology_dependent",
+    "dep_land_topology_dependent_absfloor",
+    "dep_land_topology_dependent_raw",
+    "dep_land_verdicts_distinguishable",
+    "dep_land_verdicts_equivalent_within_tolerance",
+    "dep_land_verdicts_indeterminate",
+    "dep_n",
+    "dep_n_landscape",
+    "dep_n_landscape_taste",
+    "dep_n_taste",
+    "dep_named_fipronil_class",
+    "dep_named_fipronil_effect",
+    "dep_named_fipronil_level",
+    "dep_named_fipronil_min_structural_p",
+    "dep_named_fipronil_p_rewire_degree_preserving",
+    "dep_named_fipronil_p_weight_permute",
+    "dep_named_imidacloprid_class",
+    "dep_named_imidacloprid_delta",
+    "dep_named_imidacloprid_delta_frac",
+    "dep_named_imidacloprid_effect",
+    "dep_named_imidacloprid_equivalent_modes",
+    "dep_named_imidacloprid_gap_sign_permute",
+    "dep_named_imidacloprid_gap_sign_permute_weight_matched",
+    "dep_named_imidacloprid_indeterminate_modes",
+    "dep_named_imidacloprid_level",
+    "dep_named_imidacloprid_level_verdict",
+    "dep_named_imidacloprid_p_erdos_renyi",
+    "dep_named_imidacloprid_p_rewire_degree_preserving",
+    "dep_named_imidacloprid_p_sign_permute",
+    "dep_named_imidacloprid_p_sign_permute_weight_matched",
+    "dep_named_imidacloprid_p_weight_permute",
+    "dep_named_imidacloprid_verdict_erdos_renyi",
+    "dep_named_imidacloprid_verdict_rewire_degree_preserving",
+    "dep_named_imidacloprid_verdict_sign_permute",
+    "dep_named_imidacloprid_verdict_sign_permute_weight_matched",
+    "dep_named_imidacloprid_verdict_weight_permute",
+    "dep_p_floor",
+    "dep_p_within_0p02_from_n",
+    "dep_p_within_0p02_worst_n",
+    "dep_taste_fipronil_equivalent_modes",
+    "dep_taste_fipronil_indeterminate_modes",
+    "dep_taste_fipronil_max_abs_z",
+    "dep_verdict_stable_from_n",
+    "dep_verdict_stable_to_n",
+    "dia_insect_rdl_occ",
+    "ev_binding_proxy_row_names",
+    "ev_binding_row_names",
     "ev_compounds",
-    "ev_receptor_keys",
+    "ev_dist_E0",
+    "ev_dist_E1",
+    "ev_dist_E2",
+    "ev_dist_E3",
+    "ev_dist_E4",
+    "ev_distance_labels",
+    "ev_library_problems",
+    "ev_model_binding_engagement_proxy",
+    "ev_model_binding_occupancy",
+    "ev_model_functional_engagement",
+    "ev_model_functional_engagement_proxy",
+    "ev_model_not_modelled",
     "ev_param_EC50",
     "ev_param_IC50",
     "ev_param_Kd",
+    "ev_param_unknown",
+    "ev_receptor_keys",
+    "ev_rows",
     "ev_rows_not_modelled",
-    "ev_rel_unsupported",
-    "ev_binding_row_names",
-    "named_nodes",
-    "named_edges",
-    "taste_nodes",
-    "taste_edges",
-    "census_traced",
-    "lb_type_count",
-    "sweet_grn_cells",
-    "bitter_grn_cells",
-    "paths_sweet",
-    "paths_bitter",
-    "paths_max_len",
-    "imi_insect_occ",
-    "imi_vert_occ",
-    "imi_ec50_ratio",
-    "fip_insect_occ",
-    "fip_vert_occ",
-    "fip_ec50_ratio",
-    "dia_insect_rdl_occ",
-    "window_log10_imidacloprid",
-    "veto_rate_vehicle_ratio",
-    "veto_lif_vehicle_ratio",
-    "veto_rate_fipronil_ratio",
-    "veto_lif_fipronil_ratio",
-    "veto_rate_vehicle_sugar",
-    "veto_lif_vehicle_sugar",
-    "veto_n_sweet_grn",
-    "veto_sugar_hz",
-    "dep_n",
-    "dep_p_floor",
-    "dep_named_imidacloprid_effect",
-    "dep_named_imidacloprid_class",
-    "dep_named_imidacloprid_level",
-    "dep_named_imidacloprid_p_sign_permute",
-    "dep_named_imidacloprid_p_weight_permute",
-    "dep_named_imidacloprid_p_rewire_degree_preserving",
-    "dep_named_imidacloprid_p_erdos_renyi",
-    "dep_named_fipronil_effect",
-    "dep_named_fipronil_class",
-    "dep_named_fipronil_level",
-    "dep_named_fipronil_p_weight_permute",
-    "dep_named_fipronil_p_rewire_degree_preserving",
-    "dep_named_fipronil_p_sign_permute",
-    "dep_n_taste",
-    "dep_taste_fipronil_max_abs_z",
-    "dep_taste_fipronil_p_sign_permute",
-    "dep_taste_fipronil_p_weight_permute",
-    "dep_taste_fipronil_p_rewire_degree_preserving",
-    "dep_taste_fipronil_p_erdos_renyi",
-    "dep_n_landscape",
-    "dep_land_cells",
-    "dep_land_compounds",
-    "dep_land_concs",
-    "dep_land_topology_dependent",
-    "dep_land_composition_dominated",
-    "dep_land_no_effect",
-    "dep_land_mixed",
-    "dep_land_topology_compounds",
-    "dep_verdict_stable_from_n",
-    "dep_verdict_stable_to_n",
-    "dep_p_within_0p02_from_n",
-    "dep_p_within_0p02_worst_n",
-    "abl_compounds",
-    "abl_nicotinic_n",
-    "abl_rho_receptor_min",
-    "abl_rho_receptor_max",
-    "abl_rho_composition_min",
-    "abl_rho_composition_max",
-    "abl_rho_topology_paper",
-    "abl_rms_topology_hz",
-    "abl_rho_composition_nicotinic",
-    "stab_family_size",
-    "stab_C1_retained",
-    "stab_C1_lost",
-    "stab_C5_retained",
-    "stab_C5_undecidable",
-    "stab_C6_retained",
-    "stab_specification_independent",
-    "stab_default_g_ach",
-    "stab_default_treated_hz",
-    "stab_default_vehicle_hz",
-    "stab_monotone_g_ach",
-    "stab_monotone_treated_hz",
-    "stab_monotone_vehicle_hz",
-    "stab_monotone_pct_change",
-    "thr_stable",
-    "thr_circuit_fracs",
-    "thr_vert_limits",
-    "thr_nicotinic_matching",
-    "thr_nicotinic_cells",
-    "thr_nicotinic_gap_min",
-    "thr_nicotinic_gap_max",
-    "thr_nav_ache_matching",
-    "thr_nav_ache_cells",
-    "thr_nav_ache_failing",
-    "thr_nav_ache_gap_min",
-    "unc_n_base",
-    "unc_evaluations",
-    "unc_variance",
-    "unc_S_gain_transform",
-    "unc_ST_gain_transform",
-    "unc_S_weight_threshold",
-    "unc_ST_weight_threshold",
-    "unc_S_drive",
-    "unc_noise_floor",
-    "unc_at_noise_floor",
-    "unc_interaction_share",
-    "ish_n_base",
-    "ish_estimated",
-    "ish_analytic",
-    "ish_max_abs_error",
-    "voi_rank1_factor",
-    "voi_rank1_var",
-    "voi_rank1_experiment",
-    "voi_rank2_factor",
-    "voi_rank2_var",
-    "voi_var_total",
-    "rank_mean_rho",
-    "rank_evaluated",
-    "rank_skipped",
-    "rank_known_discrepancies",
-    "rank_discrepancy_ids",
-    "rank_shared_source",
-    "rank_source_disjoint",
-    "mix_n_targets",
-    "mix_n_matching",
-    "mix_n_substituted",
-    "mix_species",
     "expr_coverage_overall",
     "expr_mn9_delta_hz",
+    "fip_ec50_ratio",
+    "fip_insect_occ",
+    "fip_vert_occ",
+    "flylab_version",
+    "geno_ddt_para_M918T_superkdr_fold",
+    "geno_deltamethrin_para_M918T_superkdr_fold",
+    "geno_fipronil_rdl_A301S_nlug_fold",
+    "geno_fipronil_rdl_A302G_dsim_fold",
+    "geno_fipronil_rdl_A302G_dsim_occ",
+    "geno_gaba_rdl_A301S_nlug_fold",
+    "git_sha",
+    "ic50_M",
+    "ic50_hi_M",
+    "ic50_lo_M",
+    "ic50_n_boot",
+    "ic50_r2",
+    "imi_ec50_ratio",
+    "imi_insect_occ",
+    "imi_vert_occ",
+    "ish_analytic",
+    "ish_estimated",
+    "ish_max_abs_error",
+    "ish_n_base",
     "landscape_amplify_compounds",
     "landscape_buffer_compounds",
     "landscape_unscored_compounds",
+    "library_sha256",
+    "map_id",
+    "mechanism_rules",
+    "mix_n_matching",
+    "mix_n_substituted",
+    "mix_n_targets",
+    "mix_species",
+    "named_cells_acetylcholine",
+    "named_cells_gaba",
+    "named_cells_glutamate",
+    "named_cells_octopamine",
+    "named_edges",
+    "named_mean_degree",
+    "named_n_seed_nodes",
+    "named_nodes",
+    "named_nodes_with_input",
+    "named_share_onto_seeds",
+    "named_share_recurrent_edges",
+    "named_share_unclear_cells",
+    "norm_note_degree",
+    "norm_note_none",
+    "norm_note_row_abs",
+    "pred_H1_effect",
+    "pred_H2_effect",
+    "pred_H3_effect",
+    "pred_H4_effect",
+    "pred_H5_effect",
+    "pred_H6_effect",
+    "pred_H7_effect",
+    "pred_direction_mismatches",
+    "pred_max_n",
+    "pred_n_hypotheses",
+    "pred_n_rep",
+    "rank_binomial_p",
+    "rank_concordant",
+    "rank_discordant",
+    "rank_discrepancy_ids",
     "rank_entries_evaluable",
+    "rank_evaluated",
+    "rank_known_discrepancies",
+    "rank_mean_rho_informative",
+    "rank_n_degenerate",
+    "rank_n_informative",
+    "rank_shared_source",
+    "rank_shared_source_be",
+    "rank_shared_source_verb",
+    "rank_skipped",
+    "rank_source_disjoint",
+    "rank_source_disjoint_be",
+    "sign_asserted",
+    "sign_asserted_transmitters",
+    "stab_C1_claim",
+    "stab_C1_failing",
+    "stab_C1_lost",
+    "stab_C1_retained",
+    "stab_C1_undecidable",
+    "stab_C2_claim",
+    "stab_C2_lost",
+    "stab_C2_retained",
+    "stab_C2_undecidable",
+    "stab_C3_claim",
+    "stab_C3_equivalent",
+    "stab_C3_indeterminate",
+    "stab_C3_lost",
+    "stab_C3_retained",
+    "stab_C3_retained_uncorrected",
+    "stab_C3_undecidable",
+    "stab_C4_claim",
+    "stab_C4_equivalent",
+    "stab_C4_indeterminate",
+    "stab_C4_lost",
+    "stab_C4_retained",
+    "stab_C4_retained_uncorrected",
+    "stab_C4_undecidable",
+    "stab_C5_claim",
+    "stab_C5_lost",
+    "stab_C5_retained",
+    "stab_C5_undecidable",
+    "stab_C6_claim",
+    "stab_C6_lost",
+    "stab_C6_retained",
+    "stab_C6_undecidable",
+    "stab_C7_claim",
+    "stab_C7_lost",
+    "stab_C7_retained",
+    "stab_C7_undecidable",
+    "stab_default_g_ach",
+    "stab_default_spec",
+    "stab_default_treated_hz",
+    "stab_default_vehicle_hz",
+    "stab_family_size",
+    "stab_mean_gap_nicotinic_default",
+    "stab_mean_gap_nicotinic_monotone",
+    "stab_mean_gap_nicotinic_monotone_max",
+    "stab_mean_gap_nicotinic_monotone_min",
     "stab_mean_gap_nicotinic_monotone_n",
-    "claims_chain_links",
-    "claims_observed",
-    "claims_n_facts",
-    "claims_n_inference",
-    "claims_n_unknown",
+    "stab_monotone_buffer_less",
+    "stab_monotone_buffer_less_n",
+    "stab_monotone_g_ach",
+    "stab_monotone_pct_change",
+    "stab_monotone_treated_hz",
+    "stab_monotone_vehicle_hz",
+    "stab_n_shuffles",
+    "stab_n_structural_tests",
+    "stab_shuffle_resolution",
+    "stab_specification_independent",
+    "stab_topology_alpha",
+    "taste_edges",
+    "taste_motor_cells_octopamine",
+    "taste_motor_mean_degree",
+    "taste_motor_share_onto_seeds",
+    "taste_motor_share_recurrent_edges",
+    "taste_nodes",
+    "thr_circuit_fracs",
+    "thr_n_compounds",
+    "thr_nav_ache_cells",
+    "thr_nav_ache_failing",
+    "thr_nav_ache_gap_min",
+    "thr_nav_ache_matching",
+    "thr_nicotinic_cells",
+    "thr_nicotinic_gap_max",
+    "thr_nicotinic_gap_min",
+    "thr_nicotinic_matching",
+    "thr_outside_t15_scope",
+    "thr_stable",
+    "thr_vert_limits",
+    "tornado_zero_span_params",
+    "unc_CI_drive",
+    "unc_ST_gain_transform",
+    "unc_ST_weight_threshold",
+    "unc_S_drive",
+    "unc_S_gain_transform",
+    "unc_S_weight_threshold",
+    "unc_at_noise_floor",
+    "unc_evaluations",
+    "unc_interaction_share",
+    "unc_interaction_share_clipped",
+    "unc_n_base",
+    "unc_n_factors",
+    "unc_n_resolved",
+    "unc_noise_floor",
+    "unc_noise_floor_factor",
+    "unc_null_factor_S",
+    "unc_resolved",
+    "unc_variance",
+    "val_power_by_n",
+    "val_power_by_strength",
+    "val_power_control_hits",
+    "val_power_control_runs",
+    "val_power_fpr",
+    "val_power_full_strengths",
+    "val_power_ns",
+    "val_power_replicates",
+    "val_power_strengths",
+    "val_power_weak_strengths",
+    "val_recovery_detected",
+    "val_recovery_edges",
+    "val_recovery_n",
+    "val_recovery_nodes",
+    "val_recovery_positive",
+    "val_recovery_statement",
+    "veto_lif_fipronil_ratio",
+    "veto_lif_vehicle_ratio",
+    "veto_lif_vehicle_sugar",
+    "veto_n_sweet_grn",
+    "veto_rate_fipronil_ratio",
+    "veto_rate_vehicle_ratio",
+    "veto_rate_vehicle_sugar",
+    "veto_sugar_hz",
+    "voi_rank1_experiment",
+    "voi_rank1_factor",
+    "voi_rank1_var",
+    "voi_rank2_factor",
+    "voi_rank2_var",
+    "voi_var_total",
+    "window_log10_imidacloprid",
 )
 
 
