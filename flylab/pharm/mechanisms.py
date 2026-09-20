@@ -150,6 +150,7 @@ def gains_from_occupancy(rows: Iterable[Mapping[str, Any]]) -> dict[str, float]:
 
 def _rule(receptor: str, direction: str, gain: str, formula: str, rationale: str) -> dict[str, str]:
     return {
+        "key": f"{receptor}:{direction}:{gain}",
         "receptor": receptor,
         "direction": direction,
         "gain": gain,
@@ -162,7 +163,7 @@ def _rule(receptor: str, direction: str, gain: str, formula: str, rationale: str
 #: ``"<receptor>:<direction>" -> rule`` description of every patch rule.
 #: JSON-serialisable so the server, UI and paper can render the same table.
 MECHANISM_TABLE: dict[str, dict[str, str]] = {
-    f"{r['receptor']}:{r['direction']}": r
+    r["key"]: r
     for r in [
         _rule("insect_nAChR", "agonist", "g_ach", "max(0.05, 1 + 0.4*th - 1.6*th^2)",
               "Cholinergic excitation at low occupancy, desensitisation/block at high occupancy (v0.4 rule)."),
@@ -184,7 +185,7 @@ MECHANISM_TABLE: dict[str, dict[str, str]] = {
               "Mirror rule: blocking GluCl removes glutamatergic chloride current."),
         _rule("insect_AChE", "inhibitor", "ach_tone", "1 + 2.0*th",
               "Unhydrolysed acetylcholine accumulates, raising ambient cholinergic tone."),
-        _rule("insect_AChE", "inhibitor:g_ach", "g_ach", "g_ach * ach_tone * (1 + 0.4*th - 1.6*th^2)",
+        _rule("insect_AChE", "inhibitor", "g_ach", "g_ach * ach_tone * (1 + 0.4*th - 1.6*th^2)",
               "The excess ACh first excites and then desensitises nicotinic receptors: OP excitation then block."),
         _rule("insect_Nav", "positive_modulator", "g_nav", "1 + 1.5*th",
               "Pyrethroids/DDT hold sodium channels open, raising excitability of every node."),
