@@ -25,9 +25,14 @@ def test_receptor_table_covers_every_compound():
     assert table["n_compounds"] == len(names)
     assert [r["compound"] for r in table["rows"]] == names
     for r in table["rows"]:
-        assert 0.0 <= r["max_insect_occupancy"] <= 1.0
-        assert 0.0 <= r["max_vertebrate_occupancy"] <= 1.0
-        assert r["receptor_si_log10"] is not None
+        # schema v3: None means "no sourced row here", not 0.0
+        for key in ("max_insect_occupancy", "max_vertebrate_occupancy"):
+            assert r[key] is None or 0.0 <= r[key] <= 1.0
+        assert (r["receptor_si_log10"] is not None) != (r["skipped_reason"] is not None)
+    skipped = {r["compound"] for r in table["rows"] if r["skipped_reason"]}
+    # every insect/vertebrate pair of these rests on a placeholder row
+    assert "diazepam" in skipped and "caffeine" in skipped
+    assert "imidacloprid" not in skipped and "picrotoxin" not in skipped
     assert table["label"] == "model_derived" and table["warnings"]
     json.dumps(table)
 
@@ -111,7 +116,8 @@ def test_selectivity_landscape_has_both_indices_and_composition():
     assert land["n_rows"] == 8
     by_key = {(r["compound"], r["graph"]): r for r in land["rows"]}
     for (compound, graph), r in by_key.items():
-        assert r["receptor_si_log10"] is not None
+        # diazepam has no sourced insect row: no receptor SI exists for it
+        assert (r["receptor_si_log10"] is not None) or compound == "diazepam"
         assert r["frac_ach_synapses"] > 0 and r["frac_gaba_synapses"] > 0
         if compound == "diazepam":
             # insect rows are all class placeholders -> skipped, not indexed

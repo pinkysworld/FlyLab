@@ -88,8 +88,18 @@ def exposure_profile(
     entry = lib["compounds"][compound.lower().strip()] if compound.lower().strip() in lib["compounds"] else None
     if entry is None:
         raise KeyError(f"unknown compound {compound!r}")
+    # Schema v3: a row with no sourced value is not modelled -> None, never a
+    # small number (the "missing evidence is not a response" rule).
     occupancy = {
-        receptor: [hill_occupancy(float(c), float(spec["ec50_M"]), float(spec.get("n", 1.0))) for c in conc]
+        receptor: (
+            None
+            if spec.get("value_M", spec.get("ec50_M")) is None
+            else [
+                hill_occupancy(float(c), float(spec.get("ec50_M") or spec["value_M"]),
+                               float(spec.get("n", 1.0)))
+                for c in conc
+            ]
+        )
         for receptor, spec in entry["receptors"].items()
     }
 

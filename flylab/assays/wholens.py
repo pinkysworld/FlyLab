@@ -82,7 +82,11 @@ def run_wholens_assay(compound=None, conc_M=0.0, dest=None):
         by = {r["receptor"]: r for r in occ["receptors"]}
         vert = by.get("vertebrate_GABA_A")
         insect = by.get("insect_RDL")
-        vert_active = bool(vert and vert["direction"] != "none" and vert["occupancy"] > 0.01)
+        vert_engagement = vert.get("engagement", vert.get("occupancy")) if vert else None
+        vert_active = bool(
+            vert and vert["direction"] != "none"
+            and vert_engagement is not None and vert_engagement > 0.01
+        )
         insect_active = bool(insect and insect["direction"] != "none")
         if vert_active and not insect_active:
             nb["warnings"].append(

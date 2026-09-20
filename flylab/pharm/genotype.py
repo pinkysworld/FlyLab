@@ -396,6 +396,13 @@ def genotype_info(genotype_id: str, path: Path | None = None) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # apply
 # ---------------------------------------------------------------------------
+def _spec_value(spec: dict[str, Any]) -> float | None:
+    """Sourced value of a library row in M, or None for a placeholder (v3)."""
+    from flylab.pharm.occupancy import spec_value_M
+
+    return spec_value_M(spec)
+
+
 def apply_genotype(
     library: dict[str, Any] | None,
     genotype_id: str,
@@ -474,10 +481,23 @@ def apply_genotype(
                 }
             )
             continue
+        # Schema v3: a placeholder row carries no number, so there is nothing to
+        # multiply. Missing evidence must not become a shifted number.
+        if _spec_value(spec) is None:
+            unshifted.append(
+                {
+                    "compound": key,
+                    "receptor": receptor,
+                    "reason": f"{key}:{receptor} is a placeholder row (no sourced value), so the "
+                    "allele cannot shift it",
+                }
+            )
+            continue
 
         fold = float(row["fold"])
-        ec50_wt = float(spec["ec50_M"])
-        spec["ec50_M"] = ec50_wt * fold
+        ec50_wt = float(_spec_value(spec))
+        spec["value_M"] = ec50_wt * fold
+        spec["ec50_M"] = spec["value_M"]
         whole_animal = _is_whole_animal(row)
         shift_kind = "whole_animal_RR" if whole_animal else "receptor_shift"
         shift_block = {
@@ -519,7 +539,7 @@ def apply_genotype(
                 "receptor": receptor,
                 "fold": fold,
                 "ec50_M_wt": ec50_wt,
-                "ec50_M_genotype": spec["ec50_M"],
+                "ec50_M_genotype": spec["value_M"],
                 "shift_kind": shift_kind,
                 "assay_type": row.get("assay_type"),
                 "evidence_tier": row.get("evidence_tier"),
@@ -619,8 +639,14 @@ def genotype_occupancy(
         for row in result["receptors"]:
             ref = by_wt.get(row["receptor"])
             if ref:
+                row["engagement_wt"] = ref["engagement"]
                 row["occupancy_wt"] = ref["occupancy"]
-                row["delta_occupancy_vs_wt"] = row["occupancy"] - ref["occupancy"]
+                if row["engagement"] is not None and ref["engagement"] is not None:
+                    delta = row["engagement"] - ref["engagement"]
+                else:
+                    delta = None  # one side is not modelled
+                row["delta_engagement_vs_wt"] = delta
+                row["delta_occupancy_vs_wt"] = delta
     return result
 
 
@@ -791,8 +817,12 @@ def genotype_panel(
         by = {r["receptor"]: r for r in occ["receptors"]}
         if receptor not in by:
             # wild type has no target receptor: report the most-occupied insect row
-            insect = [r for r in occ["receptors"] if r["receptor"].startswith("insect_") and r["direction"] != "none"]
-            receptor = max(insect, key=lambda r: r["occupancy"])["receptor"] if insect else None
+            insect = [
+                r for r in occ["receptors"]
+                if r["receptor"].startswith("insect_") and r["direction"] != "none"
+                and r.get("engagement", r.get("occupancy")) is not None
+            ]
+            receptor = max(insect, key=lambda r: r["engagement"])["receptor"] if insect else None
         target = by.get(receptor)
         nb = genotype_assay(assay, key, conc_M, gid, library=library, path=path, **kw) if assay else None
         readouts = _readout_of(assay, nb or {})

@@ -95,8 +95,17 @@ def gains_from_occupancy(rows: Iterable[Mapping[str, Any]]) -> dict[str, float]:
     selectivity scorecard only. Unknown receptors and ``direction: none`` rows
     are ignored.
 
+    **Not-modelled rows (schema v3).** A row whose ``engagement`` is ``None``
+    carries no sourced value for this compound at this receptor. The peer
+    review: "Missing receptor values are represented by ec50_M = 0.01 even when
+    direction: none ... Missing evidence should not become a small quantitative
+    response." Such a row means *this receptor is not modelled for this
+    compound*, so the corresponding gain is left unchanged -- it is never read
+    as an engagement of 0.
+
     Args:
-        rows: occupancy rows with ``receptor``, ``occupancy`` and ``direction``.
+        rows: engagement rows with ``receptor``, ``engagement`` (``occupancy``
+            is kept as a deprecated alias) and ``direction``.
 
     Returns:
         dict with keys ``g_ach``, ``g_gaba``, ``g_glu``, ``g_oct``, ``g_nav``,
@@ -110,8 +119,11 @@ def gains_from_occupancy(rows: Iterable[Mapping[str, Any]]) -> dict[str, float]:
     for row in rows:
         receptor = str(row.get("receptor", ""))
         direction = str(row.get("direction") or "none")
-        th = float(row.get("occupancy") or 0.0)
-        th = min(max(th, 0.0), 1.0)
+        raw = row.get("engagement", row.get("occupancy"))
+        if raw is None:
+            # not modelled: leave every gain as it is (never treat as 0).
+            continue
+        th = min(max(float(raw), 0.0), 1.0)
 
         if receptor == "insect_nAChR":
             if direction in _ACTIVATING:

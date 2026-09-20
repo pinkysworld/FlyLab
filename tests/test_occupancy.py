@@ -18,5 +18,8 @@ def test_imidacloprid_prefers_insect():
 
 def test_diazepam_prefers_gaba():
     result = compare_compound("diazepam", 1e-7)
-    by = {row["receptor"]: row["occupancy"] for row in result["receptors"]}
-    assert by["vertebrate_GABA_A"] > by["insect_nAChR"]
+    by = {row["receptor"]: row["engagement"] for row in result["receptors"]}
+    # schema v3: diazepam has no sourced insect nAChR row, so that receptor is
+    # not modelled (None) instead of reporting a small number.
+    assert by["insect_nAChR"] is None
+    assert by["vertebrate_GABA_A"] > 0.9

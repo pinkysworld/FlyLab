@@ -162,7 +162,11 @@ def fallback_gains(
     """
     gains = dict(DEFAULT_GAINS)
     for row in rows or []:
-        th = float(row.get("occupancy", 0.0))
+        raw = row.get("engagement", row.get("occupancy"))
+        if raw is None:
+            # schema v3: no sourced value -> receptor not modelled, gain unchanged
+            continue
+        th = float(raw)
         d = row.get("direction")
         rec = row.get("receptor")
         if rec == "insect_nAChR":

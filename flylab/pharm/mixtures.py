@@ -212,7 +212,12 @@ def mixture_occupancy(
             direction = str(spec.get("direction", "none"))
             if direction == "none":
                 continue
-            ec50 = float(spec["ec50_M"])
+            # Schema v3: a placeholder row carries no sourced value, so this
+            # component contributes nothing at this receptor (it is NOT a small
+            # occupancy). The receptor row is flagged partial_coverage below.
+            if spec.get("value_M", spec.get("ec50_M")) is None:
+                continue
+            ec50 = float(spec.get("ec50_M") or spec["value_M"])
             n = float(spec.get("n", 1.0))
             by_receptor.setdefault(receptor, []).append(
                 {
@@ -291,9 +296,14 @@ def mixture_occupancy(
 
         models_used[receptor] = model
         families = {p["family"] for p in parts if p["family"]}
+        covered = {p["compound"] for p in parts}
+        not_modelled = [c["compound"] for c in comps if c["compound"] not in covered]
         row = {
             "receptor": receptor,
             "occupancy": theta_total,
+            "engagement": theta_total,
+            "partial_coverage": bool(not_modelled),
+            "not_modelled_components": not_modelled,
             "model": model,
             "why": why,
             "n_components": len(parts),
@@ -358,12 +368,26 @@ def mixture_occupancy(
             "No receptor is shared by two components: the targets are disjoint, "
             "so Bliss independence is the applicable null model."
         )
+    partial = [r["receptor"] for r in receptor_rows if r.get("partial_coverage")]
+    if partial:
+        detail = "; ".join(
+            f"{r['receptor']} (not modelled for {', '.join(sorted(r['not_modelled_components']))})"
+            for r in receptor_rows
+            if r.get("partial_coverage")
+        )
+        warnings.append(
+            "partial_coverage: at least one component has no sourced row at these receptors, so "
+            f"it contributes nothing there - {detail}. Combination indices are computed over the "
+            "covered components only; an absent row is missing evidence, not evidence of "
+            "independence or of inactivity."
+        )
     return {
         "components": comps,
         "receptors": receptor_rows,
         "rows": gain_rows,
         "shared_receptors": shared,
         "models_used": models_used,
+        "partial_coverage": partial,
         "warnings": warnings,
     }
 
@@ -729,7 +753,7 @@ def _target_receptor(compound: str, other: str | None, library: dict[str, Any] |
     if not active:
         raise ValueError(f"{compound} has no active receptor row")
     insect = {r: s for r, s in active.items() if r.startswith("insect_")} or active
-    return min(insect, key=lambda r: float(insect[r]["ec50_M"]))
+    return min(insect, key=lambda r: float(insect[r].get("ec50_M") or insect[r]["value_M"]))
 
 
 def _effect_of(
@@ -745,8 +769,9 @@ def _effect_of(
         target = readout
         rows = {r["receptor"]: r for r in mix["receptors"]}
         if target is None or target not in rows:
+            rows = {r: v for r, v in rows.items() if v.get("occupancy") is not None}
             target = max(rows, key=lambda r: rows[r]["occupancy"]) if rows else None
-        return float(rows[target]["occupancy"]) if target else 0.0
+        return float(rows[target]["occupancy"]) if target and target in rows else 0.0
     nb = mixture_assay(components, assay=assay, library=library, readout=readout or "mn9_hz", **kw)
     return float(nb["readouts"]["effect_fraction"] or 0.0)
 

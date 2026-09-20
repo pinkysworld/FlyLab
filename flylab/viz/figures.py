@@ -15,14 +15,18 @@ def save_wholens_figures(nb: dict, outdir: Path) -> list[Path]:
     fig.tight_layout()
     p = outdir / "fig_nt_census.png"
     fig.savefig(p, dpi=160); plt.close(fig); paths.append(p)
-    occ = nb.get("occupancy") or []
+    # schema v3: rows with no sourced value are not modelled and have no bar
+    occ = [
+        r for r in (nb.get("occupancy") or [])
+        if r.get("engagement", r.get("occupancy")) is not None
+    ]
     if occ:
         fig, ax = plt.subplots(figsize=(7.2, 3.6))
         labels = [r["receptor"] for r in occ]
-        vals = [r["occupancy"] for r in occ]
+        vals = [r.get("engagement", r.get("occupancy")) for r in occ]
         colors = ["#d9772c" if l.startswith("insect") else "#3d5a5b" for l in labels]
         ax.bar(labels, vals, color=colors)
-        ax.set_ylim(0, 1); ax.set_ylabel("occupancy")
+        ax.set_ylim(0, 1); ax.set_ylabel("engagement (not occupancy unless Kd/Ki)")
         ax.set_title(f"{nb.get('compound')} @ {nb.get('concentration_M'):.1e} M")
         ax.tick_params(axis="x", rotation=25)
         fig.tight_layout()

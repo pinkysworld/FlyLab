@@ -38,7 +38,7 @@ from typing import Any, Iterable, Mapping, Sequence
 import numpy as np
 import yaml
 
-from flylab.pharm.occupancy import compare_compound, hill_occupancy, load_library
+from flylab.pharm.occupancy import compare_compound, engagement, load_library, spec_value_M
 
 __all__ = [
     "RANK_ORDERS_PATH",
@@ -300,7 +300,10 @@ def _infer_receptor(
                 continue
             if str(spec.get("direction", "none")) == "none":
                 continue
-            counts.setdefault(receptor, []).append(float(spec["ec50_M"]))
+            value = spec_value_M(spec)
+            if value is None:
+                continue  # schema v3 placeholder: no number to rank on
+            counts.setdefault(receptor, []).append(value)
     if not counts:
         return None, "no receptor is active for these compounds in the library"
     best = max(counts, key=lambda r: (len(counts[r]), -float(np.mean(np.log10(counts[r])))))
@@ -371,7 +374,10 @@ def _model_scores(
                 (p for p in sel.values() if p["insect_receptor"] == receptor),
                 sel.get("nAChR"),
             )
-            scores.append(float(np.log10(pair["ec50_ratio_vert_over_insect"])) if pair else float("nan"))
+            ratio = pair.get("ec50_ratio_vert_over_insect") if pair else None
+            # ratio is None when either side of the pair is a placeholder row:
+            # the entry is then skipped, not scored off missing evidence.
+            scores.append(float(np.log10(ratio)) if ratio else float("nan"))
             used.append(pair["insect_receptor"] if pair else None)
         return scores, used, (
             "log10(vertebrate EC50 / insect EC50) from the library's selectivity block; "
@@ -381,11 +387,16 @@ def _model_scores(
     for item, key in zip(items, keys):
         target = item.get("target") or receptor
         spec = (lib["compounds"][key].get("receptors") or {}).get(target)
-        if not spec:
+        value = spec_value_M(spec) if spec else None
+        if not spec or value is None:
+            # no sourced row (or a placeholder): NaN -> the entry is skipped
             scores.append(float("nan"))
             used.append(target)
             continue
-        scores.append(hill_occupancy(conc_M, float(spec["ec50_M"]), float(spec.get("n", 1.0))))
+        scores.append(
+            engagement(conc_M, value, float(spec.get("n", 1.0)),
+                       param_type=spec.get("param_type"), relation=spec.get("relation"))
+        )
         used.append(target)
     return scores, used, f"receptor occupancy at {receptor} and {conc_M:g} M"
 
@@ -517,7 +528,8 @@ def validate_entry(
         for item, key in zip(items, [k for k in keys if k]):
             target = item.get("target") or receptor_used
             spec = (lib["compounds"][key].get("receptors") or {}).get(target)
-            ec50s.append(float(spec["ec50_M"]) if spec else float("inf"))
+            value = spec_value_M(spec) if spec else None
+            ec50s.append(value if value is not None else float("inf"))
         if all(math.isfinite(e) for e in ec50s) and len(set(ec50s)) > 1:
             ec50_ranks = _ranks(ec50s)  # lower EC50 = rank 1 = more potent
             ec50_block = {
@@ -629,11 +641,19 @@ def _discrepancy_report(conc_M: float, library: dict[str, Any] | None = None) ->
             entry = (lib["compounds"][key].get("receptors") or {}).get("insect_nAChR")
             if not entry or str(entry.get("direction", "none")) == "none":
                 continue
+            value = spec_value_M(entry)
+            if value is None:
+                continue  # placeholder row: excluded from the ordering
+            eng = engagement(conc_M, value, float(entry.get("n", 1.0)),
+                             param_type=entry.get("param_type"), relation=entry.get("relation"))
             rows.append(
                 {
                     "compound": key,
-                    "ec50_M": float(entry["ec50_M"]),
-                    "occupancy": hill_occupancy(conc_M, float(entry["ec50_M"]), float(entry.get("n", 1.0))),
+                    "param_type": entry.get("param_type"),
+                    "param_value_M": value,
+                    "ec50_M": value,
+                    "engagement": eng,
+                    "occupancy": eng,
                 }
             )
         rows.sort(key=lambda r: r["ec50_M"])

@@ -55,11 +55,18 @@ def _warnings(payload: dict[str, Any]) -> None:
 def _print_table(result: dict) -> None:
     typer.echo(f"{result['compound']}  @  {result['concentration_M']:.2e} M")
     typer.echo(f"class: {result['class']}")
-    typer.echo(f"{'receptor':28} {'occupancy':>10} {'EC50 (M)':>12}  direction")
+    typer.echo(f"{'receptor':28} {'engagement':>10} {'value (M)':>12} {'type':>6}  direction")
     for row in result["receptors"]:
+        # schema v3: a not-modelled row prints N/A, never 0.000
+        eng = row.get("engagement", row.get("occupancy"))
+        value = row.get("param_value_M", row.get("ec50_M"))
+        eng_s = "       n/a" if eng is None else f"{eng:10.3f}"
+        val_s = "not modelled" if value is None else f"{value:12.2e}"
         typer.echo(
-            f"{row['receptor']:28} {row['occupancy']:10.3f} {row['ec50_M']:12.2e}  {row['direction']}"
+            f"{row['receptor']:28} {eng_s} {val_s} {str(row.get('param_type', '')):>6}  {row['direction']}"
         )
+    if result.get("engagement_is_not_occupancy"):
+        typer.echo(result["engagement_is_not_occupancy"])
     typer.echo(result["disclaimer"])
 
 

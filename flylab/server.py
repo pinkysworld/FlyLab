@@ -373,15 +373,23 @@ def _compound_meta(lib: dict[str, Any]) -> list[dict[str, Any]]:
         targets = [
             {
                 "receptor": receptor,
-                "ec50_M": float(r["ec50_M"]),
+                # schema v3: param_type says what the number is; ec50_M is the
+                # deprecated alias and is None on a not-modelled row.
+                "param_type": r.get("param_type", "EC50"),
+                "param_value_M": float(r["value_M"]),
+                "ec50_M": float(r["value_M"]),
+                "relation": r.get("relation"),
+                "species": r.get("species"),
                 "direction": r.get("direction", "none"),
                 "evidence_tier": r.get("evidence_tier", "class_placeholder"),
                 "source": r.get("source", ""),
             }
             for receptor, r in (spec.get("receptors") or {}).items()
-            if receptor.startswith("insect_") and r.get("direction") not in (None, "none")
+            if receptor.startswith("insect_")
+            and r.get("direction") not in (None, "none")
+            and r.get("value_M", r.get("ec50_M")) is not None
         ]
-        targets.sort(key=lambda r: r["ec50_M"])
+        targets.sort(key=lambda r: r["param_value_M"])
         rows.append(
             {
                 "key": key,

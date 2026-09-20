@@ -51,16 +51,25 @@ BASE_WARNINGS = [
     "model_derived: every index here comes from the teaching EC50 library, the "
     "gain patch rules and one hops-limited MaleCNS neighborhood. None of it is "
     "a measured selectivity margin and none of it is a safety statement.",
-    "Receptors with evidence_tier 'class_placeholder' carry no real number; "
-    "rows that depend on one are flagged.",
+    "Receptors with evidence_tier 'class_placeholder' carry no number at all "
+    "(schema v3): they report engagement None, are excluded from every ratio, "
+    "and any row that would have depended on one is flagged or skipped.",
 ]
 
 
 def _is_placeholder(row: dict[str, Any]) -> bool:
+    """True when a row carries no sourced value (schema v3: engagement None)."""
     return (
-        row.get("evidence_tier") == "class_placeholder"
+        row.get("engagement", row.get("occupancy")) is None
+        or row.get("param_value_M", row.get("ec50_M")) is None
+        or row.get("evidence_tier") == "class_placeholder"
         or str(row.get("direction") or "none") == "none"
     )
+
+
+def _engagement(row: dict[str, Any]) -> float | None:
+    value = row.get("engagement", row.get("occupancy"))
+    return None if value is None else float(value)
 
 
 # --------------------------------------------------------------------------
@@ -82,10 +91,16 @@ def _best_pair(occ: dict[str, Any]) -> tuple[str | None, dict[str, Any] | None]:
     pairs = occ.get("selectivity") or {}
     if not pairs:
         return None, None
-    real = {k: v for k, v in pairs.items() if not v.get("placeholder")}
-    pool = real or pairs
-    name = max(pool, key=lambda k: pool[k].get("log10_ec50_ratio_vert_over_insect", float("-inf")))
-    return name, pool[name]
+    # Schema v3: a pair with a placeholder on either side has ratio None and is
+    # excluded from the numbers entirely (it is not a log-ratio of 0.00).
+    real = {
+        k: v for k, v in pairs.items()
+        if not v.get("placeholder") and v.get("log10_ec50_ratio_vert_over_insect") is not None
+    }
+    if not real:
+        return None, None
+    name = max(real, key=lambda k: real[k]["log10_ec50_ratio_vert_over_insect"])
+    return name, real[name]
 
 
 def receptor_selectivity_table(
@@ -111,8 +126,11 @@ def receptor_selectivity_table(
         vert = [r for r in recs if str(r["receptor"]).startswith("vertebrate_")]
         ins_real = [r for r in ins if not _is_placeholder(r)]
         vert_real = [r for r in vert if not _is_placeholder(r)]
-        top_ins = max(ins, key=lambda r: r["occupancy"]) if ins else None
-        top_vert = max(vert, key=lambda r: r["occupancy"]) if vert else None
+        # not-modelled rows never win a max and never become a 0
+        ins_num = [r for r in ins if _engagement(r) is not None]
+        vert_num = [r for r in vert if _engagement(r) is not None]
+        top_ins = max(ins_num, key=_engagement) if ins_num else None
+        top_vert = max(vert_num, key=_engagement) if vert_num else None
         pair_name, pair = _best_pair(occ)
         rows.append(
             {
@@ -120,17 +138,26 @@ def receptor_selectivity_table(
                 "name": occ["compound"],
                 "class": occ.get("class"),
                 "conc_M": float(conc_M),
-                "max_insect_occupancy": float(top_ins["occupancy"]) if top_ins else None,
+                "max_insect_engagement": _engagement(top_ins) if top_ins else None,
+                "max_vertebrate_engagement": _engagement(top_vert) if top_vert else None,
+                # deprecated aliases (same values; None means "not modelled")
+                "max_insect_occupancy": _engagement(top_ins) if top_ins else None,
                 "insect_receptor": top_ins["receptor"] if top_ins else None,
-                "max_vertebrate_occupancy": float(top_vert["occupancy"]) if top_vert else None,
+                "max_vertebrate_occupancy": _engagement(top_vert) if top_vert else None,
                 "vertebrate_receptor": top_vert["receptor"] if top_vert else None,
                 "best_pair": pair_name,
                 "receptor_si_log10": (
                     float(pair["log10_ec50_ratio_vert_over_insect"]) if pair else None
                 ),
+                "insect_param_type": pair.get("insect_param_type") if pair else None,
+                "vertebrate_param_type": pair.get("vertebrate_param_type") if pair else None,
                 "insect_ec50_M": float(pair["insect_ec50_M"]) if pair else None,
                 "vertebrate_ec50_M": float(pair["vertebrate_ec50_M"]) if pair else None,
                 "placeholder": bool(pair.get("placeholder")) if pair else True,
+                "skipped_reason": None if pair else (
+                    "every insect/vertebrate pair for this compound rests on a placeholder row, "
+                    "so no receptor selectivity index is defined"
+                ),
                 "insect_all_placeholder": not ins_real,
                 "vertebrate_all_placeholder": not vert_real,
                 "evidence_tier": pair.get("evidence_tier") if pair else None,
@@ -168,16 +195,24 @@ def vertebrate_threshold_conc(
     th = min(max(float(occ_limit), 1e-9), 1 - 1e-9)
     cands = []
     for r in vert:
+        value = r.get("param_value_M", r.get("ec50_M"))
+        if value is None:
+            continue  # not modelled: no threshold concentration exists
         n = float(r.get("n", 1.0)) or 1.0
-        c = float(r["ec50_M"]) * (th / (1.0 - th)) ** (1.0 / n)
-        cands.append((c, r))
+        cands.append((float(value) * (th / (1.0 - th)) ** (1.0 / n), r))
+    if not cands:
+        return {"conc_M": None, "receptor": None, "placeholder": True,
+                "occ_limit": float(th),
+                "skipped_reason": "every vertebrate row for this compound is a placeholder"}
     real = [(c, r) for c, r in cands if not _is_placeholder(r)]
     pool = real or cands
     conc, row = min(pool, key=lambda t: t[0])
     return {
         "conc_M": float(conc),
         "receptor": row["receptor"],
-        "ec50_M": float(row["ec50_M"]),
+        "param_type": row.get("param_type"),
+        "param_value_M": float(row.get("param_value_M", row["ec50_M"])),
+        "ec50_M": float(row.get("param_value_M", row["ec50_M"])),
         "placeholder": _is_placeholder(row),
         "occ_limit": float(th),
     }

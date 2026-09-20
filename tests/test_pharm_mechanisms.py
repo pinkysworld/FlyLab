@@ -119,3 +119,58 @@ def test_mechanism_table_is_renderable():
     import json
 
     json.dumps(MECHANISM_TABLE)  # must stay JSON-serialisable for the UI
+
+
+# ---------------------------------------------------------------------------
+# schema v3 freeze: typing the library must not move a single gain
+# ---------------------------------------------------------------------------
+#: ``(compound, conc_M) -> gains that differ from vehicle``. Computed from the
+#: schema v2 library before the v0.6 retyping and frozen here: renaming EC50 to
+#: a typed value_M, and replacing placeholder rows with "not modelled", changed
+#: none of them.
+V05_GAIN_FREEZE = {
+    ("imidacloprid", 1e-09): {"g_ach": 1.0095487809070476},
+    ("imidacloprid", 1e-08): {"g_ach": 0.9741519509077095},
+    ("imidacloprid", 1e-07): {"g_ach": 0.12884534090016309},
+    ("imidacloprid", 1e-06): {"g_ach": 0.05},
+    ("nitenpyram", 1e-09): {"g_ach": 1.0034938564254496},
+    ("nitenpyram", 1e-08): {"g_ach": 1.0249958838000095},
+    ("nitenpyram", 1e-07): {"g_ach": 0.5019988589627358},
+    ("nitenpyram", 1e-06): {"g_ach": 0.05},
+    ("nicotine", 1e-09): {"g_ach": 1.0011601708402176},
+    ("nicotine", 1e-08): {"g_ach": 1.012250127159835},
+    ("nicotine", 1e-07): {"g_ach": 0.9653324086172921},
+    ("nicotine", 1e-06): {"g_ach": 0.17351561697271345},
+    ("diazepam", 1e-09): {},
+    ("diazepam", 1e-08): {},
+    ("diazepam", 1e-07): {},
+    ("diazepam", 1e-06): {},
+    ("fipronil", 1e-09): {"g_gaba": 0.9833971200967568},
+    ("fipronil", 1e-08): {"g_gaba": 0.7889045183000409},
+    ("fipronil", 1e-07): {"g_gaba": 0.1908081801682019},
+    ("fipronil", 1e-06): {"g_gaba": 0.05},
+}
+
+
+@pytest.mark.parametrize("key", sorted(V05_GAIN_FREEZE))
+def test_gains_are_unchanged_by_the_v3_retyping(key):
+    from flylab.pharm.occupancy import compare_compound
+
+    compound, conc = key
+    gains = gains_from_occupancy(compare_compound(compound, conc)["receptors"])
+    assert set(gains) == set(GAIN_KEYS)
+    expected = {k: 1.0 for k in GAIN_KEYS} | V05_GAIN_FREEZE[key]
+    for gain_key, value in expected.items():
+        assert gains[gain_key] == pytest.approx(value, rel=1e-12), gain_key
+
+
+def test_a_not_modelled_row_leaves_the_gain_alone_and_is_not_read_as_zero():
+    """diazepam/insect_RDL is the peer review's example: None, not 1e-4."""
+    from flylab.pharm.occupancy import compare_compound
+
+    rows = compare_compound("diazepam", 1e-6)["receptors"]
+    assert any(r["receptor"] == "insect_RDL" and r["engagement"] is None for r in rows)
+    assert gains_from_occupancy(rows) == {k: 1.0 for k in GAIN_KEYS}
+    # a hand-made None row must not be read as an engagement of 0 either
+    blocked = [{"receptor": "insect_RDL", "direction": "antagonist", "engagement": None}]
+    assert gains_from_occupancy(blocked)["g_gaba"] == 1.0

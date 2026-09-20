@@ -4,22 +4,56 @@ from flylab.pharm.binding import (
     operational_response,
     schild_shift,
 )
+from flylab.pharm.evidence import (
+    ALLOWED,
+    EngagementModel,
+    EvidenceTypeError,
+    ParameterType,
+    SourceRelation,
+    check_transformation,
+    describe,
+    model_for,
+)
 from flylab.pharm.exposure import exposure_profile
 from flylab.pharm.mechanisms import MECHANISM_TABLE, gains_from_occupancy, mechanism_table_rows
 from flylab.pharm.occupancy import (
+    binding_occupancy,
     compare_compound,
+    engagement,
+    engagement_curve,
     hill_occupancy,
+    is_placeholder,
+    library_report,
     library_sha256,
     list_compounds,
     load_library,
     occupancy_curve,
+    receptor_spec,
     receptor_table,
     selectivity_pairs,
+    spec_value_M,
+    validate_library,
 )
 from flylab.pharm.uncertainty import occupancy_ci, sample_library
 
 __all__ = [
+    "engagement",
+    "engagement_curve",
+    "binding_occupancy",
     "hill_occupancy",
+    "is_placeholder",
+    "spec_value_M",
+    "receptor_spec",
+    "library_report",
+    "validate_library",
+    "ParameterType",
+    "SourceRelation",
+    "EngagementModel",
+    "EvidenceTypeError",
+    "ALLOWED",
+    "model_for",
+    "check_transformation",
+    "describe",
     "compare_compound",
     "load_library",
     "occupancy_curve",

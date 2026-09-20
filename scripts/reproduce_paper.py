@@ -501,8 +501,15 @@ def step_scorecard(ctx: Ctx) -> None:
     ctx.put("fip_vert_ec50", float(s_fip["vertebrate_ec50_M"]), text=_fmt_M(s_fip["vertebrate_ec50_M"]))
     dia_rdl = next(r for r in dia["receptors"] if r["receptor"] == "insect_RDL")
     dia_gaba = next(r for r in dia["receptors"] if r["receptor"] == "vertebrate_GABA_A")
-    ctx.put("dia_insect_rdl_occ", float(dia_rdl["occupancy"]))
-    ctx.put("dia_vert_gabaa_occ", float(dia_gaba["occupancy"]))
+    # Schema v3: diazepam's insect RDL row carries no value, so the pipeline
+    # reports N/A instead of the 1e-4 the peer review objected to.
+    dia_rdl_eng = dia_rdl.get("engagement", dia_rdl.get("occupancy"))
+    ctx.put(
+        "dia_insect_rdl_occ",
+        None if dia_rdl_eng is None else float(dia_rdl_eng),
+        text="not modelled (N/A)" if dia_rdl_eng is None else None,
+    )
+    ctx.put("dia_vert_gabaa_occ", float(dia_gaba.get("engagement", dia_gaba.get("occupancy"))))
     ctx.put("dia_insect_rdl_tier", dia_rdl["evidence_tier"])
 
     # --- T1 -----------------------------------------------------------
@@ -521,7 +528,11 @@ def step_scorecard(ctx: Ctx) -> None:
                     "cas": entry.get("cas"),
                     "receptor": receptor,
                     "organism": (lib["receptors"].get(receptor) or {}).get("organism"),
-                    "ec50_M": spec["ec50_M"],
+                    "param_type": spec.get("param_type"),
+                    "value_M": spec.get("value_M"),
+                    "ec50_M": spec.get("ec50_M"),  # deprecated alias; None = not modelled
+                    "relation": spec.get("relation"),
+                    "species": spec.get("species"),
                     "hill_n": spec.get("n", 1.0),
                     "direction": spec.get("direction"),
                     "efficacy": spec.get("efficacy"),
@@ -546,17 +557,25 @@ def step_scorecard(ctx: Ctx) -> None:
             "cas",
             "receptor",
             "organism",
+            "param_type",
+            "value_M",
             "ec50_M",
+            "relation",
+            "species",
             "hill_n",
             "direction",
             "efficacy",
             "evidence_tier",
             "source",
         ],
-        "The sourced compound library. Every row carries an evidence tier and a "
-        "named source; `class_placeholder` rows carry no number (EC50 0.01 M, "
-        "direction `none`) and are inert by construction.",
-        md_fields=["compound", "class", "receptor", "ec50_M", "direction", "evidence_tier"],
+        "The sourced compound library (schema v3). Every row carries an evidence "
+        "tier, a named source, the KIND of parameter the source reported "
+        "(`param_type`: Kd/Ki are binding constants, EC50/IC50/Kb are functional "
+        "potencies) and how far that source sits from this compound/receptor/species "
+        "(`relation`); `class_placeholder` rows carry no number at all and report "
+        "N/A rather than a small response.",
+        md_fields=["compound", "class", "receptor", "param_type", "value_M", "direction",
+                   "evidence_tier"],
     )
 
     # --- F2 -----------------------------------------------------------
@@ -578,7 +597,7 @@ def step_scorecard(ctx: Ctx) -> None:
                     linewidth=0.8, zorder=0,
                 )
                 ax.annotate(
-                    "no sourced EC50",
+                    "not modelled (no sourced value)",
                     xy=(i, 0.5),
                     rotation=90,
                     ha="center",
@@ -587,8 +606,12 @@ def step_scorecard(ctx: Ctx) -> None:
                     color=TEXT2,
                     zorder=3,
                 )
-            ax.bar(i - 0.2, ins[i], 0.38, color=INSECT, hatch=hatch, edgecolor="white", linewidth=0.6, zorder=2)
-            ax.bar(i + 0.2, ver[i], 0.38, color=VERTEBRATE, hatch=hatch, edgecolor="white", linewidth=0.6, zorder=2)
+            # schema v3: a not-modelled side has no bar at all (None), never a
+            # bar of height 0 that reads as "no effect measured here".
+            if ins[i] is not None:
+                ax.bar(i - 0.2, ins[i], 0.38, color=INSECT, hatch=hatch, edgecolor="white", linewidth=0.6, zorder=2)
+            if ver[i] is not None:
+                ax.bar(i + 0.2, ver[i], 0.38, color=VERTEBRATE, hatch=hatch, edgecolor="white", linewidth=0.6, zorder=2)
             if not holder[i]:
                 for xo, val in ((i - 0.2, ins[i]), (i + 0.2, ver[i])):
                     ax.annotate(
@@ -602,7 +625,7 @@ def step_scorecard(ctx: Ctx) -> None:
         ax.set_title(f"{title} at {_fmt_M(PAPER_CONC)}")
         ax.grid(axis="y", lw=0.5, zorder=0)
         ax.set_axisbelow(True)
-    axes[0].set_ylabel("fractional receptor occupancy (0-1)")
+    axes[0].set_ylabel("receptor engagement (0-1); occupancy only for Kd/Ki rows)")
     handles = [
         plt.Rectangle((0, 0), 1, 1, color=INSECT, label="insect target"),
         plt.Rectangle((0, 0), 1, 1, color=VERTEBRATE, label="vertebrate counterpart"),

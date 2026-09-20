@@ -54,6 +54,13 @@ def test_validate_entry_returns_a_finite_rho():
 
 def test_alpha7_entry_uses_the_vertebrate_receptor_named_by_the_assay():
     result = validate_entry("neonic_alpha7_partial_agonism")
+    if result.get("skipped"):
+        # schema v3: thiamethoxam's alpha7 row is a placeholder (the source says
+        # "no agonist effect", which is not a number), so the model cannot score
+        # it. The entry is skipped by name instead of being ranked off a fake
+        # ec50_M of 0.01.
+        assert "vertebrate_nAChR_a7" in result["reason"]
+        return
     assert result["receptor"] == "vertebrate_nAChR_a7"
     # thiamethoxam has no alpha7 agonist effect and must come last in both
     last = max(result["compounds"], key=lambda c: c["model_rank"])

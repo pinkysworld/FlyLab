@@ -51,7 +51,8 @@ def sample_library(rng: np.random.Generator, sd_log10: float, library: dict | No
 
     Delegates to ``flylab.pharm.uncertainty.sample_library`` when that module
     exists (it is the pharm agent's single source of truth); the inline
-    fallback multiplies every ``ec50_M`` by ``10 ** N(0, sd_log10)``.
+    fallback multiplies every sourced value by ``10 ** N(0, sd_log10)`` and
+    leaves placeholder rows (no value) alone.
     """
     if sd_log10 <= 0:
         return copy.deepcopy(library) if library else None
@@ -68,10 +69,15 @@ def sample_library(rng: np.random.Generator, sd_log10: float, library: dict | No
     lib = copy.deepcopy(library or load_library())
     for comp in lib.get("compounds", {}).values():
         for spec in comp.get("receptors", {}).values():
+            value = spec.get("ec50_M", spec.get("value_M"))
+            if value is None:
+                continue  # placeholder row: nothing to perturb, nothing to invent
             try:
-                spec["ec50_M"] = float(spec["ec50_M"]) * float(10.0 ** rng.normal(0.0, sd_log10))
+                shifted = float(value) * float(10.0 ** rng.normal(0.0, sd_log10))
             except Exception:
                 continue
+            spec["value_M"] = shifted
+            spec["ec50_M"] = shifted
     return lib
 
 
@@ -240,15 +246,27 @@ def _dominant_insect_receptor(compound: str, conc_M: float) -> str | None:
     from flylab.pharm.occupancy import compare_compound
 
     rows = compare_compound(compound, conc_M)["receptors"]
-    cand = [
+    # schema v3: rows with engagement None are not modelled and cannot be
+    # "dominant" - they are excluded, never read as an engagement of 0. The
+    # subunit-resolved keys (insect_nAChR_alpha6/_beta1) carry no gain rule, so
+    # they cannot be the dominant receptor of a circuit run either: only a
+    # receptor the mechanism table can act on is a candidate.
+    from flylab.pharm.mechanisms import MECHANISM_TABLE
+
+    patched = {r["receptor"] for r in MECHANISM_TABLE.values()}
+    modelled = [
         r for r in rows
+        if r.get("engagement", r.get("occupancy")) is not None and r["receptor"] in patched
+    ]
+    cand = [
+        r for r in modelled
         if str(r["receptor"]).startswith("insect_") and r.get("direction") not in (None, "none", "unknown")
     ]
     if not cand:
-        cand = [r for r in rows if str(r["receptor"]).startswith("insect_")]
+        cand = [r for r in modelled if str(r["receptor"]).startswith("insect_")]
     if not cand:
         return None
-    return max(cand, key=lambda r: r["occupancy"])["receptor"]
+    return max(cand, key=lambda r: float(r.get("engagement", r.get("occupancy"))))["receptor"]
 
 
 def _library_with(receptor: str, field: str, factor: float) -> dict:
@@ -257,9 +275,11 @@ def _library_with(receptor: str, field: str, factor: float) -> dict:
     lib = copy.deepcopy(load_library())
     for comp in lib.get("compounds", {}).values():
         spec = comp.get("receptors", {}).get(receptor)
-        if spec is None:
-            continue
-        spec[field] = float(spec.get(field, 1.0)) * float(factor)
+        if spec is None or spec.get(field) is None:
+            continue  # placeholder row: nothing to scale, and nothing to invent
+        spec[field] = float(spec[field]) * float(factor)
+        if field == "ec50_M":
+            spec["value_M"] = spec[field]  # keep the canonical field in step
     return lib
 
 

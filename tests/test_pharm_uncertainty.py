@@ -1,4 +1,8 @@
-"""Monte-Carlo over log10 EC50."""
+"""Monte-Carlo over the log10 of a sourced library value (schema v3).
+
+Placeholder rows have no value, so they get no interval and no point estimate:
+"Missing evidence should not become a small quantitative response."
+"""
 import numpy as np
 import pytest
 
@@ -8,9 +12,17 @@ from flylab.pharm.uncertainty import occupancy_ci, sample_library
 
 def test_ci_brackets_the_point_estimate():
     ci = occupancy_ci("imidacloprid", 1e-6, n=400, seed=0)
+    modelled = 0
     for receptor, stats in ci["receptors"].items():
+        if stats["point"] is None:
+            # not modelled: no point, no interval, no number of any kind
+            assert stats["p2_5"] is None and stats["p97_5"] is None and stats["mean"] is None
+            assert stats["perturbed"] is False
+            continue
+        modelled += 1
         assert stats["p2_5"] <= stats["point"] <= stats["p97_5"], receptor
         assert 0.0 <= stats["p2_5"] <= stats["p97_5"] <= 1.0
+    assert modelled >= 2
 
 
 def test_wider_sd_gives_wider_interval():
@@ -22,11 +34,19 @@ def test_wider_sd_gives_wider_interval():
     assert w_w > w_n > 0
 
 
-def test_placeholder_rows_are_not_perturbed():
+def test_placeholder_rows_report_none_not_a_point_value():
     ci = occupancy_ci("imidacloprid", 1e-6, n=100, seed=0)
     placeholder = ci["receptors"]["insect_RDL"]
     assert placeholder["perturbed"] is False
-    assert placeholder["p2_5"] == placeholder["p97_5"] == placeholder["point"]
+    assert placeholder["point"] is None
+    assert placeholder["p2_5"] is None and placeholder["p97_5"] is None
+    assert placeholder["engagement_model"] == "not_modelled"
+
+
+def test_diazepam_rdl_has_no_interval_at_all():
+    """The peer-review example: diazepam/RDL must not be 1e-4 with a CI."""
+    ci = occupancy_ci("diazepam", 1e-6, n=100, seed=0)["receptors"]["insect_RDL"]
+    assert ci["point"] is None and ci["mean"] is None
 
 
 def test_seed_is_reproducible():
@@ -43,10 +63,13 @@ def test_sample_library_perturbs_only_estimates():
     sampled = sample_library(rng, 0.3, base)
     real = sampled["compounds"]["fipronil"]["receptors"]["insect_RDL"]
     placeholder = sampled["compounds"]["fipronil"]["receptors"]["insect_nAChR"]
-    assert real["ec50_M"] != base["compounds"]["fipronil"]["receptors"]["insect_RDL"]["ec50_M"]
-    assert placeholder["ec50_M"] == 0.01
+    assert real["value_M"] != base["compounds"]["fipronil"]["receptors"]["insect_RDL"]["value_M"]
+    assert real["ec50_M"] == real["value_M"]  # deprecated alias kept in step
+    # schema v3: a placeholder has no number to perturb and gains none
+    assert placeholder["value_M"] is None
+    assert "ec50_M" not in placeholder
     # the source library is untouched
-    assert base["compounds"]["fipronil"]["receptors"]["insect_RDL"]["ec50_M"] == 3.0e-08
+    assert base["compounds"]["fipronil"]["receptors"]["insect_RDL"]["value_M"] == 3.0e-08
 
 
 def test_sample_library_is_lognormal_around_the_point():

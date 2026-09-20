@@ -54,10 +54,18 @@
     return n.toFixed(d === undefined ? 3 : d);
   }
   function sci(v, d) {
+    // schema v3: a missing value is "not modelled", never 0 (see evidence.py)
+    if (v === null || v === undefined || v === "") return NOT_MODELLED;
     const n = Number(v);
     if (!Number.isFinite(n)) return "—";
     if (n === 0) return "0";
     return n.toExponential(d === undefined ? 2 : d);
+  }
+  // Placeholder rows carry no number at all: show that, do not print 0.000.
+  const NOT_MODELLED = '<span class="muted">not modelled</span>';
+  function engagement(v, d) {
+    if (v === null || v === undefined || v === "") return NOT_MODELLED;
+    return num(v, d === undefined ? 3 : d);
   }
   function store(key, value) {
     try {
@@ -642,14 +650,14 @@
         barmode: "group",
         showlegend: true,
         height: 300,
-        yaxis: axis({ title: "fractional occupancy", range: [0, 1.02] }),
+        yaxis: axis({ title: "engagement (occupancy only for Kd/Ki rows)", range: [0, 1.02] }),
         xaxis: axis({ title: "" }),
       }
     );
     $("#legend-scorecard").innerHTML =
       `<span class="item" style="color:${c.insect}"><span class="swatch" style="background:${c.insect}"></span>insect target</span>` +
       `<span class="item" style="color:${c.vertebrate}"><span class="swatch" style="background:${c.vertebrate}"></span>vertebrate counterpart</span>` +
-      `<span class="item">hatched = class placeholder (no sourced EC50)</span>`;
+      `<span class="item">hatched / missing bar = no sourced value: not modelled, not zero</span>`;
 
     table(
       "tbl-selectivity",
@@ -667,8 +675,8 @@
           esc(n),
           sci(p.insect_ec50_M),
           sci(p.vertebrate_ec50_M),
-          num(p.log10_ec50_ratio_vert_over_insect, 2),
-          num(p.occupancy_difference, 3),
+          engagement(p.log10_ec50_ratio_vert_over_insect, 2),
+          engagement(p.occupancy_difference, 3),
           `<span class="badge tier-${esc(p.evidence_tier)}">${esc(p.evidence_tier.replace(/_/g, " "))}</span>`,
         ];
       })
@@ -678,8 +686,9 @@
       "tbl-occupancy",
       [
         { label: "receptor" },
-        { label: "occupancy", num: true },
-        { label: "EC50 (M)", num: true },
+        { label: "engagement", num: true },
+        { label: "value (M)", num: true },
+        { label: "type" },
         { label: "n", num: true },
         { label: "direction" },
         { label: "tier" },
@@ -688,8 +697,9 @@
         const m = receptorMeta(r.receptor);
         return [
           `<span class="swatch" style="background:${m.organism === "insect" ? c.insect : c.vertebrate}"></span>${esc(r.receptor)}`,
-          num(r.occupancy, 3),
-          sci(r.ec50_M),
+          engagement(r.engagement === undefined ? r.occupancy : r.engagement, 3),
+          sci(r.param_value_M === undefined ? r.ec50_M : r.param_value_M),
+          esc(r.param_type || ""),
           num(r.n, 1),
           esc(r.direction),
           `<span class="badge tier-${esc(r.evidence_tier)}">${esc(String(r.evidence_tier).replace(/_/g, " "))}</span>`,
@@ -791,7 +801,9 @@
     if (!data || !data.curve) return;
     const pts = data.curve.points || [];
     if (!pts.length) return;
-    const receptors = Object.keys(pts[0].receptors || {});
+    const receptors = Object.keys(pts[0].receptors || {}).filter(
+      (k) => pts.some((p) => p.receptors[k] !== null && p.receptors[k] !== undefined)
+    );
     const x = pts.map((p) => Math.log10(p.conc_M));
     const traces = receptors.map((r) => {
       const m = receptorMeta(r);
@@ -815,7 +827,7 @@
       showlegend: true,
       height: 340,
       xaxis: axis({ title: "log10 concentration (M)", range: [-11, -3] }),
-      yaxis: axis({ title: "fractional occupancy", range: [0, 1.02] }),
+      yaxis: axis({ title: "engagement (occupancy only for Kd/Ki rows)", range: [0, 1.02] }),
       shapes: [
         {
           type: "line",
@@ -1549,7 +1561,8 @@
       { height: 270, xaxis: axis({ title: "time (h)" }), yaxis: axis({ title: "haemolymph C(t) (M)" }) }
     );
 
-    const receptors = Object.keys(out.occupancy || {});
+    // not-modelled receptors have no curve at all (null), so they are not drawn
+    const receptors = Object.keys(out.occupancy || {}).filter((k) => out.occupancy[k]);
     draw(
       "plot-occt",
       receptors.map((rname) => {
