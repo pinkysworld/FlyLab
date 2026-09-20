@@ -8,6 +8,9 @@ venv/
 .mypy_cache/
 dist/
 build/
+
+# `flylab run SPEC.yaml` writes here by default (see docs/WORKFLOW.md)
+runs/
 .DS_Store
 
 # connectomes — download locally, never commit

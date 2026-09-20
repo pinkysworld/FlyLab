@@ -315,9 +315,12 @@ NOT_MODELLED_PARAM_TYPES = frozenset(
 
 PARAM_TYPE_NOTES: dict[ParameterType, str] = {
     ParameterType.Kd: "equilibrium dissociation constant from a binding assay; "
-                      "C^n/(Kd^n+C^n) is physical fractional occupancy",
+                      "C^n/(Kd^n+C^n) is physical fractional occupancy OF THE "
+                      "RECEPTOR IT WAS MEASURED ON, so it is an occupancy of the "
+                      "modelled target only at evidence distance E0",
     ParameterType.Ki: "inhibition constant from a competition binding assay; "
-                      "treated as a binding constant",
+                      "treated as a binding constant, with the same E0 condition "
+                      "as Kd before it may be called an occupancy here",
     ParameterType.EC50: "half-maximal effective concentration of a functional response; "
                         "the Hill curve is a normalised response, NOT occupancy",
     ParameterType.IC50: "half-maximal inhibitory concentration of a functional or "

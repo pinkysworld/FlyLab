@@ -160,7 +160,7 @@ compounds:
         efficacy: 1.0
         relation: exact_compound_related_receptor
         species: Ctenocephalides felis alpha1/alpha2 + Gallus gallus beta2 hybrid
-        source: 'Dederer et al. 2011, Insect Biochem Mol Biol 41:51 (Drosophila/Ctenocephalides alpha1-beta1 nAChR; neonicotinoid agonist potency in the 10-100 nM order). Value kept unchanged from FlyLab v0.4. SOURCE DESCRIPTION CORRECTED in v0.6 (schema v3): Dederer et al. expressed cat-flea Cfalpha1/Cfalpha2 with the CHICKEN beta2 subunit, i.e. a hybrid receptor - not an ''alpha1-beta1'' receptor as the v0.5 source string said. The value is unchanged; only the description of what was measured is corrected. It is an agonist EC50 on a hybrid receptor, so this row is typed EC50 / exact_compound_related_receptor and drives functional_engagement, never binding occupancy. The subunit-resolved beta1 row is insect_nAChR_beta1.'
+        source: 'Dederer et al. 2011, Insect Biochem Mol Biol 41:51 (Drosophila/Ctenocephalides alpha1-beta1 nAChR; neonicotinoid agonist potency in the 10-100 nM order). Value kept unchanged from FlyLab v0.4. SOURCE DESCRIPTION CORRECTED in v0.6 (schema v3): Dederer et al. expressed cat-flea Cfalpha1/Cfalpha2 with the CHICKEN beta2 subunit, i.e. a hybrid receptor - not an ''alpha1-beta1'' receptor as the v0.5 source string said. The value is unchanged; only the description of what was measured is corrected. It is an agonist EC50 on a hybrid receptor, so this row is typed EC50 / exact_compound_related_receptor (evidence distance E2) and drives functional_engagement_proxy, never binding occupancy. The subunit-resolved beta1 row is insect_nAChR_beta1.'
         evidence_tier: literature_order
       vertebrate_nAChR_a4b2:
         param_type: EC50
@@ -499,7 +499,7 @@ compounds:
         efficacy: 1.0
         relation: class_extrapolation
         species: insect (review-level class statement)
-        source: 'Tomizawa and Casida 2005, Annu Rev Pharmacol Toxicol 45:247 (cyanoamidine neonicotinoids bind insect nAChR with low-nM to tens-of-nM affinity). TYPING NOTE (v0.6): review-level affinity statement; typed as the weaker claim (EC50 / class_extrapolation), so it drives functional_engagement only.'
+        source: 'Tomizawa and Casida 2005, Annu Rev Pharmacol Toxicol 45:247 (cyanoamidine neonicotinoids bind insect nAChR with low-nM to tens-of-nM affinity). TYPING NOTE (v0.6): review-level affinity statement; typed as the weaker claim (EC50 / class_extrapolation, evidence distance E3), so it drives functional_engagement_proxy only.'
         evidence_tier: literature_order
       vertebrate_nAChR_a7:
         param_type: EC50

@@ -9,10 +9,20 @@ from flylab.analysis.baselines import (
 )
 from flylab.analysis.dependence import (
     CLASSES,
+    DEFAULT_MODES,
     INFORMATION_LADDER,
+    VERDICTS,
+    balance_report,
+    benjamini_hochberg,
+    cut_census,
     dependence_landscape,
     dependence_profile,
+    equivalence_margin,
+    ladder_power,
+    ladder_recovery,
+    mode_verdict,
     necessary_information_level,
+    synthetic_cut,
 )
 from flylab.analysis.fit import bootstrap_fit, hill4, hill4_fit
 from flylab.analysis.impact import (
@@ -62,10 +72,12 @@ from flylab.analysis.robustness import (
 from flylab.analysis.uncertainty_global import (
     FACTORS,
     ISHIGAMI_REFERENCE,
+    RESOLUTION_STATES,
     RateSurrogate,
     ishigami,
     jansen_indices,
     saltelli_matrices,
+    resolution_summary,
     sobol_analysis,
     uncertainty_budget,
 )
@@ -96,7 +108,17 @@ __all__ = [
     "dependence_landscape",
     "necessary_information_level",
     "INFORMATION_LADDER",
+    "DEFAULT_MODES",
     "CLASSES",
+    "VERDICTS",
+    "mode_verdict",
+    "equivalence_margin",
+    "benjamini_hochberg",
+    "cut_census",
+    "balance_report",
+    "synthetic_cut",
+    "ladder_recovery",
+    "ladder_power",
     # ablation ladder
     "LEVELS",
     "level_predictions",
@@ -132,6 +154,8 @@ __all__ = [
     "jansen_indices",
     "sobol_analysis",
     "uncertainty_budget",
+    "resolution_summary",
+    "RESOLUTION_STATES",
     "ishigami",
     "ISHIGAMI_REFERENCE",
     # value of information (exported under a name that does not shadow the

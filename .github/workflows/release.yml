@@ -1,0 +1,124 @@
+name: release
+
+# Everything that must hold before a tag becomes a release.
+#
+# The ordinary `tests` workflow runs the fast suite only: `pyproject.toml` sets
+# `addopts = "-m 'not slow'"`, so the static build and the browser boot are not
+# exercised on a normal push. A release is where they are, together with a full
+# pipeline run and a check that the committed results still follow from the
+# committed inputs.
+#
+# Nothing here creates a tag or a GitHub release. It gates one.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Ref to validate (defaults to the triggering ref)"
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          fetch-depth: 0          # scripts/manifest.py asks git which files it accounts for
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install -e ".[dev,viz]"
+
+      - name: Record the environment
+        run: |
+          python -c "import sys; print(sys.version)"
+          python -m pip freeze > dist-env.txt
+          diff <(grep -v '^#' requirements-lock.txt | sort) <(sort dist-env.txt) \
+            > lock-drift.txt || true
+          echo "Packages in requirements-lock.txt that differ here:"
+          head -40 lock-drift.txt
+
+      # 1. the fast contract suite
+      - name: pytest (fast suite)
+        run: pytest -q
+
+      # 2. the checks ordinary CI never runs
+      - name: pytest (slow suite)
+        run: pytest -q -m slow
+
+      # 3. the whole paper pipeline, into a scratch directory so that the
+      #    committed papers/ artifacts stay exactly as tagged and step 5 can
+      #    compare against them
+      - name: reproduce the paper (--fast)
+        run: python scripts/reproduce_paper.py --fast --outdir dist/fastrun
+
+      - name: the fast run produced every artifact
+        run: |
+          test -f dist/fastrun/results.json
+          python - <<'PY'
+          import json, pathlib
+          results = json.loads(pathlib.Path("dist/fastrun/results.json").read_text())
+          figures = list(pathlib.Path("dist/fastrun/figures").glob("*.png"))
+          tables = list(pathlib.Path("dist/fastrun/tables").glob("*.csv"))
+          print(f"{len(results.get('values', results))} values, {len(figures)} figures, {len(tables)} tables")
+          assert figures and tables, "the pipeline wrote no figures or no tables"
+          PY
+
+      # 4. the static (Pyodide) bench actually builds
+      - name: build the static browser bench
+        run: python scripts/build_pages.py --out dist/pages --vendor-pyodide
+
+      - name: show the static manifest
+        run: cat dist/pages/manifest.json
+
+      # 5. the committed results still follow from the committed inputs.
+      #    Regenerate with `flylab manifest --write` and commit it before
+      #    tagging; a mismatch here means the tag does not describe itself.
+      - name: verify the artifact manifest
+        run: flylab manifest --check
+
+      - name: a spec still runs end to end
+        run: |
+          flylab spec-schema --example > dist/release-spec.yaml
+          flylab run dist/release-spec.yaml --outdir dist/release-run --dry-run
+          python - <<'PY'
+          import pathlib, yaml
+          from flylab.spec import load_spec, run_spec
+          spec = load_spec("dist/release-spec.yaml")
+          # the committed example asks for the paper-strength analyses; a gate
+          # only needs to prove the machinery, so drop them here
+          resolved = spec.model_dump()
+          resolved["analyses"] = {}
+          manifest = run_spec(resolved, "dist/release-run")
+          print("digest", manifest["determinism"]["digest"])
+          assert pathlib.Path("dist/release-run/results.csv").exists()
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-gate-${{ github.sha }}
+          path: |
+            dist/fastrun
+            dist/pages/manifest.json
+            dist/release-run
+            artifact-manifest.json
+            requirements-lock.txt
+            lock-drift.txt
+          retention-days: 30

@@ -789,14 +789,15 @@ def sobol_analysis(
             None if ci is None else bool(float(ci[0]) > 0.0 or float(ci[1]) < 0.0)
         )
         rows[-1]["first_order_ci_excludes_zero"] = excludes_zero
-        rows[-1]["resolution_status"] = (
-            RESOLVED_LABEL if excludes_zero else UNRESOLVED_LABEL
-        )
     rows.sort(key=lambda r: -r["total_order"])
 
     sum_first = float(sum(r["first_order"] for r in rows))
     warnings = list(BASE_WARNINGS)
     resolution = resolution_summary(rows, engine=engine)
+    for row in rows:
+        # the three-state view is the single source of truth for a row's state
+        row["resolution_status"] = resolution["by_factor"][row["factor"]]
+        row["resolved"] = bool(row["resolution_status"] == RESOLVED_LABEL)
     warnings.append(resolution["statement"])
     noise = next((r for r in rows if r["factor"] == "lif_seed"), None)
     if noise is not None and engine == "rate":
@@ -805,7 +806,7 @@ def sobol_analysis(
             f"indices (S={noise['first_order']:+.3f}, T={noise['total_order']:+.3f}) "
             "are a null-factor control: they show the SIGN and rough SIZE of the "
             "estimator's error on a factor that is exactly zero. They are one "
-            "draw of that error, not a symmetric +-tolerance band, and an index "
+            "draw of that error, not a symmetric tolerance band, and an index "
             "is NOT resolved merely by exceeding them. Resolution is decided per "
             "factor by whether its own first-order confidence interval excludes "
             "zero. Run with engine='lif' to give LIF stochasticity a real index."
@@ -824,6 +825,23 @@ def sobol_analysis(
         )
     if var <= 0:
         warnings.append("output variance is zero: the readout does not move over the sampled ranges.")
+    if resolution["noise_floor"] > 0:
+        warnings.append(
+            f"estimator noise floor {resolution['noise_floor']:+.3f}, measured as "
+            f"the most negative first-order estimate ({resolution['noise_floor_factor']}); "
+            "a true first-order index cannot be negative, so that magnitude is a "
+            "lower bound on the estimator's error at this sample size. It is NOT "
+            "a symmetric tolerance band and exceeding it does not resolve a "
+            "factor; only a confidence interval excluding zero does."
+        )
+    if float(1.0 - sum_first) != float(1.0 - sum(max(0.0, r["first_order"]) for r in rows)):
+        warnings.append(
+            f"interaction share is {float(1.0 - sum_first):.3f} on the raw "
+            "first-order estimates and "
+            f"{float(1.0 - sum(max(0.0, r['first_order']) for r in rows)):.3f} with "
+            "negative estimates clipped to zero; the difference is estimator "
+            "noise being counted as interaction."
+        )
 
     return {
         "compound": compound,
@@ -842,7 +860,13 @@ def sobol_analysis(
         "output_sd": float(math.sqrt(var)) if var > 0 else 0.0,
         "baseline_value": float(f(baseline_unit_vector())) if model is None else None,
         "sum_first_order": sum_first,
+        "sum_first_order_clipped": float(sum(max(0.0, r["first_order"]) for r in rows)),
         "interaction_share": float(1.0 - sum_first),
+        # negative first-order estimates are estimator noise, and leaving them
+        # in inflates the interaction residual; both are reported
+        "interaction_share_clipped": float(
+            1.0 - sum(max(0.0, r["first_order"]) for r in rows)
+        ),
         "rows": rows,
         "resolution": resolution,
         "summary": resolution["statement"],
@@ -913,7 +937,26 @@ def resolution_summary(
     rows = list(rows)
     by_name = {r["factor"]: r for r in rows}
     null_row = by_name.get(null_factor) if engine == "rate" else None
-    null_mag = None if null_row is None else abs(float(null_row["first_order"]))
+    # The estimator's floor is NOT the null factor's own index: a first-order
+    # index that is truly >= 0 can only be estimated below zero by estimator
+    # error, so the largest magnitude among the NEGATIVE estimates is a
+    # measured lower bound on that error, and it can be much larger than the
+    # null factor's own draw (on the shipped run: gain_coef at -0.046 against
+    # lif_seed at -0.007, 6.8x). The floor is the larger of the two.
+    negatives = [abs(float(r["first_order"])) for r in rows if float(r["first_order"]) < 0]
+    noise_floor = max(negatives) if negatives else 0.0
+    noise_floor_factor = None
+    if negatives:
+        noise_floor_factor = min(
+            (r for r in rows if float(r["first_order"]) < 0),
+            key=lambda r: float(r["first_order"]),
+        )["factor"]
+    null_mag = None
+    if null_row is not None or negatives:
+        null_mag = max(
+            noise_floor,
+            0.0 if null_row is None else abs(float(null_row["first_order"])),
+        )
 
     out: list[dict[str, Any]] = []
     for r in rows:
@@ -978,15 +1021,29 @@ def resolution_summary(
         )
     if nulls:
         statement += (
-            " Indistinguishable from the deliberately null factor"
-            + (f" ({null_factor})" if null_row is not None else "")
-            + ": "
+            " Indistinguishable from the estimator's own noise (floor "
+            f"{noise_floor:+.3f}, set by {noise_floor_factor}"
+            + (
+                f"; the deliberately null factor {null_factor} estimates "
+                f"{float(null_row['first_order']):+.3f}"
+                if null_row is not None
+                else ""
+            )
+            + "): "
             + ", ".join(sorted(nulls))
             + "."
         )
     return {
         "states": out,
         "by_factor": {r["factor"]: r["state"] for r in out},
+        "noise_floor": float(noise_floor),
+        "noise_floor_factor": noise_floor_factor,
+        "noise_floor_definition": (
+            "the largest magnitude among the negative first-order estimates, "
+            "which is a measured lower bound on the estimator's error because "
+            "a true first-order index cannot be negative; it is compared "
+            "against the null factor's own index and the larger is used"
+        ),
         "resolved": resolved,
         "unresolved": sorted(unresolved + nulls),
         "unresolved_strict": sorted(unresolved),

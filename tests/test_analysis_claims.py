@@ -18,6 +18,7 @@ from flylab.analysis.claims import (
     CHAIN_STEPS,
     CLASSIFICATIONS,
     LABELS,
+    evidence_rows,
     claim_audit,
     fact_inference_unknown,
     label_counts,
@@ -234,3 +235,42 @@ def test_empty_input_does_not_raise():
     assert [link["step"] for link in audit["chain"]] == list(CHAIN_STEPS)
     param = next(link for link in audit["chain"] if link["step"] == "parameter_source")
     assert param["label"] == "UNKNOWN"
+
+
+# --------------------------------------------------------------------------
+# the typed evidence behind an audit (what the claim card renders)
+# --------------------------------------------------------------------------
+def test_evidence_rows_carry_the_parameter_type_and_the_evidence_distance(audit):
+    rows = evidence_rows(audit)
+    assert rows, "fipronil has receptor rows"
+    assert len(rows) == len(
+        next(link for link in audit["chain"] if link["step"] == "parameter_source")["sources"]
+    )
+    for row in rows:
+        assert "param_type" in row and "relation" in row
+        assert row["modelled"] is (row["classification"] != "NOT MODELLED")
+
+    modelled = [r for r in rows if r["modelled"]]
+    assert modelled
+    for row in modelled:
+        assert row["param_type"] in ("Kd", "Ki", "EC50", "IC50", "Kb")
+        assert row["relation"] and row["relation"] != "unsupported"
+        assert row["engagement"] is not None
+        assert row["engagement_model"] in ("binding_occupancy", "functional_engagement")
+
+
+def test_every_source_row_explains_how_far_the_evidence_sits(audit):
+    """`relation` is a token; `relation_note` is the sentence a reader needs."""
+    sources = next(link for link in audit["chain"] if link["step"] == "parameter_source")["sources"]
+    for row in sources:
+        assert "relation_note" in row
+        if row["classification"] != "NOT MODELLED":
+            assert row["relation_note"], row["receptor"]
+
+
+def test_an_unsupported_row_reports_no_engagement(audit):
+    for row in evidence_rows(audit):
+        if not row["modelled"]:
+            assert row["engagement"] is None       # N/A, never a small number
+            assert row["param_value_M"] is None
+

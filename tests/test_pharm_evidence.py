@@ -373,3 +373,165 @@ def test_evidence_distance_table_is_the_paper_census():
     assert table["n_binding_occupancy"] == report["by_engagement_model"].get(
         "binding_occupancy", 0
     )
+
+
+# ---------------------------------------------------------------------------
+# the soundness invariant
+# ---------------------------------------------------------------------------
+#
+# The type system is only a contribution if it holds across the pipeline, not
+# just at the call site that happens to check.  The invariant, stated once:
+#
+#   NO numeric engagement that reaches a readout may originate from a library
+#   row whose (param_type, evidence_distance) pair does not admit one, and the
+#   model label it travels under must be exactly the one that pair admits.
+#
+# This test enumerates the whole library and every entry point that turns a
+# library row into a number a readout can see.
+def _admitted() -> dict[tuple[str, str], EngagementModel]:
+    """(compound, receptor) -> the one model the evidence admits."""
+    from flylab.pharm.occupancy import spec_value_M
+
+    admitted: dict[tuple[str, str], EngagementModel] = {}
+    for key, entry in LIB["compounds"].items():
+        for receptor, spec in entry["receptors"].items():
+            value = spec_value_M(spec)
+            admitted[(key, receptor)] = (
+                model_for(spec.get("param_type"), spec.get("relation"))
+                if value is not None else EngagementModel.not_modelled
+            )
+    return admitted
+
+
+ADMITTED = _admitted()
+
+
+def _assert_sound(compound: str, receptor: str, value, model, where: str) -> None:
+    """One number, one label, checked against what the evidence admits."""
+    admits = ADMITTED[(compound, receptor)]
+    if value is None:
+        return
+    assert admits is not EngagementModel.not_modelled, (
+        f"{where}: {compound}/{receptor} produced the number {value!r} although "
+        f"its evidence admits no numeric engagement"
+    )
+    if model is not None:
+        assert str(model) == admits.value, (
+            f"{where}: {compound}/{receptor} reported engagement_model={model!r}, "
+            f"but its evidence admits only {admits.value}"
+        )
+        spec = LIB["compounds"][compound]["receptors"][receptor]
+        # the refusal itself must agree, given both facts
+        check_transformation(spec.get("param_type"), model, spec.get("relation"))
+
+
+def test_no_number_reaching_a_readout_comes_from_inadmissible_evidence():
+    """The soundness invariant, over the whole library and every entry point."""
+    from flylab.assays.subgraph import run_subgraph_assay
+    from flylab.assays.taste import run_taste_assay
+    from flylab.browser.bridge import build_dashboard
+    from flylab.pharm.mechanisms import gains_from_occupancy
+    from flylab.pharm.occupancy import engagement_curve, occupancy_curve
+    from flylab.pharm.uncertainty import occupancy_ci
+
+    checked = 0
+    for compound in sorted(LIB["compounds"]):
+        conc = 1e-6
+
+        # 1. the typed comparison itself
+        result = compare_compound(compound, conc)
+        for row in result["receptors"]:
+            _assert_sound(compound, row["receptor"], row["engagement"],
+                          row["engagement_model"], "compare_compound")
+            checked += 1
+
+        # 2. every point of every dose-response curve
+        for point in occupancy_curve(compound, [1e-9, 1e-6, 1e-3]):
+            for receptor, value in point["receptors"].items():
+                _assert_sound(compound, receptor, value, None, "occupancy_curve")
+        for point in engagement_curve(compound, [1e-6]):
+            for receptor, value in point["receptors"].items():
+                _assert_sound(compound, receptor, value, None, "engagement_curve")
+
+        # 3. the Monte-Carlo interval (point AND both tails)
+        ci = occupancy_ci(compound, conc, n=8, seed=0)
+        for receptor, block in ci["receptors"].items():
+            for field in ("point", "mean", "p2_5", "p97_5"):
+                _assert_sound(compound, receptor, block.get(field),
+                              block["engagement_model"], f"occupancy_ci.{field}")
+
+        # 4. the circuit assays -- the numbers that actually reach a readout
+        for name, assay in (
+            ("run_subgraph_assay", run_subgraph_assay(compound, conc)),
+            ("run_taste_assay", run_taste_assay(compound, conc)),
+        ):
+            rows = assay["occupancy"]
+            for row in rows:
+                _assert_sound(compound, row["receptor"], row.get("engagement"),
+                              row.get("engagement_model"), name)
+            # and the gain patch, which is the bridge from evidence to circuit:
+            # dropping every inadmissible row must not change a single gain
+            admissible_rows = [
+                r for r in rows
+                if ADMITTED[(compound, r["receptor"])] is not EngagementModel.not_modelled
+            ]
+            assert gains_from_occupancy(rows) == gains_from_occupancy(admissible_rows), (
+                f"{name}: {compound} gain patch depends on a row the evidence "
+                "does not admit"
+            )
+            not_modelled_rows = [r for r in rows if r.get("engagement") is None]
+            assert gains_from_occupancy(not_modelled_rows) == gains_from_occupancy([]), (
+                f"{name}: {compound} not-modelled rows moved a gain off its default"
+            )
+
+        # 5. the dashboard, including its headline tiles
+        dash = build_dashboard(compound, conc, include_dependence=False,
+                               include_ladder=False)
+        for row in dash["evidence"]:
+            _assert_sound(compound, row["receptor"], row.get("engagement"),
+                          row.get("engagement_model"), "build_dashboard")
+        for tile in ("insect_engagement", "vertebrate_engagement"):
+            block = dash["headline"][tile]
+            if block.get("receptor") is not None:
+                _assert_sound(compound, block["receptor"], block["value"],
+                              block.get("engagement_model"), f"headline.{tile}")
+
+    assert checked == sum(len(e["receptors"]) for e in LIB["compounds"].values())
+
+
+def test_the_invariant_would_catch_a_violation():
+    """The test above is only worth having if it can fail: prove it can.
+
+    A hand-forged row that claims occupancy from a cross-species Kd must be
+    refused by the same check the pipeline runs.
+    """
+    spec = LIB["compounds"]["imidacloprid"]["receptors"]["insect_nAChR_beta1"]
+    with pytest.raises(EvidenceTypeError):
+        check_transformation(spec["param_type"], EngagementModel.binding_occupancy,
+                             spec["relation"])
+    placeholder = LIB["compounds"]["diazepam"]["receptors"]["insect_RDL"]
+    with pytest.raises(EvidenceTypeError):
+        check_transformation(placeholder["param_type"],
+                             EngagementModel.functional_engagement_proxy,
+                             placeholder["relation"])
+
+
+def test_the_census_states_whether_the_binding_branch_is_exercised():
+    """The paper must not claim an example the library no longer contains."""
+    report = library_report()
+    branch = report["binding_branch"]
+    assert branch["n_rows"] == report["n_rows_binding_occupancy"]
+    assert branch["exercised"] is (branch["n_rows"] > 0)
+    assert branch["n_rows"] == report["by_engagement_model"].get("binding_occupancy", 0)
+    assert report["n_rows_binding_engagement_proxy"] == report[
+        "by_engagement_model"
+    ].get("binding_engagement_proxy", 0)
+    for row in branch["rows"]:
+        assert row["evidence_distance"] == "E0"
+        assert row["param_type"] in ("Kd", "Ki")
+        assert "Drosophila melanogaster" in str(row["species"])
+    for row in branch["proxy_rows"]:
+        assert row["evidence_distance"] in ("E1", "E2")
+    assert branch["note"]
+    if not branch["exercised"]:
+        assert "EMPTY" in branch["note"]

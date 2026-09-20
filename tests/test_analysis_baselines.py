@@ -8,13 +8,23 @@ import numpy as np
 import pytest
 
 from flylab.analysis.baselines import (
+    C_FLOOR_LEVEL,
+    DEFAULT_GENERIC_RULE,
+    GENERIC_MULTIPLIER_RULE,
+    GENERIC_RULES,
     LEVELS,
+    NT_SIGN_CONVENTIONS,
     ablation,
     ablation_table,
     baseline_composition_only,
     baseline_receptor_only,
     baseline_topology_only,
+    composition_dominance_under_normalisations,
+    composition_effect_from_gains,
+    composition_reference_distribution,
     full_model,
+    generic_multiplier,
+    glutamate_sign_reconciliation,
     graph_census,
     level_predictions,
     pearson,
@@ -57,7 +67,7 @@ def test_levels_are_what_they_claim_to_be():
     ] != pytest.approx(b["effect"])
     # C sees the graph but only one generic multiplier.
     c = baseline_topology_only("imidacloprid", PAPER_CONC, graph="named")
-    assert 0.05 <= c["detail"]["multiplier"] <= 1.0
+    assert 0.05 <= c["detail"]["multiplier"] <= 2.0
     assert c["unit"] == "Hz"
     # D is the shipped model, and must equal the assay's own contrast.
     from flylab.analysis.nullmodels import drug_effect
@@ -187,3 +197,173 @@ def test_ablation_table_over_the_whole_library():
     gain = list(tab["information_gain"].values())[0]
     rows = {r["level"]: r for r in gain["levels"]}
     assert rows["B_composition_only"]["spearman_rho_vs_full"] is not None
+
+
+# --------------------------------------------------------------------------
+# the topology-only baseline used to be sign-broken
+# --------------------------------------------------------------------------
+def test_generic_rule_is_direction_aware_by_default():
+    """The old rule could only depress, so it could not express disinhibition;
+    the new one takes the sign - and only the sign - from the mechanism table."""
+    assert DEFAULT_GENERIC_RULE == "direction_aware"
+    assert GENERIC_RULES["depressant_floor"] == GENERIC_MULTIPLIER_RULE
+
+    # fipronil blocks RDL: the full model disinhibits, so a fair generic
+    # baseline must be able to go up.
+    m_new, det_new = generic_multiplier("fipronil", PAPER_CONC)
+    m_old, det_old = generic_multiplier("fipronil", PAPER_CONC, rule="depressant_floor")
+    assert m_new > 1.0 and det_new["direction"] == 1
+    assert m_old <= 1.0 and det_old["direction"] == -1
+    # same generic magnitude: only the sign is new
+    assert det_new["theta_max"] == pytest.approx(det_old["theta_max"])
+    assert m_new == pytest.approx(1.0 + det_new["theta_max"])
+    assert m_old == pytest.approx(max(0.05, 1.0 - det_old["theta_max"]))
+
+    # a nicotinic agonist at a silencing concentration still goes down
+    m_imi, det_imi = generic_multiplier("imidacloprid", PAPER_CONC)
+    assert m_imi < 1.0 and det_imi["direction"] == -1
+
+
+def test_direction_aware_baseline_can_express_disinhibition():
+    fip_new = baseline_topology_only("fipronil", PAPER_CONC, graph="named")
+    fip_full = full_model("fipronil", PAPER_CONC, graph="named")
+    assert fip_full["effect"] > 0
+    assert fip_new["effect"] > 0, "a fair topology-only baseline must be able to go up"
+    # the old rule is kept, reported alongside, and labelled a floor
+    floor = fip_new["detail"]["floor"]
+    assert floor["level"] == C_FLOOR_LEVEL
+    assert floor["rule"] == GENERIC_MULTIPLIER_RULE
+    assert floor["effect"] <= 0, "the historical rule cannot produce a positive effect"
+    assert "FLOOR" in floor["rule_note"] or "floor" in floor["rule_note"].lower()
+    old = baseline_topology_only(
+        "fipronil", PAPER_CONC, graph="named", rule="depressant_floor"
+    )
+    assert old["effect"] == pytest.approx(floor["effect"])
+
+
+def test_every_floor_rule_entry_is_non_positive_and_the_fix_moves_rho_up():
+    tab = ablation_table(compounds=SET, concs_M=(PAPER_CONC,))
+    for row in tab["rows"]:
+        assert row[C_FLOOR_LEVEL] <= 1e-9, (
+            "the historical generic rule is structurally incapable of a "
+            "positive effect: that is why it is a floor, not a competitor"
+        )
+    cmp_block = tab["information_gain"][f"{PAPER_CONC:.3e}"]["generic_rule_comparison"]
+    assert cmp_block["delta_rho"] > 0
+    assert "FLOOR" in cmp_block["depressant_floor"]["role"]
+    assert any("direction-aware generic rule" in s for s in tab["statements"])
+
+
+def test_concentration_dependence_is_reported_per_concentration():
+    tab = ablation_table(compounds=SET, concs_M=(1e-8, PAPER_CONC))
+    dep = tab["concentration_dependence"]
+    assert [r["conc_M"] for r in dep["rows"]] == [1e-8, PAPER_CONC]
+    for row in dep["rows"]:
+        assert row["worst_level"] in LEVELS
+        assert row["worst_level_with_floor_rule"] in LEVELS
+        assert row["rho_C_floor_rule"] is not None
+    assert any("worst of the four only at the lowest" in s for s in dep["statements"])
+
+
+# --------------------------------------------------------------------------
+# signed rho (4a): an inverted ordering is not a reproduction
+# --------------------------------------------------------------------------
+def test_reproduction_flag_uses_signed_rho():
+    from flylab.analysis.baselines import _corr_row
+
+    forward = list(range(10))
+    inverted = _corr_row("X", [-v for v in forward], forward, "n", "u")
+    assert inverted["spearman_rho_vs_full"] == pytest.approx(-1.0)
+    assert inverted["reproduces_full_ordering"] is False
+    assert inverted["reproduces_full"] is False
+    assert inverted["ordering_inverted"] is True
+    same = _corr_row("X", forward, forward, "n", "u")
+    assert same["reproduces_full_ordering"] is True
+    assert same["ordering_inverted"] is False
+
+
+def test_information_added_column_is_signed_and_says_so():
+    out = ablation("imidacloprid", PAPER_CONC, compounds=SET)
+    rows = {r["level"]: r for r in out["information_gain"]["levels"]}
+    assert rows["A_receptor_only"]["information_added_vs_previous"] is None
+    for lvl in LEVELS[1:]:
+        assert rows[lvl]["information_added_basis"] == "signed_spearman_rho"
+    # signed: the increment is exactly the difference of the signed rhos
+    a = rows["A_receptor_only"]["spearman_rho_vs_full"]
+    b = rows["B_composition_only"]["spearman_rho_vs_full"]
+    assert rows["B_composition_only"]["information_added_vs_previous"] == pytest.approx(b - a)
+
+
+# --------------------------------------------------------------------------
+# B versus D: algebraic identity or finding? (3)
+# --------------------------------------------------------------------------
+def test_composition_reference_distribution_gives_an_unsurprising_range():
+    out = composition_reference_distribution(PAPER_CONC, compounds=SET, n_draws=5, seed=1)
+    obs = out["observed"]["spearman_rho"]
+    assert obs is not None
+    cond = out["conditions"]
+    ref = cond["random_single_gain_vectors"]["spearman_rho"]
+    assert ref["n"] == 5 and -1.0 <= ref["median"] <= 1.0
+    assert out["unsurprising_rho_range"] == [ref["p05"], ref["p95"]]
+    assert cond["random_gain_vectors"]["spearman_rho"]["n"] == 5
+    # shuffling compound labels cannot move the correlation: both levels are
+    # functions of the same gain vector. That is the point of the condition.
+    assert cond["shuffled_compound_assignment"]["identical_to_observed"] is True
+    assert any("EVIDENCE AGAINST" in s for s in out["statements"])
+    assert any("floor" in s for s in out["statements"])
+    json.dumps(out)
+
+
+def test_composition_dominance_under_normalisations():
+    out = composition_dominance_under_normalisations(PAPER_CONC, compounds=SET)
+    assert set(out["by_normalisation"]) == {"row_abs", "none", "degree"}
+    for mode, block in out["by_normalisation"].items():
+        assert block["spearman_rho_b_vs_d"] is None or -1 <= block["spearman_rho_b_vs_d"] <= 1
+    assert any("normalisation" in s for s in out["statements"])
+    json.dumps(out)
+
+
+def test_full_effect_direct_matches_the_full_model():
+    from flylab.analysis.baselines import _full_effect_direct
+    from flylab.circuit.rate import compute_gains
+
+    for compound in ("imidacloprid", "fipronil"):
+        gains, _ = compute_gains(compound, PAPER_CONC)
+        assert _full_effect_direct(gains) == pytest.approx(
+            full_model(compound, PAPER_CONC)["effect"], rel=1e-9
+        )
+
+
+# --------------------------------------------------------------------------
+# the glutamate sign disagreement (4b)
+# --------------------------------------------------------------------------
+def test_levels_b_and_d_disagree_on_glutamate_and_the_gap_is_quantified():
+    from flylab.circuit.rate import SIGN
+
+    assert SIGN["glutamate"] < 0, "the rate engine signs glutamate inhibitory"
+    assert set(NT_SIGN_CONVENTIONS) == {"wholens", "rate_engine"}
+    # a gain on glutamate alone moves the index in opposite directions
+    gains = {"g_ach": 1.0, "g_gaba": 1.0, "g_glu": 1.5, "g_oct": 1.0, "g_nav": 1.0, "ach_tone": 1.0}
+    wholens = composition_effect_from_gains(gains, None, "named", "wholens")
+    reconciled = composition_effect_from_gains(gains, None, "named", "rate_engine")
+    assert wholens > 0 > reconciled
+
+    b = baseline_composition_only("ivermectin", PAPER_CONC, graph="named")
+    assert b["detail"]["nt_sign_convention"] == "wholens"
+    assert b["detail"]["effect_other_convention"] is not None
+    assert any("sign of glutamate" in w for w in b["warnings"])
+
+    out = glutamate_sign_reconciliation(concs_M=(PAPER_CONC,), compounds=SET)
+    row = out["rows"][0]
+    assert row["rho_wholens"] is not None and row["rho_rate_engine"] is not None
+    assert out["max_abs_delta_rho"] is not None
+    assert any("glutamate" in s for s in out["statements"])
+    json.dumps(out)
+
+
+def test_information_gain_carries_the_sign_convention_check():
+    out = ablation("imidacloprid", PAPER_CONC, compounds=SET)
+    check = out["information_gain"]["composition_sign_convention_check"]
+    assert check["shipped_convention"] == "wholens"
+    assert check["alternative_convention"] == "rate_engine"
+    assert check["delta_rho"] is not None

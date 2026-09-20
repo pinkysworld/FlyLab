@@ -35,6 +35,7 @@ __all__ = [
     "claim_audit",
     "fact_inference_unknown",
     "label_counts",
+    "evidence_rows",
     "to_markdown",
 ]
 
@@ -310,6 +311,7 @@ def claim_audit(notebook_or_result: Mapping[str, Any] | None = None, **kw: Any) 
             "param_type": e.get("param_type"),
             "param_value_M": e.get("param_value_M"),
             "relation": e.get("relation"),
+            "relation_note": e.get("relation_note"),
             "species": e.get("species"),
             "evidence_tier": e.get("evidence_tier"),
             "source": e.get("source"),
@@ -355,9 +357,12 @@ def claim_audit(notebook_or_result: Mapping[str, Any] | None = None, **kw: Any) 
             "MODEL-DERIVED",
             (
                 "Engagement is the Hill expression C^n / (value^n + C^n) applied to that "
-                "typed parameter. Only a Kd/Ki row yields fractional receptor occupancy; "
-                "an EC50/IC50 row yields normalised functional engagement, which is not "
-                "the same quantity."
+                "typed parameter. Only a Kd/Ki row measured on this receptor in this "
+                "species (evidence distance E0) yields fractional receptor occupancy; a "
+                "Kd/Ki from another species or a related preparation yields a "
+                "binding-derived engagement proxy, and an EC50/IC50 row yields normalised "
+                "functional engagement (a proxy in turn when it was transferred here). "
+                "None of the proxies is the same quantity as an occupancy."
             ),
             detail={
                 "formula": "theta = C^n / (value^n + C^n)",
@@ -367,6 +372,7 @@ def claim_audit(notebook_or_result: Mapping[str, Any] | None = None, **kw: Any) 
                         "receptor": e.get("receptor"),
                         "engagement": e.get("engagement"),
                         "engagement_model": e.get("engagement_model"),
+                        "evidence_distance": e.get("evidence_distance"),
                         "param_type": e.get("param_type"),
                         "n": e.get("n"),
                     }
@@ -553,6 +559,37 @@ def claim_audit(notebook_or_result: Mapping[str, Any] | None = None, **kw: Any) 
     }
     audit["fact_inference_unknown"] = fact_inference_unknown(audit=audit)
     return audit
+
+
+def evidence_rows(audit: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """The typed evidence behind an audit, one row per receptor.
+
+    Each row carries what the source measured (``param_type``), how far that
+    source sits from this compound/receptor/species (``relation``, with its
+    ``relation_note``), the resulting engagement and whether the row is
+    modelled at all.  ``flylab.report.card`` renders this as the card's
+    *evidence inputs* section; a row with ``modelled = False`` has no sourced
+    value and contributes N/A, never a number.
+    """
+    by_step = {link.get("step"): link for link in audit.get("chain") or []}
+    sources = list((by_step.get("parameter_source") or {}).get("sources") or [])
+    detail = (by_step.get("engagement_transformation") or {}).get("detail") or {}
+    per_receptor = {
+        str(row.get("receptor")): row for row in (detail.get("per_receptor") or [])
+    }
+    out: list[dict[str, Any]] = []
+    for row in sources:
+        extra = per_receptor.get(str(row.get("receptor"))) or {}
+        out.append(
+            {
+                **row,
+                "engagement": extra.get("engagement"),
+                "engagement_model": extra.get("engagement_model"),
+                "hill_n": extra.get("n"),
+                "modelled": row.get("classification") != "NOT MODELLED",
+            }
+        )
+    return out
 
 
 def label_counts(chain: list[dict[str, Any]] | Mapping[str, Any]) -> dict[str, int]:

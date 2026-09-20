@@ -590,7 +590,9 @@ def library_report(library: dict[str, Any] | None = None) -> dict[str, Any]:
     by_species: Counter[str] = Counter()
     n_rows = 0
     modelled = 0
-    for entry in (lib.get("compounds") or {}).values():
+    binding_rows: list[dict[str, Any]] = []
+    proxy_rows: list[dict[str, Any]] = []
+    for key, entry in (lib.get("compounds") or {}).items():
         for receptor, spec in (entry.get("receptors") or {}).items():
             n_rows += 1
             param_type = as_param_type(spec.get("param_type"))
@@ -606,6 +608,20 @@ def library_report(library: dict[str, Any] | None = None) -> dict[str, Any]:
             by_species[str(spec.get("species") or "Drosophila melanogaster (or not applicable)")] += 1
             if model is not EngagementModel.not_modelled:
                 modelled += 1
+            if model in (EngagementModel.binding_occupancy,
+                         EngagementModel.binding_engagement_proxy):
+                record = {
+                    "compound": key,
+                    "receptor": receptor,
+                    "param_type": param_type.value,
+                    "param_value_M": value,
+                    "relation": relation.value,
+                    "evidence_distance": RELATION_DISTANCE[relation].value,
+                    "species": spec.get("species"),
+                    "engagement_model": model.value,
+                }
+                (binding_rows if model is EngagementModel.binding_occupancy
+                 else proxy_rows).append(record)
     return {
         "schema_version": lib.get("schema_version"),
         "library_version": lib.get("library_version"),
@@ -621,6 +637,36 @@ def library_report(library: dict[str, Any] | None = None) -> dict[str, Any]:
         "by_engagement_model": dict(sorted(by_model.items())),
         "by_receptor": dict(sorted(by_receptor.items())),
         "by_species": dict(sorted(by_species.items())),
+        # The count the paper has to quote: how many rows actually exercise the
+        # binding branch of the type system after the v0.6.1 rule. A branch that
+        # is never taken is not a three-way distinction, and the census says so
+        # rather than leaving the reader to infer it.
+        "n_rows_binding_occupancy": len(binding_rows),
+        "n_rows_binding_engagement_proxy": len(proxy_rows),
+        "binding_branch": {
+            "exercised": bool(binding_rows),
+            "n_rows": len(binding_rows),
+            "rows": binding_rows,
+            "proxy_rows": proxy_rows,
+            "note": (
+                "binding_occupancy is exercised by "
+                f"{len(binding_rows)} row(s): a Kd/Ki measured on this compound, "
+                "at this receptor, in Drosophila (evidence distance E0). "
+                + (
+                    f"{len(proxy_rows)} further binding constant(s) sit at E1/E2 "
+                    "and are reported as binding_engagement_proxy."
+                    if proxy_rows else "No other binding constant is in the library."
+                )
+                if binding_rows else
+                "NO row in the library carries a binding constant measured on the "
+                "modelled organism, so the binding_occupancy branch is EMPTY: the "
+                "honest framing of the type system is then a modelled / "
+                "not-modelled distinction with provenance, and the paper must not "
+                "claim a binding-occupancy example. "
+                f"{len(proxy_rows)} binding constant(s) exist at evidence distance "
+                "E1/E2 and are reported as binding_engagement_proxy."
+            ),
+        },
         "note": ENGAGEMENT_IS_NOT_OCCUPANCY,
     }
 

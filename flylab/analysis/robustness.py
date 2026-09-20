@@ -49,33 +49,56 @@ At 6 shuffles the smallest attainable permutation p is ``1/7 = 0.143``, so an
 empirical ``p <= 0.05`` was arithmetically impossible and the criteria
 contradicted the method section that framed them.
 
-They are now:
+They are now not a separate statistical object at all.  Both run through
+:func:`flylab.analysis.dependence.dependence_landscape` -- the same
+permutation machinery, the same information ladder, the same prespecified
+equivalence margin and the same three-way verdict that produce the paper's
+n = 1000 headline -- at :data:`DEFAULT_SHUFFLES` shuffles per specification
+(resolution ``1/101 = 0.0099``):
 
 ``C3``
-    an empirical two-sided permutation test at :data:`DEFAULT_SHUFFLES`
-    shuffles (resolution ``1/101 = 0.0099``), retained when it **fails to
-    reject** - stated as "not distinguishable from a degree-preserving
-    rewiring null", never as equivalence.
+    imidacloprid is **not** classified topology-dependent: neither structural
+    null is distinguishable from the real cut.  A failure to reject, stated as
+    such; whether it also reaches equivalence within the margin is reported
+    per conclusion in ``equivalence_breakdown`` rather than folded into the
+    verdict.
 ``C4``
-    an explicit **effect-size contrast** with no threshold and no critical
-    value: the robust standardised distance
-    ``d = |effect - median(null)| / (1.4826 * MAD(null))`` for fipronil
-    against the same quantity for imidacloprid, on the same null at the same
-    shuffle count.
+    fipronil **is** classified topology-dependent, on the same cut, the same
+    shuffle stream and the same criterion.
+
+Because 25 specifications x 2 compounds x 2 structural modes is a family of
+tests and not a planned comparison, Benjamini-Hochberg is applied across the
+whole run and the verdicts are re-decided on the adjusted probabilities;
+``matrix_uncorrected`` keeps the uncorrected view and every topology row
+carries ``fraction_retained_uncorrected`` beside its headline fraction.
+
+One consequence is worth stating plainly, because it invalidates the v0.6
+result rather than refining it: :func:`mechanism_spec` rebinds
+``compute_gains`` on the **assay** modules only, and the permutation engine
+resolves gains through ``flylab.circuit.rate.compute_gains``, which it does
+not rebind.  A specification installed that way therefore never reached the
+null models: every member of the family produced the default gain patch, the
+identical real effect and the identical null, which is why the topology
+conclusions came back 25/25.  The topology check now passes the
+specification's gains into the engine explicitly
+(``dependence_landscape(gains_by_compound=...)``), so the fraction means what
+it says.
 
 Both predicates record what they computed in ``SpecRun.evidence`` and both
-rendered ``readout`` strings carry the shuffle count, so the criterion in the
-paper cannot drift from the criterion in the code.
+rendered ``readout`` strings carry the shuffle count and the size of the
+correction family, so the criterion in the paper cannot drift from the
+criterion in the code.
 
 Runtime
 -------
 ``conclusion_stability()`` with the full 25-member family takes roughly
-**5-7 minutes** on the committed graphs (about 12-16 s per specification:
-2 rate assays, 1 taste-map assay, 2 rewiring nulls at
-:data:`DEFAULT_SHUFFLES` = 100 shuffles -- about 3.5 s each on the ``named``
-cut -- and 10 circuit-selectivity ladders).  ``conclusion_stability(fast=True)``
-uses the 9-member subsample, reduced compound sets and
-:data:`FAST_SHUFFLES` = 25 shuffles, and takes roughly 60-90 s.
+**4-6 minutes** on the committed graphs (about 8-10 s per specification:
+2 rate assays, 1 taste-map assay, one 2-cell dependence landscape at
+:data:`DEFAULT_SHUFFLES` = 100 shuffles over five null modes -- both compounds
+share the shuffle stream, which is what makes running the full engine per
+specification affordable -- and 10 circuit-selectivity ladders).
+``conclusion_stability(fast=True)`` uses the 9-member subsample, reduced
+compound sets and :data:`FAST_SHUFFLES` = 25 shuffles.
 """
 from __future__ import annotations
 
@@ -681,6 +704,12 @@ TOPOLOGY_COMPOUNDS: tuple[str, ...] = ("imidacloprid", "fipronil")
 #: the structural null modes whose rejection makes a cell topology-dependent
 STRUCTURAL_MODE_NAMES: tuple[str, ...] = ("weight_permute", "rewire_degree_preserving")
 
+#: dependence classes that make a topology conclusion **undecidable** rather
+#: than false: with no effect on the readout (or none defined) there is
+#: nothing whose wiring-dependence could be assessed, and counting such a
+#: specification as "retained" would inflate the fraction for free.
+UNDECIDABLE_CLASSES: tuple[str | None, ...] = (None, "no-effect", "undefined")
+
 #: the smallest shuffle count at which ``p <= TOPOLOGY_ALPHA`` is attainable
 #: at all: ``1/(n+1) <= alpha``.
 MIN_SHUFFLES_FOR_ALPHA = int(round(1.0 / TOPOLOGY_ALPHA)) - 1
@@ -938,7 +967,7 @@ def _c_imidacloprid_topology_not_distinguishable(run: SpecRun) -> bool | None:
     """
     ev = run.topology_evidence("imidacloprid")
     run.evidence["C3_imidacloprid_topology_not_distinguishable"] = ev
-    if ev["class_raw"] is None:
+    if ev["class_raw"] in UNDECIDABLE_CLASSES:
         return None
     return bool(ev["class_raw"] != "topology-dependent")
 
@@ -953,7 +982,7 @@ def _c_fipronil_topology_exceeds(run: SpecRun) -> bool | None:
     """
     ev = run.topology_evidence("fipronil")
     run.evidence["C4_fipronil_topology_exceeds"] = ev
-    if ev["class_raw"] is None:
+    if ev["class_raw"] in UNDECIDABLE_CLASSES:
         return None
     return bool(ev["class_raw"] == "topology-dependent")
 
@@ -1300,6 +1329,15 @@ def conclusion_stability(
                 continue  # undecidable under this specification; stays undecidable
             is_topo = topo_fdr["topology_dependent"][cell]
             matrix[name][spec_name] = bool(is_topo) if expect else bool(not is_topo)
+    if topo_names:
+        warnings.append(
+            "every specification's topology cell is run on the SAME shuffle "
+            f"stream (seed {int(seed)}), so the {n_structural_tests} structural "
+            "tests of this run are positively dependent rather than "
+            "independent. Benjamini-Hochberg controls the FDR under positive "
+            "dependence, but the corrected fractions should be read as a "
+            "property of this shuffle stream, not as 25 independent replications."
+        )
     if topo_names and not topo_fdr["fdr"]["can_reject"]:
         warnings.append(
             "FDR cannot reject anything across this stability run: with "
@@ -1592,17 +1630,31 @@ def to_markdown(result: Mapping[str, Any]) -> str:
         out = [
             f"### Conclusion Stability Matrix ({result['family_size']} prespecified specifications)",
             "",
-            "| conclusion | claim | retained | % | failing specifications |",
-            "|---|---|---|---|---|",
+            "| conclusion | claim | retained | % | uncorrected | failing specifications |",
+            "|---|---|---|---|---|---|",
         ]
         for r in result["rows"]:
             fail = ", ".join(r["failing_specs"]) or "-"
             if r["undecidable_specs"]:
                 fail += f" (undecidable: {', '.join(r['undecidable_specs'])})"
+            raw = (
+                f"{r['n_retained_uncorrected']}/{r['n_specs']}"
+                if r.get("n_retained_uncorrected") is not None
+                else "n/a"
+            )
             out.append(
                 f"| {r['conclusion']} | {r['claim']} | {r['n_retained']}/{r['n_specs']} "
-                f"| {100 * r['fraction_retained']:.0f}% | {fail} |"
+                f"| {100 * r['fraction_retained']:.0f}% | {raw} | {fail} |"
             )
+        if result.get("n_structural_tests"):
+            out += [
+                "",
+                f"_Topology rows are decided by {result.get('topology_engine')} at "
+                f"n_shuffles = {result.get('n_shuffles')} per specification, with "
+                "Benjamini-Hochberg across the "
+                f"{result['n_structural_tests']} structural tests of this run; the "
+                "'uncorrected' column is the same matrix before that correction._",
+            ]
         return "\n".join(out)
     out = [
         "### Threshold sensitivity of the amplify / buffer split",

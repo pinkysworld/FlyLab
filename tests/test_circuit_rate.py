@@ -186,3 +186,110 @@ def test_explicit_graph_object_is_honoured():
     thin["n_edges"] = len(thin["edges"])
     net = RateNetwork(thin)
     assert int((np.abs(net.W_signed) > 0).sum()) < int((np.abs(rate_network().W_signed) > 0).sum())
+
+
+# --------------------------------------------------------------------------
+# the row normalisation (referee finding: undocumented, and it decides what
+# the readout measures)
+# --------------------------------------------------------------------------
+def test_normalisation_default_is_row_abs_and_is_documented():
+    from flylab.circuit import rate as rate_mod
+
+    assert rate_mod.DEFAULT_NORMALISATION == "row_abs"
+    assert set(rate_mod.NORMALISATIONS) == {"row_abs", "none", "degree"}
+    assert set(rate_mod.NORMALISATION_NOTES) == set(rate_mod.NORMALISATIONS)
+    doc = (rate_mod.__doc__ or "") + (rate_mod.RateNetwork.__doc__ or "")
+    # the consequence the manuscript has to carry, in words it can lift
+    assert "composition-weighted average of its presynaptic gains" in doc
+    assert "row_abs" in doc and "degree" in doc
+    net = rate_network()
+    assert net.normalise == "row_abs"
+    assert net.row_denominator.shape == (len(net),)
+
+
+def test_normalise_none_and_degree_change_the_matrix_not_the_default():
+    raw = rate_network("named", normalise="none")
+    deg = rate_network("named", normalise="degree")
+    default = rate_network("named")
+    # the default is untouched (the frozen regression above depends on it)
+    assert float(np.abs(default.W_signed).sum(axis=1).max()) <= 1.0 + 1e-9
+    assert np.array_equal(raw.W_signed, raw.W_raw)
+    assert float(np.abs(raw.W_signed).sum(axis=1).max()) > 1.0
+    nz = deg.in_degree > 0
+    assert np.allclose(
+        deg.W_signed[nz], deg.W_raw[nz] / deg.in_degree[nz].reshape(-1, 1)
+    )
+    # each mode is cached separately, and the caches do not collide
+    assert rate_network("named") is default
+    assert rate_network("named", normalise="none") is raw
+    with pytest.raises(ValueError):
+        RateNetwork(load_graph("named"), normalise="row_sum")
+
+
+def test_readout_under_normalisations_reports_every_mode():
+    from flylab.circuit.rate import NORMALISATIONS, readout_under_normalisations
+
+    out = readout_under_normalisations("imidacloprid", 1e-6)
+    assert set(out["normalisations"]) == set(NORMALISATIONS)
+    # the row_abs arm must be the shipped engine, to the last bit
+    ref = run_subgraph_assay("imidacloprid", 1e-6)["readouts"]
+    row_abs = out["normalisations"]["row_abs"]
+    assert row_abs["treated"]["mean_hz"] == pytest.approx(ref["mean_hz"], rel=1e-12)
+    assert row_abs["vehicle"]["mean_hz"] == pytest.approx(
+        ref["vehicle"]["mean_hz"], rel=1e-12
+    )
+    assert row_abs["effect"]["mean_hz"] == pytest.approx(
+        ref["mean_hz"] - ref["vehicle"]["mean_hz"], rel=1e-12
+    )
+    # the unnormalised engine is supercritical, which is what the clip absorbs
+    assert out["normalisations"]["none"]["n_at_r_max_vehicle"] > 0
+    assert out["effect_sign_agrees"]["mean_hz"] is True
+    assert any("evidence against" in s.lower() for s in out["statements"])
+    import json
+
+    json.dumps(out)
+
+
+def test_suppression_and_disinhibition_survive_the_unnormalised_engine():
+    """The two headline directions must not be artefacts of the normalisation."""
+    from flylab.circuit.rate import NORMALISATIONS, readout_under_normalisations
+
+    imi = readout_under_normalisations("imidacloprid", 1e-6)
+    fip = readout_under_normalisations("fipronil", 1e-6)
+    for mode in NORMALISATIONS:
+        assert imi["normalisations"][mode]["effect"]["mean_hz"] < 0
+        assert fip["normalisations"][mode]["effect"]["mean_hz"] > 0
+
+
+def test_effect_under_normalisation_matches_the_assay_contrast():
+    from flylab.circuit.rate import compute_gains, effect_under_normalisation
+
+    gains, _ = compute_gains("fipronil", 1e-6)
+    nb = run_subgraph_assay("fipronil", 1e-6)["readouts"]
+    assert effect_under_normalisation(gains) == pytest.approx(
+        nb["mean_hz"] - nb["vehicle"]["mean_hz"], rel=1e-12
+    )
+
+
+# --------------------------------------------------------------------------
+# the transmitter sign table (five asserted magnitudes the paper never printed)
+# --------------------------------------------------------------------------
+def test_sign_table_publishes_every_coefficient_with_a_rationale():
+    from flylab.circuit.rate import SIGN, SIGN_TABLE, sign_table_rows
+
+    assert SIGN == {k: v["sign"] for k, v in SIGN_TABLE.items()}
+    rows = sign_table_rows()
+    assert {r["transmitter"] for r in rows} == set(SIGN)
+    for row in rows:
+        assert row["rationale"].strip() and row["role"].strip()
+        assert row["evidence"] in {"convention", "asserted"}
+        assert row["in_specification_family"] is False
+    asserted = {r["transmitter"] for r in rows if r["evidence"] == "asserted"}
+    # the five magnitudes that appear nowhere in the manuscript
+    assert asserted == {"glutamate", "histamine", "dopamine", "serotonin", "octopamine"}
+    values = {r["transmitter"]: r["sign"] for r in rows}
+    assert values["glutamate"] == pytest.approx(-0.4)
+    assert values["histamine"] == pytest.approx(-0.5)
+    assert values["dopamine"] == pytest.approx(0.2)
+    assert values["serotonin"] == pytest.approx(0.2)
+    assert values["octopamine"] == pytest.approx(0.2)

@@ -889,11 +889,25 @@ def experiment_example():
 
 @experiment_app.command("run")
 def experiment_run(
-    design: Path = typer.Argument(..., help="Design YAML or JSON file."),
+    design: Path = typer.Argument(..., help="Design YAML or JSON file (a spec file also works)."),
     out: Path | None = typer.Option(None, "--out", help="Write the results CSV here."),
     json_out_path: Path | None = typer.Option(None, "--json", help="Write the full JSON result here."),
+    outdir: Path | None = typer.Option(
+        None, "--outdir", help="Write a full run directory instead; identical to `flylab run`."
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Validate and estimate only; run nothing."),
 ):
-    """Run a batch design and print (or write) the results table."""
+    """Run a batch design and print (or write) the results table.
+
+    A thin alias of `flylab run`: with --outdir or --dry-run it is that command
+    exactly, and a v0.5 design file is a valid spec (``assay``, ``concs_M`` and
+    ``compound`` are accepted aliases). Without them it keeps the v0.5
+    behaviour of emitting the flat results table.
+    """
+    if outdir is not None or dry_run:
+        run_spec_command(spec=design, outdir=outdir, dry_run=dry_run, json_out=False)
+        return
+
     from flylab.assays.experiment import design_from_yaml, run_experiment
 
     spec = design_from_yaml(design)
@@ -913,6 +927,246 @@ def experiment_run(
     )
     for w in result.get("warnings") or []:
         typer.secho(f"# ! {w}", fg=typer.colors.YELLOW, err=True)
+
+
+# --------------------------------------------------------------------------
+# specs: one YAML file describes a whole run
+# --------------------------------------------------------------------------
+@app.command("run")
+def run_spec_command(
+    spec: Path = typer.Argument(..., help="Experiment spec YAML (see `flylab spec-schema --example`)."),
+    outdir: Path | None = typer.Option(
+        None, "--outdir", help="Run directory to write. Defaults to runs/<spec name>."
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Validate, print the resolved spec and a runtime estimate; run nothing."
+    ),
+    json_out: bool = JSON_OPT,
+):
+    """Run a declarative experiment spec into a self-describing run directory."""
+    from flylab.spec import SpecError, load_spec, resolved_spec_dict, run_spec
+
+    try:
+        parsed = load_spec(spec)
+    except SpecError as exc:
+        typer.secho(f"{spec}: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2)
+
+    target = Path(outdir) if outdir else Path("runs") / parsed.name
+    try:
+        out = run_spec(
+            parsed,
+            target,
+            dry_run=dry_run,
+            progress=None if json_out else (lambda msg: typer.echo(msg)),
+        )
+    except SpecError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2)
+
+    if json_out:
+        _dump(out)
+        return
+
+    if dry_run:
+        import yaml
+
+        typer.secho(f"resolved spec ({spec})", bold=True)
+        typer.echo(yaml.safe_dump(json.loads(json.dumps(resolved_spec_dict(parsed), default=str)), sort_keys=False))
+        est = out["runtime_estimate"]
+        typer.secho(
+            f"estimate: ~{est['estimate_human']} "
+            f"({est['n_assay_runs']} assay runs"
+            + (f" + {', '.join(sorted(est['analyses']))}" if est["analyses"] else "")
+            + ")",
+            fg=typer.colors.BLUE,
+        )
+        for name, detail in sorted(est["analyses"].items()):
+            typer.echo(f"  {name:12} ~{detail['seconds']} s")
+        typer.echo(f"would write -> {target}/  ({', '.join(out['would_write'])})")
+        typer.echo(f"spec_sha256 {out['spec_sha256']}")
+        for w in out.get("warnings") or []:
+            typer.secho(f"  ! {w}", fg=typer.colors.YELLOW)
+        return
+
+    typer.secho(f"run -> {target}", bold=True)
+    typer.echo(f"  rows      {out['n_rows']}")
+    typer.echo(f"  notebooks {len(out['notebooks'])}")
+    typer.echo(f"  analyses  {', '.join(out['analyses_completed']) or 'none'}")
+    typer.echo(f"  cards     {len([c for c in out['cards'] if c.endswith('.json')])}")
+    typer.echo(f"  digest    {out['determinism']['digest']}")
+    typer.echo(f"  total     {out['timings_s'].get('total_s')} s")
+    _warnings(out)
+
+
+@app.command("spec-schema")
+def spec_schema_command(
+    example: bool = typer.Option(False, "--example", help="Print a starter spec YAML instead."),
+    json_out: bool = JSON_OPT,
+):
+    """The machine-readable schema for an experiment spec."""
+    from flylab.spec import EXAMPLE_SPEC, spec_schema
+
+    if example:
+        typer.echo(EXAMPLE_SPEC, nl=False)
+        return
+    schema = spec_schema()
+    if json_out:
+        _dump(schema)
+        return
+    typer.secho(f"{schema['title']} v{schema['flylab_spec_version']}", bold=True)
+    for name, prop in schema["properties"].items():
+        default = prop.get("default")
+        typer.echo(f"  {name:22} {str(prop.get('type')):8} default={json.dumps(default, default=str)}")
+        typer.echo(f"      {prop.get('description')}")
+        if prop.get("enum"):
+            typer.echo(f"      one of: {', '.join(str(v) for v in prop['enum'])}")
+    typer.secho("analyses", bold=True)
+    for name, meta in schema["x-analyses"].items():
+        typer.echo(f"  {name:12} -> {meta['artifact']}  ({meta['module']})")
+        for opt, text in meta["options"].items():
+            typer.echo(f"      {opt:16} {text}")
+
+
+@app.command("card")
+def card_command(
+    compound: str = typer.Argument("imidacloprid", help="Compound, or -- with --run -- ignored."),
+    conc: float = typer.Option(1e-6, "--conc", help="Free concentration in molar."),
+    engine: str = typer.Option("rate", "--engine", help="rate | lif"),
+    graph: str = typer.Option("named", "--graph"),
+    run: Path | None = typer.Option(None, "--run", help="Read the cards of an existing run directory."),
+    json_out: bool = typer.Option(False, "--json", help="Print the card(s) as JSON."),
+    markdown: bool = typer.Option(False, "--markdown", help="Print the card(s) as Markdown."),
+):
+    """A claim card: what is claimed, what backs it, and what was assumed."""
+    from flylab.report.card import cards_for_run, claim_card, to_markdown
+
+    if run is not None:
+        try:
+            cards = cards_for_run(run)
+        except FileNotFoundError as exc:
+            typer.secho(str(exc), fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=2)
+        if not cards:
+            typer.secho(f"{run}: no cards and no notebooks to build them from", fg=typer.colors.YELLOW)
+            raise typer.Exit(code=2)
+    else:
+        from flylab.assays.ensemble import run_assay
+
+        assay = "spiking" if engine in ("lif", "spiking") else "subgraph"
+        notebook = run_assay(assay, compound, conc, graph=graph)
+        vehicle = run_assay(assay, None, 0.0, graph=graph)
+        cards = [
+            claim_card(
+                notebook,
+                compound=compound,
+                conc_M=conc,
+                engine="lif" if assay == "spiking" else "rate",
+                graph=graph,
+                vehicle=vehicle,
+            )
+        ]
+
+    if json_out:
+        _dump(cards[0] if len(cards) == 1 else cards)
+        return
+    if markdown:
+        typer.echo("\n".join(to_markdown(c) for c in cards), nl=False)
+        return
+    for card in cards:
+        subject = card.get("subject") or {}
+        typer.secho(
+            f"claim card - {subject.get('compound')} @ "
+            f"{(subject.get('concentration_M') or 0):.2e} M ({subject.get('engine')})",
+            bold=True,
+        )
+        typer.echo(f"  {card['claim']['sentence']}")
+        for key in card.get("sections") or []:
+            section = card.get(key) or {}
+            mark = " " if section.get("assessed", True) else "!"
+            text = section.get("statement") or section.get("sentence") or ""
+            typer.echo(f"  {mark} {key:36} {str(text)[:96]}")
+    _warnings(cards[0])
+
+
+@app.command("manifest")
+def manifest_command(
+    write: bool = typer.Option(False, "--write", help="Write the repository artifact manifest."),
+    check: bool = typer.Option(False, "--check", help="Verify the committed manifest; exit 2 on mismatch."),
+    lock: bool = typer.Option(False, "--lock", help="Also write requirements-lock.txt."),
+    path: Path | None = typer.Option(None, "--path", help="Manifest path (default artifact-manifest.json)."),
+    json_out: bool = JSON_OPT,
+):
+    """Compute or verify the repository artifact manifest."""
+    manifest_mod = _manifest_module()
+    target = Path(path) if path else Path(manifest_mod.MANIFEST_PATH)
+
+    if lock:
+        written = manifest_mod.write_lockfile()
+        typer.echo(f"lock -> {written['path']}  ({written['n_packages']} packages)")
+
+    if write:
+        payload = manifest_mod.build_manifest()
+        manifest_mod.write_manifest(payload, target)
+        if json_out:
+            _dump(payload)
+        else:
+            typer.secho(f"manifest -> {target}", bold=True)
+            for section, entry in sorted(payload["sections"].items()):
+                typer.echo(
+                    f"  {section:13} {entry['n_entries']:4d} entries  {entry['sha256'][:12]}"
+                    + ("" if entry.get("fatal") else "  (informational)")
+                )
+        if not check:
+            return
+
+    if check or not write:
+        if not target.exists():
+            typer.secho(
+                f"{target} does not exist yet. Create it with `flylab manifest --write`.",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            raise typer.Exit(code=2)
+        diff = manifest_mod.verify_manifest(target)
+        if json_out:
+            _dump(diff)
+        else:
+            typer.secho(f"manifest check - {target}", bold=True)
+            for section, result in diff["sections"].items():
+                status = "ok" if result["ok"] else "MISMATCH"
+                colour = typer.colors.GREEN if result["ok"] else typer.colors.RED
+                typer.secho(f"  {section:12} {status:9} {result['summary']}", fg=colour)
+            for note in diff.get("notes") or []:
+                typer.secho(f"  note: {note}", fg=typer.colors.YELLOW)
+        if not diff["ok"]:
+            raise typer.Exit(code=2)
+
+
+def _manifest_module():
+    """Import ``scripts/manifest.py`` from an installed package or a checkout."""
+    import importlib
+    import importlib.util
+    import sys
+
+    try:
+        return importlib.import_module("scripts.manifest")
+    except Exception:
+        pass
+    here = Path(__file__).resolve().parents[1] / "scripts" / "manifest.py"
+    if not here.exists():
+        typer.secho(
+            "scripts/manifest.py is not in this checkout; the artifact manifest is a "
+            "repository tool and is not shipped in the wheel.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        raise typer.Exit(code=2)
+    spec_obj = importlib.util.spec_from_file_location("flylab_scripts_manifest", here)
+    module = importlib.util.module_from_spec(spec_obj)  # type: ignore[arg-type]
+    sys.modules["flylab_scripts_manifest"] = module
+    spec_obj.loader.exec_module(module)  # type: ignore[union-attr]
+    return module
 
 
 # --------------------------------------------------------------------------

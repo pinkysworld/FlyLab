@@ -96,6 +96,7 @@ ANALYSES: dict[str, dict[str, Any]] = {
         "module": "flylab.analysis.dependence",
         "candidates": ("dependence_profile",),
         "artifact": "dependence.json",
+        "enums": {"correction": ("benjamini-hochberg", "bh", "none", "off")},
         "options": {
             "permutations": "int, permutations per null model (maps to n=)",
             "correction": "benjamini-hochberg | none, applied across the cells of this run",
@@ -110,6 +111,7 @@ ANALYSES: dict[str, dict[str, Any]] = {
         "module": "flylab.analysis.robustness",
         "candidates": ("conclusion_stability",),
         "artifact": "robustness.json",
+        "enums": {"specifications": ("default_family", "fast_family")},
         "options": {
             "specifications": "default_family | fast_family",
             "shuffles": "int, topology shuffles per conclusion, or null for the default",
@@ -381,10 +383,16 @@ def _validate_analyses(raw: Any) -> dict[str, dict[str, Any]]:
                 f"Valid options: {', '.join(sorted(ANALYSES[key]['options']))}."
             )
         allowed = set(ANALYSES[key]["options"])
-        for opt in opts:
+        enums = dict(ANALYSES[key].get("enums") or {})
+        for opt, value in opts.items():
             if str(opt) not in allowed:
                 raise SpecError(
                     _suggest(opt, sorted(allowed), f"option for analysis {key!r}")
+                )
+            choices = enums.get(str(opt))
+            if choices and str(value).lower() not in choices:
+                raise SpecError(
+                    _suggest(value, list(choices), f"{opt} for analysis {key!r}")
                 )
         out[key] = {str(k): v for k, v in opts.items()}
     return out
@@ -760,6 +768,7 @@ def spec_schema() -> dict[str, Any]:
                 "entry_points_tried": list(meta["candidates"]),
                 "artifact": meta["artifact"],
                 "options": dict(meta["options"]),
+                "choices": {k: list(v) for k, v in (meta.get("enums") or {}).items()},
             }
             for name, meta in ANALYSES.items()
         },
@@ -1095,6 +1104,7 @@ def _run_assays(spec: ExperimentSpec, run_dir: Path, say: Callable[[str], None])
     notebook_paths: list[str] = []
     warnings: list[str] = []
     headline: dict[tuple[str, str], dict[str, Any]] = {}
+    vehicles: dict[str, dict[str, Any]] = {}
     per_engine: dict[str, Any] = {}
     nb_dir = run_dir / "notebooks"
     nb_dir.mkdir(parents=True, exist_ok=True)
@@ -1127,6 +1137,8 @@ def _run_assays(spec: ExperimentSpec, run_dir: Path, say: Callable[[str], None])
             name = _notebook_name(engine, key)
             _write_json(nb_dir / name, nb)
             notebook_paths.append(f"notebooks/{name}")
+            if key.get("condition") == "vehicle" and int(key.get("replicate") or 0) == 0:
+                vehicles[engine] = nb
             if (
                 key.get("condition") == "drug"
                 and int(key.get("replicate") or 0) == 0
@@ -1149,6 +1161,9 @@ def _run_assays(spec: ExperimentSpec, run_dir: Path, say: Callable[[str], None])
             "n_vehicle_rows": len(result["vehicle_rows"]),
             "seconds": round(time.perf_counter() - t0, 3),
         }
+
+    for (_compound, engine), item in headline.items():
+        item["vehicle"] = vehicles.get(engine)
 
     fields = ["engine", "condition", "compound", "conc_M", "replicate"] + list(spec.readouts)
     csv_text = rows_to_csv(rows, fields)
@@ -1179,21 +1194,20 @@ def _run_dependence(spec: ExperimentSpec, opts: Mapping[str, Any], say: Callable
     for compound in spec.compounds:
         for conc in concs:
             say(f"    dependence: {compound} @ {conc:.2e} M, n={n}")
-            cells.append(
-                _call_filtered(
-                    fn,
-                    compound=compound,
-                    conc_M=conc,
-                    assay=assay,
-                    graph=spec.graph,
-                    readout=readout,
-                    n=n,
-                    seed=spec.seed,
-                    alpha=float(opts.get("alpha", 0.05)),
-                    modes=tuple(opts["modes"]) if opts.get("modes") else None,
-                    n_jobs=int(opts.get("n_jobs", 1)),
-                )
-            )
+            kw: dict[str, Any] = {
+                "compound": compound,
+                "conc_M": conc,
+                "assay": assay,
+                "graph": spec.graph,
+                "readout": readout,
+                "n": n,
+                "seed": spec.seed,
+                "alpha": float(opts.get("alpha", 0.05)),
+                "n_jobs": int(opts.get("n_jobs", 1)),
+            }
+            if opts.get("modes"):  # otherwise leave the analysis its own default set
+                kw["modes"] = tuple(opts["modes"])
+            cells.append(_call_filtered(fn, **kw))
     payload: dict[str, Any] = {
         "analysis": "dependence",
         "entry_point": dotted,
@@ -1261,14 +1275,15 @@ def _run_robustness(spec: ExperimentSpec, opts: Mapping[str, Any], say: Callable
     if family not in ("default_family", "fast_family"):
         raise SpecError(_suggest(family, ["default_family", "fast_family"], "specification family"))
     say(f"    robustness: {family}")
-    result = _call_filtered(
-        fn,
-        fast=(family == "fast_family"),
-        seed=spec.seed,
-        conc_M=max(spec.concentrations) if spec.concentrations else 1e-6,
-        n_shuffles=int(opts["shuffles"]) if opts.get("shuffles") is not None else None,
-        n_jobs=int(opts.get("n_jobs", 1)),
-    )
+    kw: dict[str, Any] = {
+        "fast": family == "fast_family",
+        "seed": spec.seed,
+        "conc_M": max(spec.concentrations) if spec.concentrations else 1e-6,
+        "n_jobs": int(opts.get("n_jobs", 1)),
+    }
+    if opts.get("shuffles") is not None:
+        kw["n_shuffles"] = int(opts["shuffles"])
+    result = _call_filtered(fn, **kw)
     return {
         "analysis": "robustness",
         "entry_point": dotted,
@@ -1465,6 +1480,7 @@ def run_spec(
                 engine=engine,
                 graph=s.graph,
                 run_name=s.name,
+                vehicle=item.get("vehicle"),
                 dependence=analysis_results.get("dependence"),
                 robustness=analysis_results.get("robustness"),
                 requested_analyses=sorted(s.analyses),

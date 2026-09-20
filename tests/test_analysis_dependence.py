@@ -15,19 +15,29 @@ from flylab.analysis.dependence import (
     CLASSES,
     CONFIRMATORY_COMPOUNDS,
     DEFAULT_DELTA_FRAC,
+    BALANCED_TRANSMITTERS,
+    DEFAULT_MODES,
     INFORMATION_LADDER,
+    LADDER_FALLBACKS,
     MODE_INFORMATION,
     PAPER_N,
     STRUCTURAL_MODES,
     VERDICTS,
+    _shuffle_state_any,
+    balance_report,
     benjamini_hochberg,
     classify,
+    cut_census,
     dependence_landscape,
     dependence_profile,
+    effective_effect_floor,
     equivalence_margin,
     estimate_landscape_runtime,
+    ladder_power,
+    ladder_recovery,
     mode_verdict,
     necessary_information_level,
+    synthetic_cut,
 )
 from flylab.analysis.nullmodels import MODES
 
@@ -49,10 +59,13 @@ def fipronil_profile():
 # --------------------------------------------------------------------------
 def test_profile_reports_D_p_and_resolution(imidacloprid_profile):
     p = imidacloprid_profile
-    assert set(p["D"]) == {"z_sign", "z_weight", "z_degree", "z_ER"}
-    assert set(p["p"]) == {"p_sign", "p_weight", "p_degree", "p_ER"}
+    # the four nullmodels degradations are always keyed, and the weight-matched
+    # transmitter null this module adds is keyed beside them
+    assert {"z_sign", "z_weight", "z_degree", "z_ER"} <= set(p["D"])
+    assert {"p_sign", "p_weight", "p_degree", "p_ER"} <= set(p["p"])
+    assert "z_sign_wm" in p["D"] and "p_sign_wm" in p["p"]
     assert p["D_keys"] == ["z_sign", "z_weight", "z_degree", "z_ER"]
-    assert len(p["modes"]) == len(MODES)
+    assert len(p["modes"]) == len(DEFAULT_MODES) == len(MODES) + 1
     for row in p["modes"]:
         # the empirical p is the headline statistic and knows its own resolution
         assert 0.0 < row["p_two_sided"] <= 1.0
@@ -589,3 +602,170 @@ def test_fdr_keeps_fipronil_at_a_confirmatory_permutation_count():
     assert by["fipronil"]["class"] == "topology-dependent"
     assert by["imidacloprid"]["class"] == "composition-dominated"
     assert land["summary"]["n_topology_dependent"] == 1
+
+
+# --------------------------------------------------------------------------
+# the transmitter null has to preserve the WEIGHTED excitation/inhibition
+# balance, not just the label histogram
+# --------------------------------------------------------------------------
+def test_plain_sign_permute_moves_the_weighted_balance_and_says_so():
+    """The joint-null defect, measured. `sign_permute` permutes the label
+    array, so the share of outgoing synaptic weight carried by each
+    transmitter moves - and a gain patch acts through exactly that share."""
+    rep = balance_report(graph="named", n=100, seed=0)
+    plain = rep["modes"]["sign_permute"]["acetylcholine"]
+    assert plain["real"] == pytest.approx(0.6188, abs=5e-3)
+    # the real graph sits outside its own null, so the null is not centred
+    assert plain["percentile_of_real"] > 95.0
+    assert plain["null_mean"] < plain["real"] - 0.05
+    assert plain["within_tol"] is False
+    assert rep["preserves_weighted_balance"]["sign_permute"] is False
+    # and the mode says so in its own metadata rather than only here
+    assert MODE_INFORMATION["sign_permute"]["joint"] is True
+    assert "weighted" in MODE_INFORMATION["sign_permute"]["destroys"]
+    assert "JOINT null" in MODE_INFORMATION["sign_permute"]["caveat"]
+
+
+def test_the_weight_matched_null_holds_the_balance_and_still_shuffles():
+    rep = balance_report(graph="named", n=100, seed=0)
+    assert rep["preserves_weighted_balance"]["sign_permute_weight_matched"] is True
+    for nt in BALANCED_TRANSMITTERS:
+        row = rep["modes"]["sign_permute_weight_matched"][nt]
+        assert row["max_abs_deviation"] <= rep["tol"] + 1e-12
+    # it must still be a null: a useful fraction of the labels actually move,
+    # and the label histogram is preserved exactly
+    from collections import Counter
+
+    from flylab.analysis.nullmodels import _state_for
+
+    base = _state_for("named")
+    shuffled = _shuffle_state_any(base, "sign_permute_weight_matched", 0)
+    assert Counter(base.nt.tolist()) == Counter(shuffled.nt.tolist())
+    moved = sum(1 for a, b in zip(base.nt.tolist(), shuffled.nt.tolist()) if a != b)
+    assert moved > 0.40 * base.n, "the null must relabel a substantial share of nodes"
+    assert shuffled.meta["mode"] == "sign_permute_weight_matched"
+    assert shuffled.meta["swaps_accepted"] > 0
+
+
+def test_the_ladders_rank_three_rung_is_the_weight_matched_null():
+    assert INFORMATION_LADDER[3] == "sign_permute_weight_matched"
+    assert "sign_permute" not in INFORMATION_LADDER
+    assert "sign_permute" in DEFAULT_MODES  # kept: the contrast is informative
+    assert LADDER_FALLBACKS["sign_permute_weight_matched"] == ("sign_permute",)
+
+
+def test_a_ladder_without_the_matched_rung_falls_back_and_names_the_caveat():
+    prof = dependence_profile("fipronil", PAPER_CONC, n=25, modes=MODES, seed=0)
+    lvl = prof["necessary_information_level"]
+    if lvl["mode"] == "sign_permute":
+        assert lvl["ladder_substitutions"] == ["sign_permute_weight_matched -> sign_permute"]
+        assert any("rung was not run" in w for w in prof["warnings"])
+        assert any("JOINT null" in w for w in prof["warnings"])
+
+
+# --------------------------------------------------------------------------
+# what the cut under test looks like, and whether a negative can mean anything
+# --------------------------------------------------------------------------
+def test_the_named_cut_is_reported_as_an_in_star():
+    c = cut_census("named")
+    assert c["n_nodes"] == 1126 and c["n_edges"] == 1360
+    assert c["edges_onto_seeds"] == 1154
+    assert c["share_onto_seeds"] == pytest.approx(0.8485, abs=1e-3)
+    assert c["n_nodes_with_in_degree"] == 184
+    assert c["share_edges_from_nodes_with_input"] == pytest.approx(0.2493, abs=1e-3)
+    assert c["in_star"] is True
+    hubs = [h["in_degree"] for h in c["top_in_degrees"][:4]]
+    assert hubs == [556, 477, 94, 27]
+    assert "in-star" in c["note"]
+
+
+def test_the_taste_motor_cut_is_not_an_in_star():
+    c = cut_census("taste_motor")
+    assert c["n_nodes"] == 1841 and c["n_edges"] == 19066
+    assert c["mean_degree"] > 10.0
+    assert c["share_edges_from_nodes_with_input"] > 0.9
+    assert c["in_star"] is False
+    # the contrast is the whole point: one cut can barely be rewired
+    assert cut_census("named")["mean_degree"] < 2.0
+
+
+# --------------------------------------------------------------------------
+# does the instrument work at all? ground truth, planted and recovered
+# --------------------------------------------------------------------------
+def test_the_ladder_recovers_a_planted_topology_dependent_effect():
+    """Without this, a negative from the ladder is indistinguishable from an
+    under-powered test."""
+    out = ladder_recovery(strengths=(0.0, 1.0), n=60, seed=0)
+    by = {r["loop_strength"]: r for r in out["rows"]}
+    assert by[0.0]["topology_dependent"] is False, by[0.0]["p"]
+    assert by[1.0]["topology_dependent"] is True, by[1.0]["p"]
+    assert out["recovered"] is True
+    assert out["false_positive_on_control"] is False
+    assert "recovered 1 of 1" in out["statement"]
+    json.dumps(out)
+
+
+def test_the_synthetic_cut_plants_what_it_claims_to_plant():
+    planted = synthetic_cut(loop_strength=1.0, seed=0)
+    control = synthetic_cut(loop_strength=0.0, seed=0)
+    assert planted["meta"]["loop_nodes"] and not control["meta"]["loop_nodes"]
+    assert len(planted["edges"]) == len(control["edges"]) + len(
+        planted["meta"]["loop_nodes"]
+    )
+    # the two graphs are otherwise the same background
+    assert planted["nodes"][-1]["bodyId"] == control["nodes"][-1]["bodyId"]
+    assert set(planted["seeds"]) == {"MN9", "DNp01"}
+
+
+def test_ladder_power_rises_with_effect_size():
+    out = ladder_power(strengths=(0.0, 1.5), ns=(60,), replicates=3, seed=0)
+    by = {(g["loop_strength"], g["n"]): g for g in out["grid"]}
+    assert by[(0.0, 60)]["detection_rate"] <= 0.34   # the false-positive arm
+    assert by[(1.5, 60)]["detection_rate"] >= 0.66   # the planted arm
+    assert out["false_positive_rate"] is not None
+    json.dumps(out)
+
+
+@pytest.mark.slow
+def test_ladder_power_curve_over_strength_and_permutations():
+    out = ladder_power(
+        strengths=(0.0, 0.25, 0.5, 1.0, 2.0), ns=(50, 200), replicates=5, seed=0
+    )
+    rates = {(g["loop_strength"], g["n"]): g["detection_rate"] for g in out["grid"]}
+    # power is monotone in effect size at the larger permutation count
+    strong = [rates[(s, 200)] for s in (0.0, 0.25, 0.5, 1.0, 2.0)]
+    assert strong[-1] >= strong[0]
+    assert out["false_positive_rate"] <= 0.2
+
+
+# --------------------------------------------------------------------------
+# the floors and the ladder's own monotonicity, surfaced for the paper
+# --------------------------------------------------------------------------
+def test_a_relative_effect_floor_keeps_numerical_noise_out_of_the_counts():
+    f = effective_effect_floor(6.631, effect_floor=1e-6, effect_floor_frac=0.01)
+    assert f["effect_floor"] == pytest.approx(0.06631)
+    assert f["binding"] == "relative"
+    # an effect of 2.7e-05 Hz against a 6.6 Hz baseline is not a drug effect
+    assert abs(2.7e-05) < f["effect_floor"]
+    # with no baseline the absolute floor still applies
+    assert effective_effect_floor(None)["binding"] == "absolute"
+
+    land = dependence_landscape(
+        compounds=["acetylcholine", "fipronil"], concs_M=(1e-8,), n=25, seed=0
+    )
+    s = land["summary"]
+    assert s["class_counts_absolute_floor"] is not None
+    assert sum(s["class_counts_absolute_floor"].values()) == land["n_cells"]
+    assert s["n_below_relative_effect_floor"] >= 1
+    assert any("relative effect floor" in w for w in land["warnings"])
+
+
+def test_the_landscape_counts_its_non_monotone_ladders():
+    land = dependence_landscape(
+        compounds=["fipronil", "imidacloprid"], concs_M=(1e-6,), n=40, seed=0
+    )
+    s = land["summary"]
+    assert s["n_non_monotone_ladders"] == len(s["non_monotone_cells"])
+    assert s["n_non_monotone_ladders"] <= land["n_cells"]
+    for row in s["non_monotone_cells"]:
+        assert row["richer_models_distinguishable"]

@@ -9,7 +9,13 @@ from flylab.analysis.uncertainty_global import (
     FACTOR_NAMES,
     FACTORS,
     ISHIGAMI_REFERENCE,
+    NULL_CONTROL_LABEL,
+    NULL_FACTOR,
+    RESOLUTION_STATES,
+    RESOLVED_LABEL,
     SHAPE_ORDER,
+    UNRESOLVED_LABEL,
+    resolution_summary,
     RateSurrogate,
     baseline_unit_vector,
     ishigami,
@@ -259,3 +265,83 @@ def test_full_sobol_run_converges():
     res = sobol_analysis("imidacloprid", 1e-6, "mean_hz", n_base=128, n_boot=100, seed=0)
     assert res["n_evaluations"] == 128 * 11
     assert res["output_variance"] > 0
+
+
+# --------------------------------------------------------------------------
+# resolution states: what this sample could and could not resolve
+# --------------------------------------------------------------------------
+def test_every_factor_gets_one_of_three_resolution_states(tiny_sobol):
+    res = tiny_sobol["resolution"]
+    assert set(res["by_factor"]) == set(FACTOR_NAMES)
+    assert set(res["by_factor"].values()) <= set(RESOLUTION_STATES)
+    for row in tiny_sobol["rows"]:
+        assert row["resolution_status"] in RESOLUTION_STATES
+        assert row["resolution_status"] == res["by_factor"][row["factor"]]
+        ci = row["first_order_ci"]
+        if ci is not None:
+            excludes = ci[0] > 0.0 or ci[1] < 0.0
+            assert row["first_order_ci_excludes_zero"] is excludes
+            # "resolved" means exactly "CI excludes zero", nothing else
+            assert (row["resolution_status"] == RESOLVED_LABEL) is bool(
+                excludes and row["factor"] != NULL_FACTOR
+            )
+    # null control is a refinement inside unresolved, never an escape from it
+    assert set(res["null_control"]) <= set(res["unresolved"])
+    assert not set(res["resolved"]) & set(res["unresolved"])
+    assert NULL_FACTOR in res["null_control"]
+
+
+def test_the_noise_floor_is_the_largest_negative_estimate_not_the_null_factor():
+    rows = [
+        {"factor": "gain_transform", "first_order": 0.41, "total_order": 0.63,
+         "first_order_ci": [0.33, 0.49]},
+        {"factor": "weight_threshold", "first_order": 0.29, "total_order": 0.54,
+         "first_order_ci": [0.21, 0.37]},
+        {"factor": "drive", "first_order": 0.019, "total_order": 0.44,
+         "first_order_ci": [-0.072, 0.112]},
+        {"factor": "gain_coef", "first_order": -0.046, "total_order": 0.075,
+         "first_order_ci": [-0.13, 0.04]},
+        {"factor": NULL_FACTOR, "first_order": -0.007, "total_order": 0.0,
+         "first_order_ci": [-0.02, 0.01]},
+    ]
+    res = resolution_summary(rows)
+    # the shipped numbers: gain_coef's -0.046 is 6.8x the null factor's -0.007
+    assert res["noise_floor"] == pytest.approx(0.046)
+    assert res["noise_floor_factor"] == "gain_coef"
+    assert res["resolved"] == ["gain_transform", "weight_threshold"]
+    # drive sits inside the floor and its CI spans zero: not a ranked factor
+    assert "drive" in res["unresolved"]
+    assert res["by_factor"]["drive"] == NULL_CONTROL_LABEL
+    assert res["by_factor"]["gain_coef"] == NULL_CONTROL_LABEL
+    assert "gain_transform" in res["statement"]
+    assert "weight_threshold" in res["statement"]
+    assert "unresolved at this sample size" in res["statement"]
+
+
+def test_the_summary_does_not_frame_the_floor_as_a_symmetric_tolerance(tiny_sobol):
+    text = " ".join(tiny_sobol["warnings"]) + " " + tiny_sobol["summary"]
+    assert "confidence interval" in text
+    assert "not a symmetric tolerance band" in text
+    # the old framing claimed a +- floor; nothing may say that any more
+    assert "noise floor of" not in text
+    assert tiny_sobol["summary"] == tiny_sobol["resolution"]["statement"]
+
+
+def test_interaction_share_is_reported_raw_and_clipped(tiny_sobol):
+    raw = tiny_sobol["interaction_share"]
+    clipped = tiny_sobol["interaction_share_clipped"]
+    assert clipped <= raw + 1e-12
+    assert tiny_sobol["sum_first_order_clipped"] >= tiny_sobol["sum_first_order"] - 1e-12
+    assert clipped == pytest.approx(
+        1.0 - sum(max(0.0, r["first_order"]) for r in tiny_sobol["rows"])
+    )
+
+
+def test_the_budget_carries_the_state_next_to_the_number(tiny_sobol):
+    states = {b["source"]: b.get("state") for b in tiny_sobol["budget"]}
+    for name in FACTOR_NAMES:
+        assert states[name] in RESOLUTION_STATES
+    assert states["interactions (higher order)"] is None
+    md = to_markdown(tiny_sobol)
+    assert "state" in md
+    assert RESOLVED_LABEL in md or UNRESOLVED_LABEL in md

@@ -1,8 +1,19 @@
 name: tests
+
 on:
   push:
     branches: [main]
   pull_request:
+  # The fast suite excludes the slow marker (`addopts = "-m 'not slow'"` in
+  # pyproject.toml), so the static build and the browser boot would otherwise
+  # never run in CI between releases. Once a week they do.
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   pytest:
     runs-on: ubuntu-latest
@@ -13,3 +24,30 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev,viz]"   # viz: the paper pipeline needs matplotlib
       - run: pytest -q
+
+  slow:
+    # The minutes-long end-to-end checks: the pip wheel build, the static
+    # (Pyodide) site and the browser boot. Weekly, on demand, and as part of
+    # the release gate (.github/workflows/release.yml) -- never on a PR, where
+    # they would add ten minutes to every push.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # scripts/manifest.py asks git which files it accounts for
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install -e ".[dev,viz]"
+      - name: pytest (slow suite)
+        run: pytest -q -m slow
+      - name: verify the artifact manifest
+        # Informational on a schedule: main moves between releases, so a
+        # mismatch here is a reminder to run `flylab manifest --write`, not a
+        # failure. The release workflow gates on the same check for real.
+        continue-on-error: true
+        run: flylab manifest --check

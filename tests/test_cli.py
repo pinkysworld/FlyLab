@@ -53,6 +53,10 @@ COMMANDS = [
     ["experiment"],
     ["experiment", "run"],
     ["experiment", "example"],
+    ["run"],
+    ["spec-schema"],
+    ["card"],
+    ["manifest"],
     ["extract-subgraph"],
     ["download-malecns"],
     ["serve"],
@@ -382,3 +386,161 @@ def test_serve_has_open_flag():
 def test_json_flag_is_offered_on_table_commands():
     for cmd in ("occupancy", "list-drugs", "meta", "assay-subgraph", "ensemble", "ic50", "exposure"):
         assert "--json" in runner.invoke(app, [cmd, "--help"]).output, cmd
+
+
+# --------------------------------------------------------------------------
+# specs, cards and the artifact manifest
+# --------------------------------------------------------------------------
+SPEC_YAML = """\
+name: cli_spec
+compound: fipronil
+concentrations: [1.0e-6]
+readouts: [mean_hz]
+engines: [rate]
+figures: false
+"""
+
+
+def test_spec_schema_prints_the_fields_and_the_analyses():
+    out = runner.invoke(app, ["spec-schema"])
+    assert out.exit_code == 0, out.output
+    for field in ("compounds", "concentrations", "engines", "analyses"):
+        assert field in out.output
+    for analysis in ("dependence", "robustness", "uncertainty"):
+        assert analysis in out.output
+
+
+def test_spec_schema_json_is_a_schema():
+    out = runner.invoke(app, ["spec-schema", "--json"])
+    schema = json.loads(out.output)
+    assert schema["type"] == "object"
+    assert "compounds" in schema["properties"]
+
+
+def test_spec_schema_example_is_a_runnable_spec(tmp_path):
+    out = runner.invoke(app, ["spec-schema", "--example"])
+    assert out.exit_code == 0
+    path = tmp_path / "spec.yaml"
+    path.write_text(out.output)
+    dry = runner.invoke(app, ["run", str(path), "--dry-run", "--outdir", str(tmp_path / "run")])
+    assert dry.exit_code == 0, dry.output
+
+
+@pytest.fixture(scope="module")
+def cli_run(tmp_path_factory):
+    """One `flylab run` for the whole module; the card tests read it back."""
+    root = tmp_path_factory.mktemp("cli_run")
+    spec = root / "spec.yaml"
+    spec.write_text(SPEC_YAML)
+    outdir = root / "run"
+    result = runner.invoke(app, ["run", str(spec), "--outdir", str(outdir)])
+    assert result.exit_code == 0, result.output
+    return outdir, result
+
+
+def test_run_dry_run_validates_and_estimates_without_running(tmp_path):
+    spec = tmp_path / "spec.yaml"
+    spec.write_text(SPEC_YAML)
+    outdir = tmp_path / "run"
+    result = runner.invoke(app, ["run", str(spec), "--outdir", str(outdir), "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert "estimate:" in result.output
+    assert "spec_sha256" in result.output
+    assert not outdir.exists()
+
+
+def test_run_writes_a_run_directory(cli_run):
+    outdir, result = cli_run
+    assert (outdir / "manifest.json").exists()
+    assert (outdir / "results.csv").exists()
+    assert (outdir / "cards").is_dir()
+    assert "digest" in result.output
+
+
+def test_run_reports_an_invalid_spec_without_a_traceback(tmp_path):
+    spec = tmp_path / "spec.yaml"
+    spec.write_text("compound: not_a_real_drug\nconcentrations: [1.0e-6]\n")
+    result = runner.invoke(app, ["run", str(spec), "--outdir", str(tmp_path / "run")])
+    assert result.exit_code == 2
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert "unknown compound" in result.output
+
+
+def test_experiment_run_is_an_alias_of_run(tmp_path):
+    """The v0.5 entry point keeps working and gains the new flags."""
+    design = tmp_path / "design.yaml"
+    design.write_text("assay: subgraph\ncompounds: [fipronil]\nconcs_M: [1.0e-6]\n")
+    outdir = tmp_path / "run"
+    result = runner.invoke(app, ["experiment", "run", str(design), "--outdir", str(outdir), "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert "estimate:" in result.output
+    assert not outdir.exists()
+
+
+def test_card_prints_every_section():
+    """The standalone path: no run directory, the assay is run on the spot."""
+    result = runner.invoke(app, ["card", "fipronil", "--conc", "1e-6"])
+    assert result.exit_code == 0, result.output
+    from flylab.report.card import SECTIONS
+
+    for section in SECTIONS:
+        assert section in result.output
+    assert "not assessed in this run" in result.output
+
+
+def test_card_reads_a_run_directory_as_json(cli_run):
+    outdir, _ = cli_run
+    result = runner.invoke(app, ["card", "--run", str(outdir), "--json"])
+    assert result.exit_code == 0, result.output
+    card = json.loads(result.output)
+    assert card["subject"]["compound"] == "fipronil"
+    assert card["independent_biological_validation"]["status"] == "none"
+
+
+def test_card_renders_markdown(cli_run):
+    outdir, _ = cli_run
+    result = runner.invoke(app, ["card", "--run", str(outdir), "--markdown"])
+    assert result.exit_code == 0, result.output
+    assert result.output.startswith("# Claim card")
+    assert "## Independent biological validation" in result.output
+
+
+def test_card_on_a_missing_run_directory_is_an_error_not_a_crash(tmp_path):
+    result = runner.invoke(app, ["card", "--run", str(tmp_path / "nothing")])
+    assert result.exit_code == 2
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+
+
+def test_manifest_check_reports_rather_than_crashes():
+    """The committed manifest may legitimately be stale, or absent in a slim tree.
+
+    The contract is only that --check reports -- never a traceback -- and exits
+    0 when it matches, 2 when it does not or when there is nothing to check.
+    """
+    result = runner.invoke(app, ["manifest", "--check"])
+    assert result.exit_code in (0, 2), result.output
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    if "does not exist" in result.output:
+        assert "--write" in result.output
+        return
+    assert "manifest check" in result.output
+    for section in ("code", "library", "graphs", "literature", "paper"):
+        assert section in result.output
+
+
+def test_manifest_write_and_check_agree(tmp_path):
+    path = tmp_path / "m.json"
+    written = runner.invoke(app, ["manifest", "--write", "--path", str(path)])
+    assert written.exit_code == 0, written.output
+    assert path.exists()
+    checked = runner.invoke(app, ["manifest", "--check", "--path", str(path)])
+    assert checked.exit_code == 0, checked.output
+    assert "MISMATCH" not in checked.output
+
+
+def test_manifest_check_without_a_manifest_says_how_to_make_one(tmp_path):
+    result = runner.invoke(app, ["manifest", "--check", "--path", str(tmp_path / "absent.json")])
+    assert result.exit_code == 2
+    assert "--write" in result.output
+
+
