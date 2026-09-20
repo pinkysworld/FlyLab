@@ -34,7 +34,10 @@ jobs:
 
       - name: Build the static site
         # fails the job if dist/pages goes over the 25 MB budget
-        run: python scripts/build_pages.py --out dist/pages
+        # --vendor-pyodide bundles the runtime (~16 MB total) so the published
+        # site never depends on a third-party CDN at load time. Reviewers behind
+        # restrictive networks, and offline mirrors of the site, both need this.
+        run: python scripts/build_pages.py --out dist/pages --vendor-pyodide
 
       - name: Show the manifest
         run: cat dist/pages/manifest.json

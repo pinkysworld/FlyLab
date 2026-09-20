@@ -424,7 +424,7 @@ def predictions(n_rep: int = 4, seed: int = 0, json_out: bool = JSON_OPT):
 
 @app.command("reproduce-paper")
 def reproduce_paper():
-    """Regenerate every figure and table in the paper draft."""
+    """Print the command that regenerates every figure and table in the paper."""
     try:
         from scripts.reproduce_paper import main  # type: ignore[import-not-found]
     except ImportError:

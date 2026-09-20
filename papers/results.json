@@ -1,12 +1,12 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-19T18:47:03+00:00",
+  "generated_utc": "2026-09-19T18:51:49+00:00",
   "fast": false,
   "seed": 0,
-  "runtime_s": 0.94,
+  "runtime_s": 199.06,
   "provenance": {
     "flylab_version": "0.5.0",
-    "git_sha": "ff39abefde079c919af11a4b17cc12d7728923c2",
+    "git_sha": "bc447af291b33a06490c13439db661242f0518fb",
     "library_sha256": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
     "library_version": "0.5",
     "library_schema_version": 2,
@@ -36,6 +36,14 @@
     "fast": false
   },
   "steps": {
+    "provenance": {
+      "status": "ok",
+      "runtime_s": 0.17,
+      "description": "versions, hashes, map ids, graph sizes",
+      "figures": 0,
+      "tables": 0,
+      "values": 11
+    },
     "census": {
       "status": "ok",
       "runtime_s": 0.0,
@@ -46,7 +54,7 @@
     },
     "scorecard": {
       "status": "ok",
-      "runtime_s": 0.71,
+      "runtime_s": 0.68,
       "description": "dual scorecard + library table (F2, T1)",
       "figures": 1,
       "tables": 2,
@@ -54,7 +62,7 @@
     },
     "curves": {
       "status": "ok",
-      "runtime_s": 1.22,
+      "runtime_s": 1.21,
       "description": "occupancy curves and selectivity windows (F3)",
       "figures": 1,
       "tables": 0,
@@ -70,7 +78,7 @@
     },
     "graph": {
       "status": "ok",
-      "runtime_s": 1.41,
+      "runtime_s": 1.39,
       "description": "taste-motor graph and GRN->MN9 paths (F4, T7)",
       "figures": 1,
       "tables": 2,
@@ -78,7 +86,7 @@
     },
     "veto": {
       "status": "ok",
-      "runtime_s": 5.07,
+      "runtime_s": 5.08,
       "description": "map-based bitter veto, rate vs LIF (F5)",
       "figures": 1,
       "tables": 0,
@@ -86,7 +94,7 @@
     },
     "nulls": {
       "status": "ok",
-      "runtime_s": 114.02,
+      "runtime_s": 110.03,
       "description": "connectome null models (F6, T6)",
       "figures": 1,
       "tables": 2,
@@ -94,7 +102,7 @@
     },
     "landscape": {
       "status": "ok",
-      "runtime_s": 61.7,
+      "runtime_s": 57.61,
       "description": "receptor vs circuit selectivity (F7, T8)",
       "figures": 1,
       "tables": 2,
@@ -102,7 +110,7 @@
     },
     "dose": {
       "status": "ok",
-      "runtime_s": 6.6,
+      "runtime_s": 6.39,
       "description": "model IC50 + sensitivity tornado (F8)",
       "figures": 1,
       "tables": 0,
@@ -110,7 +118,7 @@
     },
     "genotype": {
       "status": "ok",
-      "runtime_s": 0.52,
+      "runtime_s": 0.5,
       "description": "resistance-allele panels (F9, T9)",
       "figures": 1,
       "tables": 2,
@@ -118,7 +126,7 @@
     },
     "validation": {
       "status": "ok",
-      "runtime_s": 0.92,
+      "runtime_s": 0.9,
       "description": "rank validation vs published orders (F10, T4)",
       "figures": 1,
       "tables": 2,
@@ -126,7 +134,7 @@
     },
     "predictions": {
       "status": "ok",
-      "runtime_s": 15.05,
+      "runtime_s": 14.15,
       "description": "pre-registered predictions (T3)",
       "figures": 0,
       "tables": 2,
@@ -134,7 +142,7 @@
     },
     "mixtures": {
       "status": "ok",
-      "runtime_s": 0.32,
+      "runtime_s": 0.34,
       "description": "binary mixtures vs published verdicts (T5)",
       "figures": 0,
       "tables": 2,
@@ -142,38 +150,100 @@
     },
     "expression": {
       "status": "ok",
-      "runtime_s": 0.17,
+      "runtime_s": 0.18,
       "description": "expression-weighted sensitivity coverage",
       "figures": 0,
       "tables": 0,
       "values": 14
     },
-    "paper": {
-      "status": "ok",
-      "runtime_s": 0.0,
-      "description": "render the draft from its template",
-      "figures": 0,
-      "tables": 0,
-      "values": 3
-    },
-    "provenance": {
-      "status": "ok",
-      "runtime_s": 0.2,
-      "description": "versions, hashes, map ids, graph sizes",
-      "figures": 0,
-      "tables": 0,
-      "values": 11
-    },
     "architecture": {
       "status": "ok",
-      "runtime_s": 0.74,
+      "runtime_s": 0.41,
       "description": "architecture schematic (F1)",
       "figures": 2,
       "tables": 0,
       "values": 0
+    },
+    "paper": {
+      "status": "ok",
+      "runtime_s": 0.01,
+      "description": "render the draft from its template",
+      "figures": 0,
+      "tables": 0,
+      "values": 3
     }
   },
   "values": {
+    "flylab_version": {
+      "value": "0.5.0",
+      "text": "0.5.0",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "git_sha": {
+      "value": "bc447af291b33a06490c13439db661242f0518fb",
+      "text": "bc447af291b3",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "library_sha256": {
+      "value": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
+      "text": "68252432a397",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "map_id": {
+      "value": "male-cns:v1.0",
+      "text": "male-cns:v1.0",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_nodes": {
+      "value": 1126,
+      "text": "1126",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_edges": {
+      "value": 1360,
+      "text": "1360",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_nodes": {
+      "value": 1841,
+      "text": "1841",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_edges": {
+      "value": 19066,
+      "text": "19\u202f066",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_min_weight": {
+      "value": 5,
+      "text": "5",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_closure_min_weight": {
+      "value": 10,
+      "text": "10",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
     "census_traced": {
       "value": 165122,
       "text": "165\u202f122",
@@ -1846,80 +1916,10 @@
       "note": null,
       "step": "paper"
     },
-    "flylab_version": {
-      "value": "0.5.0",
-      "text": "0.5.0",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "git_sha": {
-      "value": "ff39abefde079c919af11a4b17cc12d7728923c2",
-      "text": "ff39abefde07",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "library_sha256": {
-      "value": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
-      "text": "68252432a397",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "map_id": {
-      "value": "male-cns:v1.0",
-      "text": "male-cns:v1.0",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_nodes": {
-      "value": 1126,
-      "text": "1126",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_edges": {
-      "value": 1360,
-      "text": "1360",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_nodes": {
-      "value": 1841,
-      "text": "1841",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_edges": {
-      "value": 19066,
-      "text": "19\u202f066",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_min_weight": {
-      "value": 5,
-      "text": "5",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_closure_min_weight": {
-      "value": 10,
-      "text": "10",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
     "_provenance": {
       "value": {
         "flylab_version": "0.5.0",
-        "git_sha": "ff39abefde079c919af11a4b17cc12d7728923c2",
+        "git_sha": "bc447af291b33a06490c13439db661242f0518fb",
         "library_sha256": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
         "library_version": "0.5",
         "library_schema_version": 2,
@@ -2104,7 +2104,7 @@
     {
       "name": "T6_nullmodels.csv",
       "path": "tables/T6_nullmodels.csv",
-      "bytes": 2357,
+      "bytes": 2356,
       "rows": 16,
       "step": "nulls"
     },
@@ -2193,7 +2193,7 @@
     "[landscape] no circuit selectivity index exists for chlordimeform, dieldrin, fipronil, gaba, ivermectin, picrotoxin, sulfoxaflor, thiamethoxam: on this neighbourhood their largest relative change in the mean rate never reaches the 50% threshold (RDL/GluCl blockers are bounded by the GABA/glutamate share of the cut and by the 0.05 gain floor).",
     "[dose] at 1 uM imidacloprid the model is exactly insensitive to a 2x change in the insect_nAChR EC50 and in the Hill coefficient (span 0 Hz): occupancy is saturated, so the gain-rule coefficient is the only parameter that still moves the readout. A dose-response experiment, not a single high dose, is what constrains the EC50."
   ],
-  "partial": true,
+  "partial": false,
   "honesty": [
     "Every number in this file is model_derived: it comes from the teaching EC50 library, the gain patch rules and one or two hops-limited MaleCNS cuts. Nothing here was measured in a living fly.",
     "live_lab is null in every notebook this pipeline produced.",
