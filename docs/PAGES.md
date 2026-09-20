@@ -1,233 +1,242 @@
-# The static bench (GitHub Pages)
+# Browser bench and GitHub Pages
 
-FlyLab runs in two places and is **one program**. The served bench is
-`flylab/server.py` (FastAPI) on your machine. The static bench is the same
-`flylab` wheel running inside your browser tab on Pyodide, answering the same
-routes through `flylab/browser/bridge.py`. There is no second implementation of
-the pharmacology or the circuit models: `flylab-boot.js` is a loader, `app.js`
-is the same UI file in both builds, and every number on the page comes out of
-Python.
+FlyLab has two interactive transports around the same Python science core:
 
-```
-                     ┌───────────────────────────── same package ─────────┐
-browser tab          │ flylab.pharm / circuit / assays / analysis / maps   │
-  app.js  ──►  window.flylabCall  ──►  flylab.browser.bridge.call(route, payload)
-                                                      ▲
-localhost      app.js  ──►  fetch("/api/...")  ──►  flylab.server (FastAPI)
-```
+1. the local FastAPI bench,
+2. the static browser bench running the FlyLab wheel inside Pyodide.
 
-## What runs where
+The browser build is not a JavaScript reimplementation of the pharmacology or circuit models.
 
-| | served bench | static bench |
-|---|---|---|
-| transport | FastAPI + pydantic over HTTP | `bridge.call(route, payload)` in Pyodide |
-| Python | your interpreter | Pyodide 0.28.3 (CPython 3.13, WebAssembly) |
-| packages | full dependency list | `numpy`, `pyyaml` only (`pip install flylab[browser]`) |
-| data files | repo `data/` | fetched at boot into `<site-packages>/data/` |
-| compute | your CPU, threads available | one WebAssembly thread in the tab |
-| your data | stays local | stays local — nothing is uploaded, there is no server |
+## Architecture
 
-`fastapi`, `pydantic`, `typer`, `uvicorn`, `pandas` and `pyarrow` are **not**
-installed in the browser. `pyarrow` has no WebAssembly build at all, which is
-why the wheel is installed with `deps: false` and why the science core had to
-stop importing pydantic:
+~~~text
+                         shared FlyLab Python package
+                 pharm | circuit | assays | analysis | maps
+                                /                 \
+                               /                   \
+                  local server                    browser
+                  FastAPI HTTP               Pyodide bridge
+                       |                           |
+                       +----------- app.js --------+
+~~~
 
-* `flylab/assays/experiment.py` was the only core module that imported
-  pydantic. It now imports it inside a `try`, and falls back to a dataclass
-  `ExperimentDesign` with the same field names, defaults, coercion, error
-  messages and `.model_dump()`. `tests/test_browser_bridge.py` asserts the two
-  paths dump identical dicts.
-* `flylab/maps/malecns.py` imports `pandas` only *inside* `load_census`, and
-  only when a local MaleCNS atlas is present. In the browser there is none, so
-  the committed `data/derived/malecns_census_v1.json` fallback is used — the
-  same fallback CI uses.
-* `flylab/notebook/schema.py` shells out to `git rev-parse` for provenance.
-  That call fails inside Pyodide and is already wrapped in `try/except`, so a
-  browser notebook carries `git_sha: null` and every other provenance field
-  (flylab version, `library.yaml` SHA-256, platform, RNG seed) intact.
+The local application reaches scientific functions through flylab/server.py.
 
-Nothing else in `flylab/` (outside `server.py` and `cli.py`) imports a web
-framework. `python -c "import flylab.browser.bridge"` works with pydantic,
-fastapi, typer, pandas and pyarrow all hidden.
+The static application reaches the same core through flylab/browser/bridge.py.
 
-## The bridge
+The user interface is shared.
 
-```python
+## What "same core" means
+
+The browser and server builds share:
+
+- pharmacology library parsing,
+- typed receptor engagement,
+- mechanism rules,
+- derived MaleCNS circuit data,
+- rate-model assays,
+- supported LIF assays,
+- analysis functions exposed by the bridge,
+- notebook and provenance structures.
+
+There is no second set of receptor rules or circuit equations in JavaScript.
+
+## What it does not mean
+
+The browser build should not be described as reproducing the entire publication pipeline.
+
+The native paper pipeline also uses publication tooling such as Matplotlib and writes figures, tables, results.json and rendered manuscript artifacts.
+
+The accurate reproducibility claim is:
+
+> The browser executes the same FlyLab scientific core for supported interactive endpoints, while the native reproduction pipeline regenerates the complete publication artifact set.
+
+## Browser dependencies
+
+The browser build intentionally keeps its Python dependency surface small.
+
+The science core used by Pyodide must not require server-only packages at module import time.
+
+Server and CLI dependencies such as FastAPI, pydantic, typer, pandas and pyarrow are therefore isolated from the browser-safe core wherever possible.
+
+The browser package subset is declared in pyproject.toml.
+
+## Bridge
+
+The bridge accepts route-style calls and dispatches them to Python handlers.
+
+Example:
+
+~~~python
 from flylab.browser import bridge
 
 bridge.call("/api/meta")
-bridge.call("/api/assay/subgraph", {"compound": "imidacloprid", "conc_M": 1e-6})
-bridge.call("/api/occupancy?compound=nicotine&conc_M=1e-6")   # query string also works
-bridge.routes()    # the 34 server paths
-bridge.version()   # version, limits, data root
-```
+bridge.call(
+    "/api/assay/subgraph",
+    {"compound": "imidacloprid", "conc_M": 1e-6},
+)
+~~~
 
-It mirrors all 46 routes of `flylab/server.py` — same handler bodies, same
-defaults, same bounds (`MAX_N_REP`, `MAX_T_MS`, `MAX_EXPERIMENT_ROWS`,
-`MAX_CONC_M`), same forward-compatible 501s. Two deliberate transport-level
-differences:
+The exact route set is defined by the current implementation. Do not copy a route count into durable documentation because the count changes as the API grows.
 
-* errors are returned, not raised: `{"error": {"status": 400|404|501, "detail": ...}}`.
-  `KeyError` / `FileNotFoundError` → 404, `ValueError` and out-of-range fields
-  → 400 (FastAPI answers 422 for a malformed body; the bridge has no request
-  objects, so it calls that 400 too).
-* `POST /api/experiment/csv` returns `{"csv": ..., "filename": ..., "content_type": ...}`
-  instead of a file download.
+## Transport parity
 
-**Data files.** Every module except `flylab/maps/malecns.py` looks for its data
-relative to the CWD as well as to the package, so a wheel layout works as long
-as the files sit where `Path(__file__).parents[2] / "data"` points — i.e.
-`<site-packages>/data/…`, which is exactly where `flylab-boot.js` writes them.
-`malecns.py` computes `CENSUS_FALLBACK` / `GUSTATORY_SEEDS` as absolute paths at
-import time with no fallback; if those paths are wrong for the layout in use,
-`bridge._prepare()` repoints those two module attributes (and, if needed,
-chdirs) rather than editing the module. `FLYLAB_DATA_DIR` overrides the search
-and names the directory *containing* `data/`.
+tests/test_browser_bridge.py compares representative browser-bridge and server calls.
 
-## LIF in WebAssembly
+The intended contract is:
 
-The browser must not silently run a *different* model, so the integration step
-stays at `DT_MS = 0.1 ms`. What the browser build shortens is the window:
-`flylab.circuit.lif.BROWSER_T_MS = 200.0` ms (the Spikes panel defaults to it
-and says so in one line under the heading), and the rate engine stays the
-default everywhere else.
+- same scientific inputs,
+- same scientific implementation,
+- equal or numerically equivalent supported outputs,
+- equivalent warnings and provenance semantics.
 
-`lif.py` also grew a CSR-style sparse kernel, built once from the same signed
-matrix the dense kernel uses (`LIFNetwork.csr()`, `run(..., sparse=True)`,
-`BROWSER_SPARSE`). Both kernels reduce each column in ascending row order, so
-**the spike trains are identical, not merely similar** — `tests/test_browser_bridge.py`
-asserts equality of `spikes` and `rates_hz` for both graphs, two seeds, vehicle
-and two drugs, and the existing `tests/test_circuit_lif.py` regressions pin the
-dense default.
-Native default behaviour is unchanged (`sparse=False`).
+This is transport parity, not evidence that every possible route, parameter combination or publication artifact has been exhaustively cross-validated.
 
-Measured here (Python 3.11, single core, 500 ms window, `dt = 0.1 ms`):
+## Provenance differences
 
-| graph | nodes | non-zeros | fill | dense | sparse | speed-up |
-|---|---|---|---|---|---|---|
-| `named` | 1126 | 1230 | 0.10 % | 384 ms | 352 ms | 1.09× |
-| `named`, fipronil | 1126 | 1230 | 0.10 % | 412 ms | 359 ms | 1.15× |
-| `taste_motor` | 1841 | 18 345 | 0.54 % | 630 ms | 492 ms | 1.28× |
-| `taste_motor`, fipronil | 1841 | 18 345 | 0.54 % | 953 ms | 582 ms | 1.64× |
+A browser has no Git repository checkout in the usual sense.
 
-The win grows with the spike count, because the sparse kernel only ever touches
-the entries of the columns that fired; most of the remaining cost is the 5000
-Python-level time steps, which neither kernel avoids.
+As a result:
 
-## Building the site
+- notebook git_sha may be null in Pyodide,
+- the static-site build records the build revision in its manifest,
+- library and data hashes remain available where supported.
 
-```bash
-python scripts/build_pages.py            # -> dist/pages (gitignored)
-python scripts/build_pages.py --serve    # build, then preview on :8000
-python scripts/build_pages.py --vendor-pyodide   # no CDN at run time
-```
+These transport differences should be explicit rather than hidden.
 
-`dist/pages/` contains `index.html` (the repo's own, with `/static/...` asset
-paths made relative and `flylab-boot.js` injected before `app.js`), `app.js` and
-`styles.css` copied byte for byte, the wheel built by `pip wheel . --no-deps`,
-the data files, and `manifest.json` with the git SHA, the wheel and
-`library.yaml` SHA-256s, every file size and the pinned Pyodide version. The
-build prints a size report and **fails if the total exceeds 25 MB**.
+## LIF execution
 
-Size of this build:
+The browser may use browser-oriented execution defaults to keep interactive latency acceptable.
 
-| item | size |
-|---|---|
-| `data/derived/malecns_taste_motor_neighborhood.json` | 1.03 MB |
-| `wheels/flylab-0.5.0-py3-none-any.whl` | 191 KB |
-| `data/derived/malecns_named_neighborhood.json` | 169 KB |
-| `app.js` | 90 KB |
-| `index.html` | 27 KB |
-| `data/derived/malecns_census_v1.json` | 26 KB |
-| six `data/literature/*.yaml` | 93 KB |
-| `styles.css` | 15 KB |
-| `flylab-boot.js` | 9 KB |
-| **total (16 files)** | **1.64 MB** |
+Any such difference must be visible in the UI and documentation. A shorter simulation window is not the same experiment and must never be silently presented as identical to a longer native run.
 
-Pyodide itself is loaded from the pinned CDN
-`https://cdn.jsdelivr.net/pyodide/v0.28.3/full/` and cached by the browser, so
-it is not part of that 1.64 MB: `pyodide.asm.wasm` 8.25 MB, `python_stdlib.zip`
-2.30 MB, `pyodide.asm.js` 1.02 MB, the numpy wheel 2.97 MB, pyyaml 117 KB,
-micropip + packaging 182 KB.
+The underlying model equations and parameters should remain shared unless a difference is explicitly documented.
 
-`--vendor-pyodide` copies exactly those files into the build — the loader, the
-interpreter and only the wheels this bench imports, not the other ~340 packages
-of a Pyodide release — for networks that block the CDN. That build is **16.61 MB
-in 26 files**, still inside the 25 MB budget, and needs no third-party host at
-run time. Every network step in `flylab-boot.js` is retried three times and each
-package is verified by importing it, so a dropped transfer costs seconds rather
-than the page; if it fails anyway, the page says plainly that the runtime could
-not start and points the visitor at the served bench.
+## Building the static site
 
-## Measured in a real browser
+~~~bash
+python scripts/build_pages.py
+~~~
 
-Headless Chromium, `dist/pages/` over `python -m http.server`, one core, cold
-cache, all CDN traffic through a TLS-intercepting proxy — treat these as an
-upper bound, not a benchmark:
+Preview locally:
 
-| step | browser (Pyodide 0.28.3) | same call natively | note |
-|---|---|---|---|
-| first load, runtime vendored in the build | **8.6 s** (3.5 s in `flylab-boot.js`) | — | no third-party host; zero console errors, zero failed requests |
-| first load from the CDN, cold cache | **37.6 s** (31.8 s in `flylab-boot.js`) | — | includes one automatic retry of `python_stdlib.zip`; an uninterrupted CDN boot measured **22.9 s** |
-| `/api/assay/subgraph` (imidacloprid 1e-6, `named`) | **278 ms** | 36 ms | ~8x, and the returned `mean_hz` is `0.45846211979249263` in both, to the last digit |
-| `/api/assay/spiking`, 200 ms window | **736 ms** | 295 ms | ~2.5x; `mn9_hz = 12.5 Hz`, 826 vehicle / 563 treated spikes in both |
-| Spikes panel (two 200 ms LIF runs + plots) | **1.3 s** | — | |
-| Scorecard tab | 1.0 s | | |
-| Curves tab (occupancy curve + circuit IC50 ladder) | 15.3 s | | the heaviest routine panel |
-| Circuit tab (viewer + impact) | 2.6 s | | |
-| Taste tab (reduced control + map path) | 3.0 s | | |
-| Notebook tab | 0.9 s | | |
+~~~bash
+python scripts/build_pages.py --serve
+~~~
 
-Zero console errors, zero page errors and zero failed requests in the vendored
-run; Plotly and cytoscape load from their own CDNs exactly as in the served
-bench. The panel timings above are the same either way — once Python is up, the
-runtime's origin makes no difference.
+Build with a vendored Pyodide runtime:
 
-The environment these were measured in routes all HTTPS through an intercepting
-proxy that intermittently drops a large transfer, which is why `flylab-boot.js`
-retries every network step three times and proves each package by importing it
-before continuing: a dropped `python_stdlib.zip`, `micropip` or `pyyaml` wheel
-then costs a few seconds instead of the whole page. On a network that drops
-those repeatedly, ship the vendored build.
+~~~bash
+python scripts/build_pages.py --vendor-pyodide
+~~~
 
+The generated site is written under dist/pages and is not committed as source.
 
-## Publishing
+## GitHub Pages deployment
 
-`.github/workflows/pages.yml` builds on push to `main` and on
-`workflow_dispatch` (**not** on pull requests — a PR must never publish), then
-deploys with `actions/deploy-pages` using `pages: write` + `id-token: write`.
+The Pages workflow is defined in:
 
-**One-time repository setting:** the owner must go to *Settings → Pages →
-Build and deployment → Source* and choose **GitHub Actions**. Until that is
-done the workflow builds and uploads the artifact but the deploy step fails.
+~~~text
+.github/workflows/pages.yml
+~~~
 
-## The reproducibility claim (for the paper)
+It builds and publishes from main and can also be started manually.
 
-> The bench in the browser and the bench on a workstation are the same program.
-> Both import the same `flylab` wheel; the browser reaches it through
-> `flylab.browser.bridge`, the workstation through `flylab.server`, and
-> `tests/test_browser_bridge.py` asserts that the two transports return equal
-> JSON — every readout to 1e-9, every warning, every provenance field — for a
-> representative call to each route family, including all five assays, the
-> ensemble, sensitivity, circuit IC50, the graph viewer, mixtures, genotypes,
-> selectivity, the pre-registered predictions and a null-model panel. A
-> notebook exported from the GitHub Pages page therefore carries the same
-> `library.yaml` SHA-256 and the same numbers as one exported locally, and a
-> reader can re-run any figure in this paper without installing anything.
+Pull requests do not publish directly to the live site.
 
-Two caveats that belong next to that claim: `git_sha` is `null` in browser
-notebooks (there is no git in WebAssembly — the build's SHA is in
-`manifest.json` instead), and the browser's Spikes panel defaults to a 200 ms
-window rather than 500 ms. The step size, the parameters, the map, the library
-and the patch rules are identical.
+The deployment workflow intentionally separates:
 
-## No network at load time
+- build,
+- artifact upload,
+- Pages deployment.
 
-The published site is fully self-contained. The Pyodide runtime, the NumPy and
-PyYAML wheels, the FlyLab wheel, the connectome cuts, and both chart libraries
-(Plotly and cytoscape) are served from the site's own origin. A build verified
-with every off-origin request blocked boots in under a second and runs an assay
-with no console errors, so a reviewer behind a proxy that blocks or throttles
-third-party CDNs still gets a working bench. Pass `--no-vendor-js` to build
-against the CDNs instead; the FastAPI bench keeps using them either way.
+## Local browser bench
 
+For local development, the simplest supported path is:
+
+~~~bash
+python -m pip install -e ".[dev,viz]"
+flylab serve
+~~~
+
+This runs the FastAPI transport and shared UI in the default browser.
+
+## Zero-install bench
+
+The public static bench is intended to be available at:
+
+https://pinkysworld.github.io/FlyLab/
+
+The GitHub Pages workflow is the source of truth for deployment status.
+
+## Testing
+
+Fast test suite:
+
+~~~bash
+python -m pytest -q
+~~~
+
+Longer end-to-end browser and static-build checks:
+
+~~~bash
+pytest -m slow
+~~~
+
+The ordinary tests workflow currently runs the fast suite. Slow checks should be run before tagged research releases and can also be placed in a scheduled or release-specific CI job.
+
+## Performance
+
+Browser performance depends strongly on:
+
+- Pyodide startup,
+- browser engine,
+- cache state,
+- CPU,
+- selected assay,
+- simulation length,
+- graph size,
+- whether dependencies are vendored.
+
+Do not treat old timing numbers in issue threads or historical commits as stable performance specifications.
+
+If reproducible performance numbers are needed for a paper or release, record:
+
+- FlyLab commit,
+- browser version,
+- operating system,
+- CPU,
+- cold or warm cache,
+- graph,
+- assay parameters,
+- number of repetitions.
+
+## Offline and restricted-network use
+
+The build system can vendor Pyodide assets so the scientific runtime does not depend on a third-party Python CDN at execution time.
+
+Front-end asset policy should be checked against the generated build before making a "fully offline" claim. A release should only use that wording after an automated browser test confirms there are no required off-origin requests.
+
+## Reproducibility wording for papers
+
+Recommended wording:
+
+> FlyLab exposes the same Python scientific core through a local server and a Pyodide browser bridge. Transport-parity tests compare representative route families and verify equivalent scientific outputs. The complete publication artifact set is regenerated by the native reproduction pipeline from committed inputs.
+
+Avoid:
+
+> The complete paper regenerates in the browser.
+
+Avoid:
+
+> Every browser and native route is proven identical.
+
+Those statements are stronger than the current automated test contract.
+
+## Related documentation
+
+- [Documentation index](README.md)
+- [Architecture](ARCHITECTURE.md)
+- [Software stack](STACK.md)
+- [Research positioning](NOVELTY.md)
+- [Main README](../README.md)
