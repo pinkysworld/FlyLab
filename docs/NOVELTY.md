@@ -1,45 +1,208 @@
-# Novelty (keep this short in the paper)
+# Research positioning
 
-Read this before accepting a PR. If a PR only adds a prettier fly viewer, reject it.
+This document is the claim guardrail for FlyLab.
 
-## What this is *not* novel against
+Its purpose is not to market the project. It exists to keep the paper, README, website and future PRs aligned with what the software actually contributes and with adjacent published work.
 
-Say these out loud before claiming anything:
+## The narrow contribution
 
-- **Executable fly circuits from connectome data exist.** FlyBrainLab (Lazar *et al.*, *eLife* 10:e62362, 2021, DOI 10.7554/eLife.62362) builds and compares executable circuits from fly brain data interactively. FlyLab is not the first thing to simulate named *Drosophila* circuits.
-- **Connectome LIF runtimes exist.** Shiu *et al.* (*Nature* 634, 2024) reproduce sugar-driven motor output and the bitter veto on the whole adult brain without fitting. FlyLab uses that result as a directional control, not as a finding.
-- **Receptor-informed pharmacological perturbation of a connectome exists.** On human structural connectomes, whole-brain models are perturbed by scaling regional synaptic responses with PET receptor-density maps (Mindlin *et al.*, *Commun. Biol.* 7:1176, 2024, DOI 10.1038/s42003-024-06852-9; Deco *et al.*, *Curr. Biol.* 28:3065, 2018). **That work also found the effect dominated by overall receptor presence rather than receptor placement** — the improvement correlated with the mean density of activated receptors across the brain. Our composition-dominated result is the same phenomenon at synapse resolution in an insect. Cite it: the convergence makes FlyLab more credible, not less novel.
+FlyLab should not be presented as "connectomics plus pharmacology is new."
 
-Never write "no tool has combined connectomes and pharmacology". It is false and a reviewer will catch it.
+Executable Drosophila circuits already exist. Connectome-based LIF models already exist. Receptor-informed pharmacological perturbation of whole-brain network models already exists.
 
-## What *is* new, narrowly
+FlyLab's contribution is narrower:
 
-1. **Typed pharmacological evidence.** Each row records the parameter its source measured (`Kd`/`Ki` vs `EC50`/`IC50`/`Kb` vs nothing) and the source's distance from this compound/receptor/species. Those two facts decide which transformation is permitted: binding occupancy, functional engagement, or **not modelled**. Unsupported rows return N/A and are excluded from numeric results — enforced by the type system (`EvidenceTypeError`), not by convention. In the shipped library: 101 rows, 34 EC50, 10 IC50, **exactly 1 Kd** (imidacloprid at `insect_nAChR_beta1`, Bass 2011 saturation binding), 56 not modelled.
-2. **Compound- and concentration-specific perturbation of named, synapse-resolution circuits**, with the insect and vertebrate panels scored at the same free concentration and only the insect side allowed to patch a circuit.
-3. **Connectome-dependence analysis.** For each `compound × concentration × readout`, the empirical permutation *p* against four degraded graph models, the dependence class, and the **weakest graph model that already reproduces the effect**. This is the transferable method.
-4. **Specification robustness and an uncertainty budget** that tell you which of your own conclusions are properties of a modelling choice.
-5. **Provenance that survives**: library SHA-256 in every notebook, per-compound (never per-receptor) genotype shifts, ten recorded literature-vs-library contradictions, and one caught library error (fipronil's vertebrate GABA-A EC50 contradicted its own citation ~9-fold; after correction "vertebrate-safe" is no longer sayable).
+1. **Typed pharmacological evidence**  
+   The software records what kind of parameter a source reported, where the source sits relative to the modelled receptor and species, and whether a numeric transformation is supported at all.
 
-## The findings that justify 3 and 4
+2. **Compound- and concentration-specific perturbation of named, synapse-resolution Drosophila circuits**  
+   The insect circuit and vertebrate receptor scorecard are evaluated at the same supplied free concentration, while only the insect side can alter a circuit.
 
-**Dependence (n = 1000 permutations, `named` cut, mean rate).**
+3. **Connectome-dependence analysis**  
+   A real-graph drug contrast is compared with distributions produced by degraded graph models that retain different levels of network information.
 
-- Imidacloprid, −6.17 Hz: **composition-dominated**. p = 0.275 (sign), 0.586 (weight), 0.472 (degree), 0.0010 (ER, at the resolution floor). Necessary level: `degree_sequence`. A graph that knows only each node's degree and transmitter reproduces the drug effect.
-- Fipronil, +0.90 Hz: **topology-dependent**. p = 0.0060 (weight), 0.0070 (degree), 0.113 (sign). Necessary level: `wiring_without_transmitter_identity`.
-- Taste-motor arm, fipronil veto ratio at n = 300: p = 0.42 / 0.88 / 0.20 / 0.24, all |z| < 0.25 — **a properly powered negative**, not the ten-shuffle hand-wave of v0.5. Imidacloprid's veto ratio is **undefined** there (MN9 silenced), not zero.
-- Landscape, 21 compounds × 4 concentrations: **20 topology-dependent, 51 composition-dominated, 13 no-effect, 0 mixed**. The topology-dependent set is exactly the chloride-channel blockers (dieldrin, fipronil, ivermectin, picrotoxin, gaba ≥ 1e-7, chlorpyrifos-oxon at 1e-8).
-- Permutation-count sweep: verdicts settle from n ≈ 25–50; quoting a mid-range *p* to ±0.02 needs 400–1000.
+4. **Model-auditing analyses**  
+   Ablation, specification robustness, global uncertainty and claim provenance make it possible to determine whether a conclusion comes from measured structure, sourced pharmacology, an asserted model choice, or their interaction.
 
-**Ablation ladder (21 compounds).** Receptor engagement alone orders the library **backwards** (ρ −0.05 to −0.51). Composition-only (mechanism gains on the cut's transmitter proportions, no edges) **reproduces the full model's ordering** (ρ 0.906–0.989; ρ 0.953 within the nine nicotinic agonists). Topology-only (real cut, generic multiplier) is the **worst** level (ρ 0.24, 11.7 Hz rms). Nearly all the information is in the mechanism rules; the connectome without the pharmacology is not a cheap substitute for the connectome with it.
+5. **Reproducible computational artifacts**  
+   The scientific core, notebooks and paper pipeline retain version, library, map and random-seed provenance.
 
-**Specification robustness (25 prespecified gain specifications).** "Nicotinic agonist suppresses circuit activity" retained 15/25 and **reversed by all ten monotone specifications** — under a monotone rule the same drug at the same engagement *excites* the network. "Nicotinic buffering" 18/25, reversed by none (7 undecidable). "Nav/AChE amplification" 19/25. RDL disinhibition, both topology conclusions and the map bitter-veto direction: **25/25**. So the topology results are specification-independent and the suppression result is not.
+The transferable idea is not simply "simulate a drug on a connectome." It is:
 
-**Uncertainty budget (Sobol', n_base 1024, 11264 evaluations, Var(Y) = 3.149 Hz²).** gain_transform S1 0.410 (ST 0.626), weight_threshold S1 0.294 (ST 0.542), drive 0.019, everything else at the ±0.007 noise floor measured by a null factor. VOI: gain_transform 1.29 Hz² (needs a synaptic-gain calibration), weight_threshold 0.925 Hz² (**needs no experiment**, only synapse-confidence strata).
+> **Make every connectome-based pharmacology prediction explain what evidence and network information it actually depends on.**
 
-## Not novelty
+## Adjacent work that must be acknowledged
 
-- Reproducing the bitter veto. Shiu *et al.* did that; FlyLab uses it as a directional control.
-- A Hill curve. Textbook. (And on an EC50 it is *engagement*, not occupancy.)
-- Exposure C(t), mixtures, genotype shifts, expression weighting — supporting capabilities, documented in the supplement, not equal-weight novelty claims.
-- A bigger graph, a 3D viewer, more compounds, or a spiking model of the whole CNS.
-- Any claim about a living fly. There are none in this repository.
+### Executable fly circuits
+
+FlyBrainLab already provides an interactive environment for constructing and comparing executable Drosophila circuits from connectome data.
+
+Do not claim FlyLab is the first software to simulate named fly circuits.
+
+### Connectome LIF models
+
+Published whole-brain Drosophila LIF work demonstrates connectome-driven sensorimotor simulation and provides an important directional control for FlyLab.
+
+Reproducing an existing sensorimotor direction is not a FlyLab novelty claim.
+
+### Receptor-informed whole-brain pharmacology
+
+Human whole-brain models have already used receptor maps to simulate pharmacological interventions.
+
+Do not write that FlyLab is the first project to combine network structure and receptor pharmacology.
+
+The relevant distinction is scale, evidence typing, named synapse-resolution circuits, cross-species scorecards, and explicit dependence testing.
+
+## How to describe connectome dependence
+
+The dependence framework uses degraded graph ensembles and empirical permutation probabilities.
+
+The safe interpretation is:
+
+- a small empirical p means the real-graph effect is distinguishable from that null ensemble at the chosen permutation effort,
+- a large p means the analysis did not distinguish the real effect from that null ensemble,
+- a large p is not proof of equality or biological equivalence.
+
+Accordingly, prefer:
+
+> "The real-graph effect was not distinguishable from the degree-preserving null ensemble."
+
+over:
+
+> "The degree-preserving graph reproduces the effect."
+
+The latter is stronger than a non-significant permutation comparison establishes unless an explicit equivalence criterion is added.
+
+## Current headline comparisons
+
+### Imidacloprid
+
+At the current headline concentration and readout, the imidacloprid real-graph effect is not distinguishable from several structure-preserving null ensembles at n = 1000, while it differs strongly from the Erdős-Rényi control.
+
+The current interpretation is that detailed wiring is not supported as necessary for this particular model output.
+
+### Fipronil
+
+At the same headline concentration and readout, the fipronil effect differs from the weight-permuted and degree-preserving rewired ensembles at n = 1000.
+
+That is evidence that this output is more sensitive to wiring structure than the imidacloprid comparison.
+
+### Landscape
+
+The 21-compound by 4-concentration landscape is useful as an exploratory screen, but it contains many comparisons.
+
+Do **not** summarize it as:
+
+> "Exactly the chloride-channel blockers are topology-dependent."
+
+That statement is biologically inaccurate and too categorical for the current exploratory classification. The current set includes perturbations with different pharmacological actions and at least one low-concentration AChE case.
+
+Until multiplicity handling or a clearly declared exploratory framing is finalized, describe the landscape as:
+
+> "Topology-sensitive classifications are concentrated among perturbations affecting inhibitory signalling, with mechanism and concentration-specific exceptions."
+
+The exact counts and classifications should be taken from papers/results.json, not copied by hand into durable project descriptions.
+
+## Specification robustness
+
+The gain-rule family is one of FlyLab's most important self-audits.
+
+The current analysis demonstrates that some qualitative conclusions are sensitive to the engagement-to-gain functional form. In particular, a nicotinic suppression conclusion reverses under monotone alternatives.
+
+That is a useful result because it identifies a model choice that should not be mistaken for a connectome-derived biological conclusion.
+
+However, distinguish two things:
+
+1. **Qualitative circuit conclusions re-derived under alternative gain rules**
+2. **Statistical dependence conclusions derived from permutation nulls**
+
+If a robustness predicate uses a small null sample or z-score shortcut, do not present it as equivalent to the full n = 1000 permutation analysis. The manuscript and README should reserve strong statistical language for analyses that actually use the corresponding permutation evidence.
+
+## Typed evidence
+
+FlyLab's evidence model is a methodological contribution because unsupported rows remain unsupported.
+
+Important distinctions:
+
+- EC50 and IC50 are functional potency parameters.
+- Kd and Ki are binding parameters.
+- source relation remains relevant even when the parameter type is strong.
+- a binding parameter measured in another species is not automatically a direct measurement of the modelled Drosophila receptor state.
+- missing evidence must not become a small numerical effect.
+
+Public descriptions should usually use the umbrella term **engagement** and allow detailed outputs to expose the more specific evidence type.
+
+## Uncertainty and value of information
+
+Sobol and VOI outputs describe variance of a **model output under declared input ranges**.
+
+They are not estimates of biological variability.
+
+Finite-sample Sobol first-order estimates can be slightly negative around zero. Negative raw estimates may be retained for statistical transparency, but they must not be described as negative physical "variance removed" or negative experimental value.
+
+The useful qualitative question is:
+
+> Which uncertain assumption is currently responsible for the largest resolvable share of model variance?
+
+## Literature concordance
+
+Use **literature concordance**, not **validation**, when the comparison:
+
+- reuses a source represented in the pharmacology library,
+- evaluates receptor-level ordering rather than circuit output,
+- uses another species,
+- or uses a coarse qualitative endpoint.
+
+Reserve "independent out-of-sample validation" for data that did not enter the library, model construction or calibration.
+
+The current circuit model has no such independent biological validation.
+
+## Prospective predictions
+
+The software predictions are **prospective**, not pre-registered, while they exist only in a mutable repository.
+
+An archived and timestamped release can establish a fixed prediction record for future experiments, but repository history alone should not be described as a formal registry.
+
+## Supporting capabilities, not primary novelty
+
+The following are useful capabilities but should not carry equal novelty weight:
+
+- exposure C(t),
+- mixtures,
+- genotype shifts,
+- expression weighting,
+- the graph viewer,
+- a Hill fit to the model's own dose-response,
+- reproduction of a previously published bitter-veto direction.
+
+## Claims FlyLab should not make
+
+Do not describe FlyLab as:
+
+- a digital twin of a fly,
+- a validated predictor of in vivo drug effects,
+- a vertebrate safety model,
+- a replacement for regulatory toxicology,
+- proof that a given compound "needs the connectome",
+- proof that non-significant null comparisons are equivalent,
+- the first connectome pharmacology simulator,
+- the first executable Drosophila circuit environment.
+
+## Claims FlyLab can make
+
+FlyLab can accurately be described as:
+
+- a provenance-first computational pharmacology workbench,
+- a framework for applying typed receptor evidence to named MaleCNS-derived circuits,
+- a system for testing sensitivity of model predictions to degraded connectome information,
+- a reproducible model-auditing framework,
+- a tool for computational hypothesis triage,
+- a research object that records when its own conclusions are assumption-dependent.
+
+## One preferred novelty sentence
+
+For the paper or a project summary:
+
+> FlyLab combines typed pharmacological evidence with compound-specific perturbation of named, synapse-resolution Drosophila circuits and adds a model-auditing layer that tests which network information and modelling assumptions each computed conclusion actually depends on.
+
+That sentence is deliberately narrower than the software's full feature list.
