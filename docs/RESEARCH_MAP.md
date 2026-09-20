@@ -4,12 +4,16 @@ The research plan, not a results paper. Software that exists today is marked **d
 
 ## Claim the project is allowed to make
 
-Same compound, same concentration, two scorecards:
+Same compound, same concentration, two panels, **typed**:
 
-1. Insect: occupancy on insect nAChR / RDL / GluCl / AChE / Nav / OctR → gain patch on *named* MaleCNS objects.
-2. Vertebrate: occupancy on α4β2 / α7 / GABA-A / GlyR / AChE / Nav1.x — scored, never simulated.
+1. Insect: engagement of insect nAChR (α6 / β1 / aggregate) / RDL / GluCl / AChE / Nav / OctR → gain patch on *named* MaleCNS objects.
+2. Vertebrate: engagement of α4β2 / α7 / GABA-A / GlyR / AChE / Nav1.x — scored, never simulated.
 
-One notebook JSON. Map version and library hash recorded. No invented EC50. No fake live *n*.
+Say **engagement**, not occupancy, unless the row carries a measured `Kd`/`Ki` (exactly one does: imidacloprid at `insect_nAChR_beta1`). A row with no sourced value returns **N/A**, enforced by the type system, and is excluded from every numeric result.
+
+One notebook JSON. Map version and library hash recorded. No invented potency value. No fake live *n*.
+
+And, since v0.6, no prediction is stated without the answer to *what does it depend on*: every headline claim carries its connectome-dependence class and the weakest graph model that reproduces it.
 
 ## Map objects (MaleCNS v1.0)
 
@@ -33,12 +37,19 @@ Public feathers (`body-annotations…`, `body-neurotransmitters…`, `connectome
 | 1b Named subgraph | MN9/DNp01 1-hop cut from the real weight matrix | **done** |
 | 1c Gustatory types | LB1/LB3 seeds resolved from MaleCNS `type` | **done — this was open issue #2 and it is now closed** |
 | 1d Map taste path | sugar/bitter drive on extracted GRNs, read MN9 | **done** (both engines) |
-| 2 Drug panel | ≥ 5 compounds, insect vs vertebrate | **done** (21 compounds, teaching tiers) |
+| 2 Drug panel | ≥ 5 compounds, insect vs vertebrate | **done** (21 compounds, 101 typed rows, 14 receptor keys) |
 | 3 Local bench | assays + export in one UI | **done** |
 | 4 Whole-CNS census | traced transmitter counts | **done** |
 | 4b 166k LIF | full matrix as a spike network | **out of scope** |
 | 5 Live fly | PER / climbing *n* | **blocked — protocol only** |
-| 6 IJRC | software note or live table | **draft complete, not submitted** |
+| 6 IJRC | research article with a Discussion, or a live table | **v0.6 draft complete, not submitted** |
+| 6a Typed evidence | parameter type + source relation decide the transformation | **done in v0.6** |
+| 6b Connectome dependence | permutation *p*, dependence class, necessary information level | **done in v0.6** |
+| 6c Ablation ladder | which layer carries the ordering information | **done in v0.6** |
+| 6d Specification robustness | 25 gain specifications x 7 conclusions + threshold grid | **done in v0.6** |
+| 6e Global uncertainty + VOI | Sobol' budget, validated estimator, ranked experiments | **done in v0.6** |
+| 7 Expression coverage | adult motor-neuron receptor expression, or a declared bound | **open — 0.205, MN9 unresolved** |
+| 8 Archival | Zenodo deposit; only then may "prospective" become "pre-registered" | **open** |
 
 ### Gate 1c is closed (former issue #2)
 
@@ -54,39 +65,58 @@ Two caveats travel with it, permanently: the sweet/bitter assignment of the type
 | 5b Second runtime | Shiu-style LIF beside the rate model, with a stated calibration and a background Poisson drive |
 | 5c Uncertainty | log-EC50 Monte-Carlo, replicate ensembles, bootstrap Hill fits, sensitivity tornado |
 | 5d Literature layer | six sourced YAML datasets; genotype shifts, mixtures, expression weighting, rank validation |
-| 5e Null models | four connectome degradations and a connectome-information score |
+| 5e Null models | four connectome degradations (superseded in v0.6 by connectome-dependence analysis) |
 | 5f Selectivity | receptor SI vs circuit SI landscape over the library and both cuts |
-| 5g Pre-registration | H1–H7 with model-internal effect sizes and a suggested *n* |
+| 5g Prospective predictions | H1–H7 with model-internal effect sizes and an illustrative planning *n* |
 | 5h Reproduction | `scripts/reproduce_paper.py`: every figure, table and number from committed data |
 | 5i Static bench | the same wheel on Pyodide, published from GitHub Pages (`docs/PAGES.md`) |
 
-## Pharmacological hypotheses (pre-registered, not yet tested in vivo)
+## Pharmacological hypotheses (prospective, not yet tested in vivo)
 
-`flylab predictions` prints these with model-internal CIs and a suggested *n* per group. Full table: `papers/tables/T3_predictions.csv`.
+`flylab predictions` prints these with model-internal CIs and an **illustrative planning minimum** *n* per group (capped at d = 1.0; not a power calculation). They are *prospective*, not pre-registered: a mutable repository is not a registry. Full table: `papers/tables/T3_predictions.csv`.
 
-H1 dual scorecard gap at 1 µM · H2 imidacloprid lowers the neighbourhood mean rate · H3 fipronil raises it · H4 diazepam moves nothing · H5 bitter vetoes sugar-driven MN9 on the map path · H6 fipronil relieves that veto · H7 picrotoxin perturbs the circuit with ~zero receptor selectivity.
+H1 dual panel gap at 1 µM · H2 imidacloprid lowers the neighbourhood mean rate · H3 fipronil raises it · H4 diazepam moves nothing · H5 bitter vetoes sugar-driven MN9 on the map path · H6 fipronil relieves that veto · H7 picrotoxin perturbs the circuit with ~zero receptor selectivity.
 
 **Software check: done for all seven. Live check: blocked for all seven.** `live_result` is `null` in every row.
 
-## What v0.5 learned that changes the plan
+## What v0.6 learned that changes the plan
 
-1. **The mean-rate readout is not a wiring result for nicotinic agonists.** Imidacloprid beats an Erdős–Rényi null decisively and fails every structure-preserving null (max |z| ≈ 1.2). Fipronil beats the topology nulls (z ≈ 3). Any future claim that "the connectome matters" must name the compound and the readout.
-2. **The bitter veto ratio is not yet distinguishable from a shuffled graph** (max |z| ≈ 0.7 at 10 shuffles). More shuffles and a readout less dominated by the drive are needed before H6 can be called a wiring prediction.
-3. **At a saturating dose the model cannot see its own EC50** (zero sensitivity span). Dose ladders, not single doses, constrain the receptor layer; the gain-rule coefficient is the parameter that matters.
-4. **RDL/GluCl blockers have no circuit selectivity index** on these cuts: disinhibition is bounded by the GABA share and the 0.05 gain floor.
-5. **Correcting one library row removed a claim.** Fipronil's vertebrate GABA-A EC50 contradicted its own citation by ~9×; after correction its vertebrate occupancy at 1 µM is 0.48, and "vertebrate-safe" is no longer sayable.
+Every number here comes from `papers/results.json`.
 
-## v0.6 (the next three things, in order)
+1. **Most predictions do not need the connectome; a chemically coherent minority do.** Over 21 compounds × 4 concentrations: 20 cells topology-dependent, 51 composition-dominated, 13 no-effect, 0 mixed, and the topology-dependent set is exactly the chloride-channel blockers. Imidacloprid at 1 µM is composition-dominated (p = 0.275 / 0.586 / 0.472 against the three structure-preserving nulls at n = 1000; necessary level `degree_sequence`); fipronil is topology-dependent (p = 0.0060 weight, 0.0070 degree; necessary level `wiring_without_transmitter_identity`). Never claim "the connectome matters" without naming the compound, the concentration and the readout.
+2. **The bitter-veto arm is a properly powered negative.** At n = 300 on the taste-motor cut, fipronil's veto ratio gives p = 0.42 / 0.88 / 0.20 / 0.24 with all |z| < 0.25, replacing the ten-shuffle hand-wave of v0.5. H6 is a pharmacology prediction, not a wiring prediction, and that is now measured rather than assumed. Imidacloprid's veto ratio there is **undefined** (MN9 silenced), not zero.
+3. **Nearly all the ordering information is in the mechanism rules.** Composition-only reproduces the full model's ordering (ρ 0.906–0.989; ρ 0.953 within the nicotinic agonists); receptor-only orders it backwards (ρ −0.05 to −0.51); topology-only with a generic multiplier is the worst level (ρ 0.24, 11.7 Hz rms). The connectome without the pharmacology is not a cheap substitute for the connectome with it.
+4. **The suppression result is specification-dependent.** "A nicotinic agonist suppresses circuit activity" is retained by 15 of 25 prespecified gain specifications and reversed by all ten monotone ones, where the same drug at the same engagement *excites* the network. Nicotinic buffering (18/25) is reversed by none; Nav/AChE amplification is 19/25; RDL disinhibition, both topology conclusions and the map bitter-veto direction are 25/25. Quote the specification-independent ones freely; caveat the rest.
+5. **The uncertainty is in two places only.** Sobol' at n_base 1024 (11 264 evaluations, Var(Y) = 3.149 Hz²): `gain_transform` S1 0.410 (ST 0.626), `weight_threshold` S1 0.294 (ST 0.542), drive 0.019, everything else at the ±0.007 noise floor measured by a deliberately null factor. Potency and Hill *n* are invisible at a saturating dose. Interactions carry 0.344.
+6. **The next experiment is named by the model, not by taste.** VOI: `gain_transform` 1.29 Hz² (a synaptic-gain calibration at a known synapse) and `weight_threshold` 0.925 Hz² — which needs **no experiment at all**, only a re-run against synapse-confidence strata.
+7. **The amplify/buffer split is threshold-sensitive.** Nicotinic buffering holds 9/9 on the 3×3 grid (gap −0.362 to −1.224); Nav/AChE amplification holds 8/9 and flips at the strictest corner (gap −0.075). Quote ranges, never the point estimate.
+8. **Typing the evidence removed numbers that never existed.** 101 rows: 34 EC50, 10 IC50, 1 Kd, 56 not modelled. Diazepam at insect RDL is N/A, not 1e-4.
 
-1. **Expression coverage.** Coverage is 0.21 across the five insect receptor keys, and motor neurons — the class MN9 belongs to — are a confirmed gap. Either find per-cell-type receptor expression for adult leg/labellar motor neurons, or state the gap as a permanent bound on the weighted layer. Not a new model; a data problem.
-2. **Subunit-resolved receptors.** `insect_nAChR` is one key where α1/α5/α6/α7 and β1/β2 are different, partly overlapping cell populations. Spinosad (α6) and the neonicotinoids (β1) must not share a key. This is a `library.yaml` schema change (v3) plus per-subunit expression weights, and it caps how much the selectivity landscape can mean until it is done.
-3. **One live assay.** Climbing is the better first target: a full published protocol and control statistics exist (Martelli 2020; RING), whereas the specific PER baseline FlyLab needs was not found in the literature and is recorded as `null`. One table in `live_lab` converts this project from a methods article to a results article.
+## v0.6 gates (all done)
 
-Not v0.6: a 166k-cell LIF, a second connectome, a 3D viewer, or fitting more than one parameter.
+| Gate | What it added |
+|---|---|
+| 6a Typed evidence | schema v3: parameter type + source relation decide the transformation; unsupported rows return N/A (T10, F11) |
+| 6b Connectome dependence | permutation *p* first, dependence class, necessary information level, a landscape over the library, a permutation-count sweep (T6, T11, T12, F6, F12) |
+| 6c Ablation ladder | receptor-only / composition-only / topology-only / full (T13, F13) |
+| 6d Specification robustness | 25 gain specifications × 7 conclusions, plus the 3×3 threshold grid (T14, T15, F14) |
+| 6e Global uncertainty + VOI | Sobol' budget with an Ishigami-validated estimator, ranked experiments (T16, T17, F15) |
+| 6f Subunit-resolved nicotinic keys | α6 (spinosad), β1 (imidacloprid); the rest stay on a documented aggregate because their sources used hybrid constructs |
+| 6g IJRC research article | Introduction / Methods / Results / Discussion / Conclusion plus a supplement, inside the word target |
+
+## v0.7 (the next things, in order)
+
+1. **Expression coverage.** 0.205 across the insect receptor keys, and motor neurons — MN9's class — are a confirmed gap. Either source it or declare the bound permanent. A data problem, not a modelling one.
+2. **The one allowed fit, now named by the model.** The engagement→gain transformation. Not a potency: at a saturating dose the model cannot see one.
+3. **The free win.** `weight_threshold` needs no bench time: re-run against synapse-confidence strata.
+4. **One live assay.** Climbing first; the PER baseline could not be sourced and is `null`.
+5. **Archive a tagged release** before the word "pre-registered" may be used anywhere in this repository.
+
+Not v0.7: a 166k-cell LIF, a second connectome, a 3D viewer, or fitting more than one parameter.
 
 ## Parameter policy
 
-Allowed to fit later, at most one coefficient per paper: a gain-rule coefficient (now known to be the sensitive one) or one EC50.
+Allowed to fit later, at most one coefficient per paper: the engagement→gain transformation or its coefficient — the variance budget says so — and never a potency value.
 Not allowed: refitting MaleCNS weights, inventing transmitters, hiding a reduced-circuit warning, or editing a library EC50 to improve a rank correlation.
 
 ## Assays
@@ -103,7 +133,7 @@ Not allowed: refitting MaleCNS weights, inventing transmitters, hiding a reduced
 
 ## Paper path (IJRC)
 
-`papers/IJRC_FlyLab_draft.md` is a methods / software article, rendered from `papers/IJRC_FlyLab_draft.md.in`. Submit when either the journal accepts a software article with no live table, or one PER/climbing table exists in a notebook. Do not submit H2–H7 as empirical biology without that table. Checklist: `papers/SUBMISSION_CHECKLIST.md`.
+`papers/IJRC_FlyLab_draft.md` is a research article (Introduction / Methods / Results / Discussion / Conclusion) with `papers/SUPPLEMENT.md`, rendered from `papers/IJRC_FlyLab_draft.md.in`. Submit when either the journal accepts a software article with no live table, or one PER/climbing table exists in a notebook. Do not submit H2–H7 as empirical biology without that table. Checklist: `papers/SUBMISSION_CHECKLIST.md`.
 
 ## What this map is not
 

@@ -28,7 +28,11 @@ from scripts.reproduce_paper import (  # noqa: E402
 
 PAPERS = REPO_ROOT / "papers"
 TEMPLATE = PAPERS / "IJRC_FlyLab_draft.md.in"
+SUPPLEMENT_TEMPLATE = PAPERS / "SUPPLEMENT.md.in"
 COMMITTED_RESULTS = PAPERS / "results.json"
+
+#: figures a full run must produce
+EXPECTED_FIGURES = 15
 
 #: two steps that touch no circuit runtime, so the fast run stays well under a
 #: second: one writes a table, the other writes a figure.
@@ -110,11 +114,18 @@ def validate_results(doc: object) -> list[str]:
 
 
 def template_keys() -> set[str]:
-    """Every ``{{key}}`` the paper template substitutes."""
-    if not TEMPLATE.exists():
-        return set()
-    text = re.sub(r"\A<!--.*?-->\s*", "", TEMPLATE.read_text(), flags=re.S)
-    return set(re.findall(r"\{\{([A-Za-z0-9_]+)\}\}", text))
+    """Every ``{{key}}`` the manuscript or its supplement substitutes.
+
+    Both documents are rendered from the same ``results.json``, so both are
+    part of the contract: a key either document quotes must exist.
+    """
+    keys: set[str] = set()
+    for path in (TEMPLATE, SUPPLEMENT_TEMPLATE):
+        if not path.exists():
+            continue
+        text = re.sub(r"\A<!--.*?-->\s*", "", path.read_text(), flags=re.S)
+        keys |= set(re.findall(r"\{\{([A-Za-z0-9_]+)\}\}", text))
+    return keys
 
 
 # --------------------------------------------------------------------------
@@ -232,6 +243,11 @@ def test_rendered_draft_has_no_unresolved_placeholders() -> None:
     text = draft.read_text()
     assert "[[MISSING:" not in text
     assert "{{" not in text
+    supplement = PAPERS / "SUPPLEMENT.md"
+    if supplement.exists():
+        body = supplement.read_text()
+        assert "[[MISSING:" not in body
+        assert "{{" not in body
 
 
 # --------------------------------------------------------------------------
@@ -246,6 +262,63 @@ def test_full_fast_pipeline(tmp_path: Path) -> None:
     assert validate_results(doc) == []
     assert [n for n, s in doc["steps"].items() if s["status"] != "ok"] == []
     assert set(doc["steps"]) == set(STEP_NAMES)
-    assert len([f for f in doc["figures"] if f["name"].endswith(".png")]) == 10
+    assert len([f for f in doc["figures"] if f["name"].endswith(".png")]) == EXPECTED_FIGURES
     missing = sorted(set(PAPER_KEYS) - set(doc["values"]))
     assert not missing, f"a full run did not produce: {missing}"
+
+
+# --------------------------------------------------------------------------
+# editorial contracts the peer review turned into rules
+# --------------------------------------------------------------------------
+@pytest.mark.skipif(not COMMITTED_RESULTS.exists(), reason="papers/results.json not built yet")
+def test_body_word_count_is_inside_the_venue_target() -> None:
+    """IJRC asks for 5000-7000 body words; the pipeline counts them."""
+    values = json.loads(COMMITTED_RESULTS.read_text())["values"]
+    row = values.get("paper_words_body")
+    if row is None:
+        pytest.skip("paper step has not run")
+    assert 5000 <= row["value"] <= 7000, f"body word count {row['value']} is outside 5000-7000"
+
+
+#: framings the peer review asked to have removed, and that must not creep back
+BANNED_PHRASES = (
+    # adjacent tools do exist; they are cited instead
+    "do not touch",
+    "no public tool",
+    "no other tool",
+    "first tool to",
+)
+
+#: "pre-registered" may appear only where the manuscript denies the label; a
+#: mutable repository is not a registry, so the predictions are *prospective*
+_NEGATED_PREREG = re.compile(
+    r"(not|never|rather than|instead of|called them|becomes?|become)\W{0,12}"
+    r"[\"\u201c]?pre-?registered",
+    re.I,
+)
+
+
+@pytest.mark.skipif(not TEMPLATE.exists(), reason="paper template not present")
+def test_manuscript_does_not_reuse_retracted_framings() -> None:
+    for path in (TEMPLATE, SUPPLEMENT_TEMPLATE):
+        if not path.exists():
+            continue
+        text = path.read_text()
+        lowered = text.lower()
+        for phrase in BANNED_PHRASES:
+            assert phrase not in lowered, f"{path.name} still says {phrase!r}"
+        negated = {m.end() for m in _NEGATED_PREREG.finditer(text)}
+        for m in re.finditer(r"pre-?registered", text, re.I):
+            assert m.end() in negated, (
+                f"{path.name} calls something pre-registered at offset {m.start()}: "
+                f"{text[max(0, m.start() - 70):m.end() + 20]!r}. A mutable repository "
+                "is not a registry; say 'prospective' unless the release is archived."
+            )
+
+
+@pytest.mark.skipif(not TEMPLATE.exists(), reason="paper template not present")
+def test_manuscript_cites_the_adjacent_tools_it_is_positioned_against() -> None:
+    """FlyBrainLab and the receptor-informed whole-brain models are load-bearing."""
+    text = TEMPLATE.read_text()
+    for needle in ("FlyBrainLab", "10.7554/eLife.62362", "10.1038/s42003-024-06852-9"):
+        assert needle in text, f"the manuscript no longer cites {needle}"

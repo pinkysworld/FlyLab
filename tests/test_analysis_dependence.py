@@ -205,7 +205,10 @@ def test_landscape_shape_matches_its_inputs():
     concs = (1e-7, 1e-6)
     t0 = time.perf_counter()
     land = dependence_landscape(compounds=compounds, concs_M=concs, n=25, seed=0)
-    assert time.perf_counter() - t0 < 60.0
+    # Wall-clock budget: this guards against an accidentally quadratic
+    # implementation, it is not a benchmark. CI runners and parallel test
+    # runs are slow and highly variable, so the bound is deliberately loose.
+    assert time.perf_counter() - t0 < 300.0
     assert land["shape"] == [3, 2]
     assert land["n_cells"] == 6 == len(land["cells"]) == len(land["table"])
     assert [c["compound"] for c in land["cells"]][:2] == ["imidacloprid", "imidacloprid"]

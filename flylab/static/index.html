@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>FlyLab bench</title>
-<meta name="description" content="Virtual Drosophila pharmacology bench: compound and dose to receptor occupancy, gain patches on named MaleCNS cells, circuit readouts and a notebook." />
+<meta name="description" content="Virtual Drosophila pharmacology workstation: compound and dose to typed receptor engagement, gain patches on named MaleCNS cells, circuit readouts, and a dashboard that says which numbers were measured and which the model assumed." />
 <link rel="stylesheet" href="/static/styles.css" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%F0%9F%AA%B0%3C/text%3E%3C/svg%3E" />
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
@@ -85,22 +85,270 @@
 
   <!-- ------------------------------------------------------ main -->
   <main id="main">
-    <nav class="tabs" role="tablist" aria-label="Bench panels">
-      <button role="tab" id="tab-scorecard" aria-controls="panel-scorecard" aria-selected="true">Scorecard</button>
-      <button role="tab" id="tab-curves" aria-controls="panel-curves" aria-selected="false">Curves</button>
+    <nav class="tabs" role="tablist" aria-label="FlyLab panels">
+      <button role="tab" id="tab-dashboard" aria-controls="panel-dashboard" aria-selected="true">Dashboard</button>
+      <button role="tab" id="tab-dose" aria-controls="panel-dose" aria-selected="false">Dose-response</button>
       <button role="tab" id="tab-circuit" aria-controls="panel-circuit" aria-selected="false">Circuit</button>
+      <button role="tab" id="tab-genotype" aria-controls="panel-genotype" aria-selected="false">Genotype</button>
+      <button role="tab" id="tab-mixtures" aria-controls="panel-mixtures" aria-selected="false">Mixtures</button>
+      <button role="tab" id="tab-experiment" aria-controls="panel-experiment" aria-selected="false">Experiment</button>
+      <button role="tab" id="tab-evidence" aria-controls="panel-evidence" aria-selected="false">Evidence</button>
+      <button role="tab" id="tab-notebook" aria-controls="panel-notebook" aria-selected="false">Notebook</button>
+    </nav>
+    <nav class="tabs bench" role="tablist" aria-label="Bench panels">
+      <span class="tabs-label" aria-hidden="true">Bench</span>
+      <button role="tab" id="tab-scorecard" aria-controls="panel-scorecard" aria-selected="false">Scorecard</button>
+      <button role="tab" id="tab-curves" aria-controls="panel-curves" aria-selected="false">Curves</button>
       <button role="tab" id="tab-spikes" aria-controls="panel-spikes" aria-selected="false">Spikes</button>
       <button role="tab" id="tab-taste" aria-controls="panel-taste" aria-selected="false">Taste</button>
       <button role="tab" id="tab-wholecns" aria-controls="panel-wholecns" aria-selected="false">Whole CNS</button>
       <button role="tab" id="tab-exposure" aria-controls="panel-exposure" aria-selected="false">Exposure</button>
       <button role="tab" id="tab-uncertainty" aria-controls="panel-uncertainty" aria-selected="false">Uncertainty</button>
-      <button role="tab" id="tab-experiment" aria-controls="panel-experiment" aria-selected="false">Experiment</button>
       <button role="tab" id="tab-controls" aria-controls="panel-controls" aria-selected="false">Controls</button>
-      <button role="tab" id="tab-notebook" aria-controls="panel-notebook" aria-selected="false">Notebook</button>
     </nav>
 
+    <!-- 0. Dashboard (landing) -->
+    <section class="panel active" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
+      <div class="panel-head">
+        <h1>Dashboard</h1>
+        <p>One dose, one compound, and an explicit account of which numbers were measured and which this model invented.</p>
+        <button class="small" data-run="dashboard" type="button">Run dashboard</button>
+      </div>
+
+      <div class="dose-rail" role="group" aria-label="Concentration">
+        <label for="f-dash-logconc">Concentration</label>
+        <input id="f-dash-logconc" type="range" min="-11" max="-3" step="0.1" value="-6" aria-describedby="dash-conc-read" />
+        <output id="dash-conc-read" class="mono">1.00e-6 M</output>
+        <div class="ladder" id="dash-ladder" role="group" aria-label="Dose ladder">
+          <button class="small" type="button" data-conc="1e-9">1 nM</button>
+          <button class="small" type="button" data-conc="1e-8">10 nM</button>
+          <button class="small" type="button" data-conc="1e-7">100 nM</button>
+          <button class="small" type="button" data-conc="1e-6">1 &micro;M</button>
+          <button class="small" type="button" data-conc="1e-5">10 &micro;M</button>
+        </div>
+        <span class="hint">Every card below is recomputed at the dose you release the slider on.</span>
+      </div>
+
+      <div id="dash-overview"><div class="empty">Not run yet.</div></div>
+
+      <div class="tiles kpi" id="dash-tiles"></div>
+
+      <div class="card why" id="dash-why"><div class="empty">Not run yet.</div></div>
+
+      <div class="grid two">
+        <div class="card span-all">
+          <h3>One concentration axis</h3>
+          <p class="sub">Insect engagement, vertebrate engagement and circuit response are all dimensionless fractions, so they share one y-axis. No second scale is ever drawn.</p>
+          <div id="plot-dash-ladder" class="plot"></div>
+          <div class="legend" id="legend-dash-ladder"></div>
+          <div class="table-wrap"><table id="tbl-dash-ladder"><thead></thead><tbody></tbody></table></div>
+        </div>
+
+        <div class="card">
+          <h3>Selectivity &mdash; values, not a verdict</h3>
+          <p class="sub">A ratio is not a safety margin. The vertebrate engagement at <i>this</i> dose is printed beside it, and the receptor that becomes limiting first is named.</p>
+          <div class="meters" id="meters-dash-sel"></div>
+          <div id="dash-sel-facts"></div>
+          <div class="table-wrap"><table id="tbl-dash-vert"><thead></thead><tbody></tbody></table></div>
+        </div>
+
+        <div class="card">
+          <h3>Circuit consequence</h3>
+          <p class="sub">Vehicle &rarr; treated on the committed MaleCNS cut. Rates are model output, not recordings.</p>
+          <div id="plot-dash-circuit" class="plot"></div>
+          <div class="legend" id="legend-dash-circuit"></div>
+          <div class="table-wrap"><table id="tbl-dash-circuit"><thead></thead><tbody></tbody></table></div>
+        </div>
+
+        <div class="card span-all">
+          <h3>Is the effect wiring-dependent?</h3>
+          <p class="sub">A separate question from "did the circuit move". Permutation nulls destroy one kind of structure at a time; the headline statistic is the empirical p with its resolution, never a bare z.</p>
+          <div id="dash-dep-verdict"></div>
+          <div class="table-wrap"><table id="tbl-dash-dep"><thead></thead><tbody></tbody></table></div>
+        </div>
+
+        <div class="card span-all" id="card-trust">
+          <h3>What can I trust?</h3>
+          <p class="sub">Per layer, not blended. There is no single confidence percentage here on purpose.</p>
+          <div class="table-wrap"><table id="tbl-dash-trust"><thead></thead><tbody></tbody></table></div>
+          <div class="hint" id="trust-note"></div>
+        </div>
+
+        <div class="card span-all" id="card-compare">
+          <h3>Compare compounds</h3>
+          <p class="sub">Receptor selectivity beside circuit selectivity. The two do not rank compounds the same way.</p>
+          <div class="card-actions">
+            <label for="f-cmp-compounds" class="badge">compounds</label>
+            <select id="f-cmp-compounds" multiple size="5" style="width:auto;min-width:200px"></select>
+            <label class="badge"><input type="checkbox" id="f-cmp-dependence" style="width:auto" checked /> topology column</label>
+            <button class="small" id="btn-cmp-run" type="button">Run compare</button>
+            <span class="hint" id="cmp-estimate"></span>
+          </div>
+          <div id="cmp-findings"></div>
+          <div id="plot-compare" class="plot"></div>
+          <div class="table-wrap"><table id="tbl-compare"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0b. Dose-response -->
+    <section class="panel" id="panel-dose" role="tabpanel" aria-labelledby="tab-dose">
+      <div class="panel-head">
+        <h1>Dose-response</h1>
+        <p>Where saturation happens, and why changing an EC50 barely moves a receptor that is already full.</p>
+        <button class="small" data-run="dose" type="button">Run dose-response</button>
+      </div>
+      <div class="grid two">
+        <div class="card span-all">
+          <h3>Engagement and circuit response on one axis</h3>
+          <p class="sub">Same three series as the dashboard, drawn large. The vertical rules are the current dose and the concentration at which the vertebrate receptor reaches 20% engagement.</p>
+          <div id="plot-dose-ladder" class="plot"></div>
+          <div class="legend" id="legend-dose-ladder"></div>
+        </div>
+        <div class="card span-all" id="card-saturation">
+          <h3>Saturation check</h3>
+          <p class="sub">Computed from this run: how far a two-fold error in the cited parameter would move engagement at the current dose.</p>
+          <div class="tiles" id="tiles-saturation"></div>
+          <div id="saturation-text"></div>
+        </div>
+        <div class="card span-all">
+          <h3>Every receptor in this row</h3>
+          <p class="sub">Solid = insect, dashed = vertebrate counterpart. Rows with no sourced value are not drawn: absent is not zero.</p>
+          <div id="plot-dose-receptors" class="plot"></div>
+          <div class="table-wrap"><table id="tbl-dose-receptors"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0c. Genotype -->
+    <section class="panel" id="panel-genotype" role="tabpanel" aria-labelledby="tab-genotype">
+      <div class="panel-head">
+        <h1>Genotype</h1>
+        <p>Wild type against sourced resistance alleles. Shifts are <b>per compound</b>: an allele that moves deltamethrin need not move DDT.</p>
+        <button class="small" data-run="genotype" type="button">Run genotype panel</button>
+      </div>
+      <div id="genotype-notices"></div>
+      <div class="grid two">
+        <div class="card">
+          <h3>Potency under each allele</h3>
+          <p class="sub">Engagement at the current dose, with the sourced fold-shift beside it.</p>
+          <div id="plot-geno-occ" class="plot"></div>
+        </div>
+        <div class="card">
+          <h3>Circuit response under each allele</h3>
+          <p class="sub">MN9 firing rate on the same cut, same drive.</p>
+          <div id="plot-geno-circuit" class="plot"></div>
+        </div>
+        <div class="card span-all">
+          <h3>Before and after</h3>
+          <div class="table-wrap"><table id="tbl-genotype"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="card span-all">
+          <h3>Per-compound specificity</h3>
+          <p class="sub">The same allele applied to a second compound, to show the shift is not a property of the receptor alone.</p>
+          <div class="card-actions">
+            <label for="f-geno-other" class="badge">compare with</label>
+            <select id="f-geno-other" style="width:auto"></select>
+            <button class="small" id="btn-geno-other" type="button">Run</button>
+          </div>
+          <div class="table-wrap"><table id="tbl-genotype-other"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0d. Mixtures -->
+    <section class="panel" id="panel-mixtures" role="tabpanel" aria-labelledby="tab-mixtures">
+      <div class="panel-head">
+        <h1>Mixtures</h1>
+        <p>Two compounds, their targets, and whether the combination beats the null expectation.</p>
+        <div class="row" style="gap:8px; flex-wrap:wrap">
+          <label for="f-mix-a" class="badge">A</label>
+          <select id="f-mix-a" style="width:auto"></select>
+          <input id="f-mix-a-conc" type="text" value="1e-7" style="width:88px" aria-label="Concentration of compound A in molar" />
+          <label for="f-mix-b" class="badge">B</label>
+          <select id="f-mix-b" style="width:auto"></select>
+          <input id="f-mix-b-conc" type="text" value="1e-7" style="width:88px" aria-label="Concentration of compound B in molar" />
+          <label for="f-mix-model" class="badge">model</label>
+          <select id="f-mix-model" style="width:auto">
+            <option value="bliss">Bliss independence</option>
+            <option value="loewe">Loewe additivity</option>
+          </select>
+          <button class="small" data-run="mixtures" type="button">Run mixture</button>
+        </div>
+      </div>
+      <div id="mixture-notices"></div>
+      <div class="grid two">
+        <div class="card span-all">
+          <div class="tiles" id="tiles-mixture"></div>
+        </div>
+        <div class="card">
+          <h3>Observed against expectation</h3>
+          <p class="sub">Single agents and the combination, with the model's expectation drawn as a reference line.</p>
+          <div id="plot-mixture" class="plot"></div>
+          <div class="legend" id="legend-mixture"></div>
+        </div>
+        <div class="card">
+          <h3>Isobologram</h3>
+          <p class="sub">Iso-effect pairs against the Loewe additivity line. Points below the line are more than additive.</p>
+          <div id="plot-isobologram" class="plot"></div>
+          <div class="legend" id="legend-isobologram"></div>
+        </div>
+        <div class="card span-all">
+          <h3>Receptors touched by the mixture</h3>
+          <p class="sub">Where the two compounds meet, and where only one of them acts.</p>
+          <div class="table-wrap"><table id="tbl-mixture"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0e. Evidence -->
+    <section class="panel" id="panel-evidence" role="tabpanel" aria-labelledby="tab-evidence">
+      <div class="panel-head">
+        <h1>Evidence</h1>
+        <p>Every number carries a classification. Click any chip to open its provenance.</p>
+        <button class="small" data-run="evidence" type="button">Run evidence</button>
+      </div>
+      <div class="grid two">
+        <div class="card span-all">
+          <h3>Classification key</h3>
+          <div class="legend" id="legend-chips"></div>
+        </div>
+        <div class="card span-all">
+          <h3>This compound, row by row</h3>
+          <p class="sub">The library rows behind the current run, with the parameter type, the source relation and the species.</p>
+          <div class="table-wrap"><table id="tbl-evidence"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="card span-all">
+          <h3>Fact &middot; Inference &middot; Unknown</h3>
+          <p class="sub">Generated for this experiment from <span class="mono">flylab/analysis/claims.py</span>.</p>
+          <div class="fiu" id="fiu"></div>
+        </div>
+        <div class="card span-all">
+          <h3>Claim chain</h3>
+          <p class="sub">Result &rarr; parameter source &rarr; engagement &rarr; mechanism rule &rarr; expression &rarr; MaleCNS edges &rarr; transmitters &rarr; engine &rarr; readout.</p>
+          <div id="claim-chain"></div>
+        </div>
+        <div class="card">
+          <h3>Library census</h3>
+          <p class="sub">What the whole library is made of, by parameter type and evidence tier.</p>
+          <div class="table-wrap"><table id="tbl-library"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="card">
+          <h3>Rank validation</h3>
+          <p class="sub">Model orderings against published ones, with the recorded discrepancies.</p>
+          <div class="table-wrap"><table id="tbl-validation"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="card span-all" id="card-deeper">
+          <h3>Deeper analyses</h3>
+          <p class="sub">These cost real compute. Each one states its estimated runtime before it runs, and the browser build defaults to the cheap settings.</p>
+          <div class="analysis-grid" id="analysis-grid"></div>
+          <div id="analysis-out"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- 1. Scorecard -->
-    <section class="panel active" id="panel-scorecard" role="tabpanel" aria-labelledby="tab-scorecard">
+    <section class="panel" id="panel-scorecard" role="tabpanel" aria-labelledby="tab-scorecard">
       <div class="panel-head">
         <h1>Scorecard</h1>
         <p>The same dose, two receptor panels. Occupancy is a Hill calculation on literature-order EC50s, not a measurement.</p>
@@ -535,6 +783,12 @@
   <button class="small drawer-close" id="btn-drawer-close" type="button">Close</button>
   <h2>Warnings from the current notebook</h2>
   <div id="drawer-body"><p class="empty">No run yet.</p></div>
+</aside>
+
+<aside class="drawer" id="provenance" aria-label="Provenance" aria-hidden="true">
+  <button class="small drawer-close" id="btn-prov-close" type="button">Close</button>
+  <h2 id="prov-title">Provenance</h2>
+  <div id="prov-body"><p class="empty">Click any classification chip to open its provenance.</p></div>
 </aside>
 
 <div class="statusbar" role="status" aria-live="polite">

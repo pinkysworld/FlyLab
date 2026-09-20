@@ -1,0 +1,8 @@
+conclusion,claim,readout,n_specs,n_retained,n_lost,n_undecidable,fraction_retained,fraction_retained_decidable,failing_specs,undecidable_specs
+C1_nicotinic_suppression,"a nicotinic agonist (imidacloprid, 1 uM) suppresses network activity","subgraph mean_hz, treated < vehicle",25,15,10,0,0.6,0.6,linear@0.50x; linear@0.75x; linear@1.00x; linear@1.25x; linear@1.50x; saturating@0.50x; saturating@0.75x; saturating@1.00x; saturating@1.25x; saturating@1.50x,
+C5_nicotinic_buffering,the neighborhood buffers nicotinic receptor selectivity,mean (circuit SI - receptor SI) < 0 over the nicotinic set,25,18,0,7,0.72,1.0,,linear@0.50x; linear@0.75x; saturating@0.50x; saturating@0.75x; weak_biphasic@0.50x; weak_biphasic@0.75x; weak_biphasic@1.00x
+C6_nav_ache_amplification,the neighborhood amplifies Nav / AChE receptor selectivity,mean (circuit SI - receptor SI) > 0 over the Nav/AChE set,25,19,6,0,0.76,0.76,flylab_biphasic@0.50x; linear@0.50x; strong_biphasic@0.50x; strong_biphasic@0.75x; strong_biphasic@1.00x; weak_biphasic@0.50x,
+C2_rdl_disinhibition,"an RDL antagonist (fipronil, 1 uM) disinhibits the network","subgraph mean_hz, treated > vehicle",25,25,0,0,1.0,1.0,,
+C3_imidacloprid_topology_weak,imidacloprid's mean-rate effect is not a wiring result,|z| < 2 against a degree-preserving rewiring null,25,25,0,0,1.0,1.0,,
+C4_fipronil_topology_exceeds,fipronil's topology dependence exceeds imidacloprid's,|z_fipronil| > |z_imidacloprid| on the same null,25,25,0,0,1.0,1.0,,
+C7_map_bitter_veto,"on the map path, bitter drive lowers MN9 under fipronil",taste_map bitter_veto_ratio < 1,25,25,0,0,1.0,1.0,,

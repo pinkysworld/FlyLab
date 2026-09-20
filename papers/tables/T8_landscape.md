@@ -6,10 +6,10 @@
 | acetamiprid | neonicotinoid | taste_motor | 3.301 | 2.414 | -0.887 |
 | acetylcholine | endogenous transmitter | named | 0.000 | -0.795 | -0.795 |
 | acetylcholine | endogenous transmitter | taste_motor | 0.000 | -0.803 | -0.803 |
-| caffeine | methylxanthine | named | 0.000 | -- | -- |
-| caffeine | methylxanthine | taste_motor | 0.000 | -- | -- |
-| chlordimeform | formamidine | named | 0.000 | -- | -- |
-| chlordimeform | formamidine | taste_motor | 0.000 | -- | -- |
+| caffeine | methylxanthine | named | -- | -- | -- |
+| caffeine | methylxanthine | taste_motor | -- | -- | -- |
+| chlordimeform | formamidine | named | -- | -- | -- |
+| chlordimeform | formamidine | taste_motor | -- | -- | -- |
 | chlorpyrifos_oxon | organophosphate (oxon metabolite) | named | 1.477 | 1.967 | 0.490 |
 | chlorpyrifos_oxon | organophosphate (oxon metabolite) | taste_motor | 1.477 | 2.083 | 0.605 |
 | clothianidin | neonicotinoid | named | 3.523 | 2.625 | -0.897 |
@@ -18,8 +18,8 @@
 | ddt | organochlorine | taste_motor | 1.187 | 1.355 | 0.168 |
 | deltamethrin | type II pyrethroid | named | 2.066 | 2.282 | 0.216 |
 | deltamethrin | type II pyrethroid | taste_motor | 2.066 | 2.267 | 0.201 |
-| diazepam | benzodiazepine | named | 0.000 | -- | -- |
-| diazepam | benzodiazepine | taste_motor | 0.000 | -- | -- |
+| diazepam | benzodiazepine | named | -- | -- | -- |
+| diazepam | benzodiazepine | taste_motor | -- | -- | -- |
 | dieldrin | cyclodiene organochlorine | named | 1.000 | -- | -- |
 | dieldrin | cyclodiene organochlorine | taste_motor | 1.000 | -- | -- |
 | fipronil | phenylpyrazole | named | 1.564 | -- | -- |
@@ -38,9 +38,9 @@
 | permethrin | type I pyrethroid | taste_motor | 2.000 | 2.210 | 0.210 |
 | picrotoxin | plant convulsant | named | 0.000 | -- | -- |
 | picrotoxin | plant convulsant | taste_motor | 0.000 | -- | -- |
-| spinosad | spinosyn | named | 3.301 | 2.343 | -0.958 |
-| spinosad | spinosyn | taste_motor | 3.301 | 2.346 | -0.955 |
+| spinosad | spinosyn | named | -- | -- | -- |
+| spinosad | spinosyn | taste_motor | -- | -- | -- |
 | sulfoxaflor | sulfoximine | named | 0.824 | -- | -- |
 | sulfoxaflor | sulfoximine | taste_motor | 0.824 | -- | -- |
-| thiamethoxam | neonicotinoid | named | 2.000 | -- | -- |
-| thiamethoxam | neonicotinoid | taste_motor | 2.000 | -- | -- |
+| thiamethoxam | neonicotinoid | named | -- | -- | -- |
+| thiamethoxam | neonicotinoid | taste_motor | -- | -- | -- |

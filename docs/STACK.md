@@ -6,10 +6,10 @@ Goal: one lab that feels like software on Windows and macOS (Linux comes free), 
 
 | Layer | Choice | Why |
 |---|---|---|
-| Science core | Python 3.11+ | Connectome loaders, occupancy, pytest, every fly sim already lives here |
+| Science core | Python 3.11+ | Connectome loaders, typed engagement, permutation analyses, pytest; every fly sim already lives here |
 | Numerics | numpy only (no scipy) | Spearman, Kendall, Nelder–Mead and the bootstrap are ~200 lines each; scipy has no WebAssembly guarantee and the browser build has to import the same package |
 | Circuit kernel | numpy rate model + numpy LIF | the rate model is deterministic and ~50 ms per run, which is what makes 400 null-model shuffles affordable; Brian2 stays optional and unused |
-| API | FastAPI + pydantic, 34 routes | local server, OpenAPI, one place to hang the UI and the browser bridge |
+| API | FastAPI + pydantic | local server, OpenAPI, one place to hang the UI and the browser bridge; the browser bridge mirrors every route |
 | Browser | Pyodide + `flylab/browser/bridge.py` | the *same wheel* answers the same routes in a tab; no second implementation (`docs/PAGES.md`) |
 | UI | plain HTML + `app.js`, CDN libs, no build step | one file serves both the local server and the static site |
 | Plots | Plotly.js + cytoscape.js (UI) / matplotlib (paper figures) | the paper needs 300 dpi PNG+SVG from the same numbers the UI shows |
@@ -32,7 +32,7 @@ Worth knowing before adding a dependency: `pyarrow` has no WebAssembly build and
 |                 [ Run assay ]  [ Export notebook ]           |
 +------------------------------+-------------------------------+
 | FLY CIRCUIT                  | VERTEBRATE PANEL              |
-| named cells + rates          | occupancy bars + Hill curves  |
+| named cells + rates          | engagement bars + Hill curves |
 | MN9 / GRNs / DNp01           | nAChR a4b2 / GABA-A           |
 +------------------------------+-------------------------------+
 | notebook preview (JSON) + warnings                           |
@@ -61,7 +61,7 @@ Streamlit is allowed as a *throwaway* Gate-3 spike if FastAPI+React slips. It mu
 python -m pip install -e ".[dev,viz]"
 python -m pytest -q                  # fast suite; `-m slow` adds the end-to-end checks
 flylab serve                         # http://127.0.0.1:8765
-python scripts/reproduce_paper.py    # ~3.5 min: 10 figures, 10 tables, results.json
+python scripts/reproduce_paper.py    # ~8-10 min: 15 figures, 21 tables, results.json
 ```
 
 Same command on Windows PowerShell and macOS Terminal. Python from python.org or conda-forge, not the Windows Store stub.

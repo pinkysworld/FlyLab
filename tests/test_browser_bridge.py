@@ -221,6 +221,56 @@ CASES = [
         "/api/notebook/live-lab",
         {"notebook": {"warnings": []}, "csv_text": "fly,per\n1,0.4\n2,0.6\n"},
     ),
+    # -- the v0.6 dashboard / decision layer.  Everything here is pinned to the
+    # cheapest settings the route allows: the point is that both transports run
+    # the same function, not that the analysis is well resolved.
+    (
+        "dashboard",
+        "GET",
+        "/api/dashboard",
+        {"compound": "fipronil", "conc_M": 1e-6, "n": 2, "graph": "named"},
+    ),
+    (
+        "dashboard-estimate",
+        "GET",
+        "/api/dashboard",
+        {"compound": "imidacloprid", "estimate_only": True},
+    ),
+    (
+        "compare",
+        "POST",
+        "/api/compare",
+        {
+            "compounds": ["imidacloprid", "fipronil"],
+            "conc_M": 1e-6,
+            "include_dependence": False,
+        },
+    ),
+    ("claims", "POST", "/api/claims", {"compound": "imidacloprid", "conc_M": 1e-6}),
+    (
+        "dependence",
+        "POST",
+        "/api/dependence",
+        {"compound": "imidacloprid", "conc_M": 1e-6, "n": 2, "seed": 0},
+    ),
+    ("dependence-landscape", "POST", "/api/dependence/landscape", {"n": 2}),
+    ("ablation", "POST", "/api/ablation", {"compound": "imidacloprid", "conc_M": 1e-6}),
+    ("stability-estimate", "POST", "/api/robustness/stability", {"estimate_only": True}),
+    ("thresholds-estimate", "POST", "/api/robustness/thresholds", {"estimate_only": True}),
+    ("uncertainty-estimate", "POST", "/api/uncertainty/global", {"estimate_only": True}),
+    ("voi-estimate", "POST", "/api/voi", {"estimate_only": True}),
+    (
+        "genotype-panel",
+        "POST",
+        "/api/genotype/panel",
+        {"compound": "deltamethrin", "conc_M": 1e-6},
+    ),
+    (
+        "isobologram",
+        "POST",
+        "/api/mixture/isobologram",
+        {"compound_a": "imidacloprid", "compound_b": "fipronil", "n": 3},
+    ),
 ]
 
 
@@ -283,7 +333,7 @@ def test_every_server_route_is_mirrored():
     mirrored = set(bridge.routes())
     assert served <= mirrored, f"not mirrored by the bridge: {sorted(served - mirrored)}"
     assert mirrored <= served, f"bridge invents routes: {sorted(mirrored - served)}"
-    assert len(mirrored) == 34
+    assert len(mirrored) == 46
 
 
 def test_version_and_limits_match_the_server():
@@ -295,7 +345,7 @@ def test_version_and_limits_match_the_server():
     assert bridge.MAX_EXPERIMENT_ROWS == server.MAX_EXPERIMENT_ROWS
     assert bridge.MAX_CONC_M == server.MAX_CONC_M
     v = bridge.version()
-    assert v["version"] == server.VERSION and v["n_routes"] == 34
+    assert v["version"] == server.VERSION and v["n_routes"] == 46
 
 
 def test_errors_are_returned_not_raised():
@@ -490,9 +540,47 @@ def test_bridge_import_is_cheap():
     code = (
         "import sys, flylab.browser.bridge as b;"
         "assert 'numpy' not in sys.modules, 'numpy must not be imported at module level';"
-        "assert len(b.routes()) == 34;"
+        "assert len(b.routes()) == 46;"
         "print(len([m for m in sys.modules if m.startswith('flylab')]))"
     )
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120)
     assert out.returncode == 0, out.stderr
     assert int(out.stdout.strip()) <= 4, "the bridge pulled in more of flylab than it needs"
+
+
+def test_browser_defaults_to_the_fast_dependence_setting():
+    """The static build must not silently run the paper's shuffle count."""
+    from flylab.analysis.dependence import FAST_N
+
+    assert bridge.FAST_DEPENDENCE_N == FAST_N
+    out = bridge.call("/api/dashboard", {"compound": "imidacloprid", "estimate_only": True})
+    assert out["runtime_estimate"]["n"] == FAST_N
+    assert out["runtime_estimate"]["estimate_s"] > 0
+
+
+def test_long_routes_answer_an_estimate_without_running():
+    """Every expensive route states a runtime before it spends one."""
+    for route in (
+        "/api/robustness/stability",
+        "/api/robustness/thresholds",
+        "/api/uncertainty/global",
+        "/api/voi",
+        "/api/ablation",
+    ):
+        out = bridge.call(route, {"estimate_only": True})
+        assert out["estimate_only"] is True, route
+        assert out["runtime_estimate"]["estimate_s"] > 0, route
+    # the landscape is minutes of compute, so estimate-only is its *default*
+    out = bridge.call("/api/dependence/landscape", {})
+    assert out["estimate_only"] is True
+    assert out["runtime_estimate"]["estimate_s"] > 0
+
+
+def test_the_dashboard_builder_is_shared_with_the_server():
+    """Not merely equal answers: literally the same function object."""
+    from flylab import server
+
+    assert server.bridge is bridge
+    assert callable(bridge.build_dashboard)
+    assert callable(bridge.build_compare)
+    assert callable(bridge.build_claims)

@@ -49,7 +49,19 @@ NOT_READY = "module not available yet"
 GRAPH_NAMES = ("named", "taste_motor")
 ASSAY_NAMES = ("subgraph", "spiking", "taste", "taste_map")
 
-__all__ = ["call", "routes", "version", "BridgeError", "data_root", "VERSION"]
+__all__ = [
+    "call",
+    "handle",
+    "routes",
+    "version",
+    "BridgeError",
+    "data_root",
+    "VERSION",
+    "build_dashboard",
+    "build_compare",
+    "build_claims",
+    "FAST_DEPENDENCE_N",
+]
 
 
 # --------------------------------------------------------------------------
@@ -1076,6 +1088,45 @@ def _h_mixture(p: dict[str, Any]) -> dict[str, Any]:
     return _invoke(fn, components=components, **kw)
 
 
+def _h_genotype_panel(p: dict[str, Any]) -> dict[str, Any]:
+    fn = _lazy("flylab.pharm.genotype", "genotype_panel")
+    genotypes = _strs(p, "genotypes")
+    kw: dict[str, Any] = {}
+    if genotypes:
+        kw["genotypes"] = genotypes
+    compound = _opt_str(p, "compound")
+    if compound is None:
+        raise BridgeError(400, "compound is required")
+    return _invoke(
+        fn,
+        compound=compound,
+        conc_M=_num(p, "conc_M", 1e-6, lo=0, hi=MAX_CONC_M),
+        assay=_choice(p, "assay", "subgraph", ASSAY_NAMES),
+        **kw,
+    )
+
+
+def _h_isobologram(p: dict[str, Any]) -> dict[str, Any]:
+    fn = _lazy("flylab.pharm.mixtures", "isobologram")
+    a = _opt_str(p, "compound_a")
+    b = _opt_str(p, "compound_b")
+    if not a or not b:
+        raise BridgeError(400, "compound_a and compound_b are required")
+    kw: dict[str, Any] = {}
+    readout = _opt_str(p, "readout")
+    if readout:
+        kw["readout"] = readout
+    return _invoke(
+        fn,
+        compound_a=a,
+        compound_b=b,
+        assay=_str(p, "assay", "occupancy"),
+        effect_frac=_num(p, "effect_frac", 0.5, gt=0, hi=0.999),
+        n=_int(p, "n", 7, lo=3, hi=25),
+        **kw,
+    )
+
+
 def _h_expression(p: dict[str, Any]) -> Any:
     fn = _lazy("flylab.pharm.expression", "expression_table")
     return _invoke(fn)
@@ -1084,6 +1135,1371 @@ def _h_expression(p: dict[str, Any]) -> Any:
 def _h_validation(p: dict[str, Any]) -> Any:
     fn = _lazy("flylab.validation.rank", "validate_all")
     return _invoke(fn)
+
+
+# --------------------------------------------------------------------------
+# dashboard / decision layer (shared with flylab.server, which imports these)
+# --------------------------------------------------------------------------
+# The dashboard is the bench's interpretation layer: one call that answers
+# "what does this compound do, at this dose, and how much of the answer is
+# measured?".  The assembly lives here rather than in ``flylab/server.py``
+# because the served bench and the browser build must return byte-identical
+# payloads -- sharing the function is the only way to guarantee that.
+
+#: shuffle count the browser (and every dashboard call) defaults to.  Kept in
+#: step with :data:`flylab.analysis.dependence.FAST_N` by
+#: ``tests/test_browser_bridge.py``.
+FAST_DEPENDENCE_N = 20
+
+#: dependence null modes used by the dashboard's "is it wiring?" verdict
+DEPENDENCE_MODES = (
+    "sign_permute",
+    "weight_permute",
+    "rewire_degree_preserving",
+    "erdos_renyi",
+)
+
+#: per-compound cost of a compare row, measured on the committed cut
+COMPARE_SECONDS_PER_COMPOUND = 0.6
+
+#: assays whose contrast the rate engine can compute directly.  The dashboard's
+#: concentration ladder is built on that path, so it accepts these two only --
+#: the LIF assay would answer with zeros rather than refuse.
+LADDER_ASSAYS = ("subgraph", "taste_map")
+
+DASHBOARD_WARNINGS = [
+    "Every number on this page is simulated. FlyLab has never dosed a fly.",
+    "Engagement is not occupancy: only a Kd/Ki row reports fractional receptor "
+    "occupancy, an EC50/IC50 row reports normalised functional engagement.",
+    "A missing value means 'not modelled', never zero.",
+    "There is no blended confidence score here on purpose: the layers fail "
+    "independently and averaging them would hide which one is weak.",
+]
+
+
+def _chip(row: dict[str, Any]) -> str:
+    """The evidence chip for one library row (see analysis/claims.CLASSIFICATIONS)."""
+    value = row.get("param_value_M", row.get("ec50_M"))
+    if value is None or row.get("engagement_model") == "not_modelled":
+        return "NOT MODELLED"
+    if row.get("evidence_tier") == "literature_order":
+        return "LITERATURE"
+    if row.get("evidence_tier") == "measured_fit":
+        return "MODEL-DERIVED"
+    return "MODEL-ASSUMPTION"
+
+
+def _engagement_of(row: dict[str, Any]) -> float | None:
+    value = row.get("engagement", row.get("occupancy"))
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out if out == out else None
+
+
+def _evidence_rows(occ: dict[str, Any]) -> list[dict[str, Any]]:
+    """``compare_compound`` rows, each with its provenance record and chip."""
+    from flylab.pharm.evidence import describe
+
+    out = []
+    for row in occ.get("receptors") or []:
+        try:
+            rec = dict(describe(row))
+        except Exception:  # pragma: no cover - a malformed row must not 500
+            rec = {"receptor": row.get("receptor")}
+        rec["engagement"] = _engagement_of(row)
+        rec["direction"] = row.get("direction")
+        rec["organism"] = "insect" if str(row.get("receptor", "")).startswith("insect_") else "vertebrate"
+        rec["classification"] = _chip(row)
+        rec["not_modelled_reason"] = row.get("not_modelled_reason")
+        out.append(rec)
+    return out
+
+
+def _split_rows(evidence: list[dict[str, Any]]):
+    insect = [r for r in evidence if r["organism"] == "insect" and r["engagement"] is not None]
+    vert = [r for r in evidence if r["organism"] == "vertebrate" and r["engagement"] is not None]
+    return insect, vert
+
+
+def _best_pair(occ: dict[str, Any]) -> tuple[str | None, dict[str, Any] | None]:
+    """The sourced insect/vertebrate pair with the widest ratio."""
+    best_name, best = None, None
+    for name, pair in (occ.get("selectivity") or {}).items():
+        if pair.get("placeholder") or not pair.get("comparable"):
+            continue
+        ratio = pair.get("ratio")
+        if ratio is None:
+            continue
+        if best is None or float(ratio) > float(best.get("ratio") or 0.0):
+            best_name, best = name, pair
+    return best_name, best
+
+
+def _threshold_conc(value_M: float | None, n: float | None, target: float) -> float | None:
+    """Closed-form concentration at which a Hill row reaches ``target`` engagement."""
+    try:
+        v = float(value_M)
+        hill = float(n or 1.0) or 1.0
+    except (TypeError, ValueError):
+        return None
+    if not (v > 0) or not (0.0 < target < 1.0):
+        return None
+    return v * (target / (1.0 - target)) ** (1.0 / hill)
+
+
+def _hill(conc: float, value_M: float | None, n: float | None) -> float | None:
+    try:
+        v = float(value_M)
+        hill = float(n or 1.0) or 1.0
+        c = float(conc)
+    except (TypeError, ValueError):
+        return None
+    if not (v > 0) or c < 0:
+        return None
+    if c == 0:
+        return 0.0
+    cn = c**hill
+    return cn / (v**hill + cn)
+
+
+# -- block 1: compound overview + headline tiles ---------------------------
+def _headline(occ: dict[str, Any], evidence: list[dict[str, Any]]) -> dict[str, Any]:
+    insect, vert = _split_rows(evidence)
+    top_insect = max(insect, key=lambda r: r["engagement"]) if insect else None
+    top_vert = max(vert, key=lambda r: r["engagement"]) if vert else None
+    pair_name, pair = _best_pair(occ)
+    sourced = [r for r in evidence if r["classification"] == "LITERATURE"]
+    tier = (
+        "literature_order"
+        if any(r["organism"] == "insect" for r in sourced)
+        else "class_placeholder"
+    )
+    return {
+        "insect_engagement": {
+            "value": top_insect["engagement"] if top_insect else None,
+            "receptor": top_insect["receptor"] if top_insect else None,
+            "param_type": top_insect.get("param_type") if top_insect else None,
+            "param_value_M": top_insect.get("param_value_M") if top_insect else None,
+            "classification": top_insect["classification"] if top_insect else "NOT MODELLED",
+            "unit": "engagement 0-1",
+        },
+        "vertebrate_engagement": {
+            "value": top_vert["engagement"] if top_vert else None,
+            "receptor": top_vert["receptor"] if top_vert else None,
+            "param_type": top_vert.get("param_type") if top_vert else None,
+            "param_value_M": top_vert.get("param_value_M") if top_vert else None,
+            "classification": top_vert["classification"] if top_vert else "NOT MODELLED",
+            "unit": "engagement 0-1",
+        },
+        "receptor_selectivity": {
+            "pair": pair_name,
+            "ratio_vert_over_insect": (pair or {}).get("ratio"),
+            "log10_ratio": (pair or {}).get("log10_ratio_vert_over_insect"),
+            "insect_receptor": (pair or {}).get("insect_receptor"),
+            "vertebrate_receptor": (pair or {}).get("vertebrate_receptor"),
+            "classification": "MODEL-DERIVED" if pair else "NOT MODELLED",
+            "unit": "fold (potency ratio)",
+        },
+        "evidence_tier": {
+            "value": tier,
+            "n_sourced": len(sourced),
+            "n_rows": len(evidence),
+            "n_not_modelled": sum(1 for r in evidence if r["classification"] == "NOT MODELLED"),
+            "classification": "LITERATURE" if sourced else "NOT MODELLED",
+            "unit": "library rows",
+        },
+    }
+
+
+# -- block 2: selectivity, as facts ----------------------------------------
+def _selectivity_block(
+    occ: dict[str, Any], evidence: list[dict[str, Any]], conc_M: float, occ_limit: float = 0.2
+) -> dict[str, Any]:
+    pair_name, pair = _best_pair(occ)
+    vert_rows = []
+    for row in evidence:
+        if row["organism"] != "vertebrate":
+            continue
+        threshold = _threshold_conc(row.get("param_value_M"), row.get("n"), occ_limit)
+        vert_rows.append(
+            {
+                "receptor": row.get("receptor"),
+                "engagement_at_dose": row.get("engagement"),
+                "param_type": row.get("param_type"),
+                "param_value_M": row.get("param_value_M"),
+                "n": row.get("n"),
+                "species": row.get("species"),
+                "relation": row.get("relation"),
+                "source": row.get("source"),
+                "doi": row.get("doi"),
+                "pmid": row.get("pmid"),
+                "classification": row.get("classification"),
+                "conc_at_limit_M": threshold,
+            }
+        )
+    reachable = [r for r in vert_rows if r["conc_at_limit_M"] is not None]
+    reachable.sort(key=lambda r: r["conc_at_limit_M"])
+    limiting = reachable[0] if reachable else None
+    insect_eng = (pair or {}).get("insect_engagement")
+    vert_eng = (pair or {}).get("vertebrate_engagement")
+    difference = None
+    if insect_eng is not None and vert_eng is not None:
+        difference = float(insect_eng) - float(vert_eng)
+    return {
+        "occ_limit": occ_limit,
+        "pair": pair_name,
+        "insect_receptor": (pair or {}).get("insect_receptor"),
+        "vertebrate_receptor": (pair or {}).get("vertebrate_receptor"),
+        "insect_engagement": insect_eng,
+        "vertebrate_engagement": vert_eng,
+        "ratio_vert_over_insect": (pair or {}).get("ratio"),
+        "log10_ratio": (pair or {}).get("log10_ratio_vert_over_insect"),
+        "engagement_difference": difference,
+        "vertebrate_limit_conc_M": (limiting or {}).get("conc_at_limit_M"),
+        "limiting_vertebrate_receptor": limiting,
+        "vertebrate_rows": vert_rows,
+        "dose_over_vertebrate_limit": (
+            float(conc_M) / float(limiting["conc_at_limit_M"])
+            if limiting and limiting["conc_at_limit_M"]
+            else None
+        ),
+        "statement": (
+            "These are values, not a verdict: a ratio is not a safety margin, and the "
+            "vertebrate engagement printed beside it is the number that matters at this dose."
+        ),
+    }
+
+
+# -- block 3: circuit consequence ------------------------------------------
+def _circuit_block(
+    compound: str | None,
+    conc_M: float,
+    graph: str | None,
+    genotype: str | None = None,
+    drive_hz: float = 40.0,
+    steps: int = 80,
+) -> dict[str, Any]:
+    from flylab.assays.subgraph import run_subgraph_assay
+
+    nb, ms = _timed(
+        lambda: _with_genotype(
+            run_subgraph_assay,
+            genotype,
+            compound,
+            conc_M,
+            drive_hz=drive_hz,
+            steps=steps,
+            graph=graph,
+        )
+    )
+    nb = _stamp(nb, ms)
+    readouts = nb.get("readouts") or {}
+    vehicle = readouts.get("vehicle") or {}
+    out: dict[str, Any] = {
+        "assay": nb.get("assay"),
+        "graph": graph or "named",
+        "gains": nb.get("gains") or {},
+        "n_nodes": readouts.get("n_nodes"),
+        "n_edges": readouts.get("n_edges"),
+        "drive_hz": readouts.get("drive_hz"),
+        "readouts": {},
+        "notebook": nb,
+        "classification": "PREDICTION",
+    }
+    for key, label in (("mean_hz", "mean circuit rate"), ("mn9_hz", "MN9"), ("dnp01_hz", "DNp01")):
+        treated = readouts.get(key)
+        base = vehicle.get(key)
+        try:
+            t = float(treated)
+            b = float(base)
+        except (TypeError, ValueError):
+            continue
+        pct = ((t - b) / b * 100.0) if abs(b) > 1e-12 else None
+        out["readouts"][key] = {
+            "label": label,
+            "vehicle": b,
+            "treated": t,
+            "delta": t - b,
+            "percent": pct,
+            "direction": "suppressed" if t < b else ("enhanced" if t > b else "unchanged"),
+            "unit": "Hz",
+        }
+    mean = out["readouts"].get("mean_hz") or {}
+    out["direction"] = mean.get("direction", "unchanged")
+    out["percent"] = mean.get("percent")
+    out["warnings"] = list(nb.get("warnings") or [])
+    return out
+
+
+# -- block 3b: is the effect wiring-dependent? ------------------------------
+def _dependence_verdict(cls: str | None) -> str:
+    """Plain-language verdict for a dependence class, used by both routes."""
+    if cls == "topology-dependent":
+        return "specific wiring evidence: present (topology-dependent)"
+    if cls == "composition-dominated":
+        return "specific wiring evidence: weak (composition-dominated)"
+    if cls == "network-insensitive":
+        return "specific wiring evidence: none (network-insensitive)"
+    return f"specific wiring evidence: {cls}"
+
+
+def _dependence_block(
+    compound: str,
+    conc_M: float,
+    graph: str | None,
+    n: int,
+    assay: str = "subgraph",
+    seed: int = 0,
+) -> dict[str, Any]:
+    fn = _lazy("flylab.analysis.dependence", "dependence_profile")
+    kw: dict[str, Any] = {}
+    if graph:
+        kw["graph"] = graph
+    profile = _invoke(
+        fn,
+        compound=compound,
+        conc_M=conc_M,
+        assay=assay,
+        n=int(n),
+        seed=int(seed),
+        modes=list(DEPENDENCE_MODES),
+        **kw,
+    )
+    cls = profile.get("class")
+    structural = [
+        m
+        for m in profile.get("modes") or []
+        if m.get("mode") in ("weight_permute", "rewire_degree_preserving") and m.get("beats_null")
+    ]
+    verdict = _dependence_verdict(cls)
+    return {
+        "class": cls,
+        "verdict": verdict,
+        "reason": (profile.get("classification") or {}).get("reason"),
+        "n": profile.get("n"),
+        "p_resolution": profile.get("p_resolution"),
+        "real_effect": profile.get("real_effect"),
+        "readout": profile.get("readout"),
+        "structural_modes_beaten": [m.get("mode") for m in structural],
+        "modes": [
+            {
+                "mode": m.get("mode"),
+                "information_kept": m.get("information_kept"),
+                "p_two_sided": m.get("p_two_sided"),
+                "p_resolution": m.get("p_resolution"),
+                "at_resolution_floor": bool(m.get("resolution_limited")),
+                "beats_null": m.get("beats_null"),
+                "z": m.get("z"),
+                "n": m.get("n"),
+            }
+            for m in profile.get("modes") or []
+        ],
+        "necessary_information_level": profile.get("necessary_information_level"),
+        "classification": "MODEL-DERIVED",
+        "warnings": list(profile.get("warnings") or []),
+        "note": (
+            "The headline statistic is the empirical two-sided permutation p with its "
+            f"resolution 1/(n+1); z is reported second and is never a probability."
+        ),
+    }
+
+
+# -- block 4: one concentration axis ---------------------------------------
+def _ladder(
+    compound: str,
+    assay: str,
+    graph: str | None,
+    readout: str,
+    concs: list[float],
+    threshold_frac: float = 0.5,
+) -> dict[str, Any]:
+    """Circuit response across the concentration ladder, on the rate engine.
+
+    ``analysis.nullmodels.fast_drug_effect`` is the project's own engine path
+    for exactly this contrast: same arithmetic as the notebook assay, ~80x
+    faster because the vehicle arm is not re-run at every rung.  The crossing
+    rule below is the one in ``analysis.selectivity.circuit_threshold_conc``,
+    and ``tests/test_server.py`` asserts the two agree.
+    """
+    import math
+
+    fn = _lazy("flylab.analysis.nullmodels", "fast_drug_effect")
+    curve: list[dict[str, Any]] = []
+    rel: list[float | None] = []
+    vehicle_val: float | None = None
+    for c in concs:
+        res = _invoke(fn, assay=assay, compound=compound, conc_M=c, readout=readout, graph=graph)
+        treated, vehicle = res.get("treated"), res.get("vehicle")
+        if vehicle is not None:
+            vehicle_val = vehicle
+        r = None
+        if treated is not None and vehicle is not None and abs(vehicle) > 1e-12:
+            r = abs(treated - vehicle) / abs(vehicle)
+        rel.append(r)
+        curve.append(
+            {
+                "conc_M": c,
+                "treated": treated,
+                "vehicle": vehicle,
+                "effect": res.get("effect"),
+                "rel_change": r,
+            }
+        )
+
+    hit_index = next((i for i, r in enumerate(rel) if r is not None and r >= threshold_frac), None)
+    finite = [(r, c) for r, c in zip(rel, concs) if r is not None]
+    max_rel, max_rel_conc = max(finite, default=(None, None))
+    hit_conc: float | None = None
+    if hit_index == 0:
+        hit_conc = concs[0]
+    elif hit_index is not None:
+        lo_r, hi_r = rel[hit_index - 1], rel[hit_index]
+        lo_x, hi_x = math.log10(concs[hit_index - 1]), math.log10(concs[hit_index])
+        if lo_r is not None and hi_r is not None and hi_r > lo_r:
+            frac = (threshold_frac - lo_r) / (hi_r - lo_r)
+            hit_conc = float(10.0 ** (lo_x + frac * (hi_x - lo_x)))
+        else:
+            hit_conc = concs[hit_index]
+    return {
+        "curve": curve,
+        "vehicle": vehicle_val,
+        "circuit_threshold_M": hit_conc,
+        "crossing_index": hit_index,
+        "max_rel_change": max_rel,
+        "max_rel_change_conc_M": max_rel_conc,
+        "threshold_frac": threshold_frac,
+        "readout": readout,
+    }
+
+
+def _ladder_block(
+    compound: str,
+    conc_M: float,
+    evidence: list[dict[str, Any]],
+    graph: str | None,
+    assay: str = "subgraph",
+    occ: dict[str, Any] | None = None,
+    occ_limit: float = 0.2,
+) -> dict[str, Any]:
+    import math
+
+    from flylab.analysis.selectivity import DEFAULT_CONCS
+
+    readout = "mean_hz" if assay == "subgraph" else "mn9_hz"
+    concs = [float(c) for c in DEFAULT_CONCS]
+    lad = _ladder(compound, assay, graph or "named", readout, concs)
+    curve = lad["curve"]
+    insect, vert = _split_rows(evidence)
+
+    def _series(rows):
+        out = []
+        for c in concs:
+            values = [
+                _hill(c, r.get("param_value_M"), r.get("n"))
+                for r in rows
+                if r.get("param_value_M") is not None
+            ]
+            values = [v for v in values if v is not None]
+            out.append(max(values) if values else None)
+        return out
+
+    vt = _invoke(
+        _lazy("flylab.analysis.selectivity", "vertebrate_threshold_conc"),
+        compound=compound,
+        occ_limit=occ_limit,
+    )
+    c_circ, c_vert = lad["circuit_threshold_M"], vt.get("conc_M")
+    circuit_si = (
+        float(math.log10(c_vert) - math.log10(c_circ)) if (c_circ and c_vert) else None
+    )
+    _pair_name, pair = _best_pair(occ or {})
+    receptor_si = (pair or {}).get("log10_ratio_vert_over_insect")
+    gap = None
+    if circuit_si is not None and receptor_si not in (None, float("-inf")):
+        gap = float(circuit_si - float(receptor_si))
+
+    per_receptor = [
+        {
+            "receptor": r.get("receptor"),
+            "organism": r.get("organism"),
+            "classification": r.get("classification"),
+            "param_type": r.get("param_type"),
+            "param_value_M": r.get("param_value_M"),
+            "values": [_hill(c, r.get("param_value_M"), r.get("n")) for c in concs],
+        }
+        for r in insect + vert
+    ]
+    return {
+        "concs_M": concs,
+        "insect_engagement": _series(insect),
+        "vertebrate_engagement": _series(vert),
+        "circuit_response": [p.get("rel_change") for p in curve],
+        "circuit_treated_hz": [p.get("treated") for p in curve],
+        "circuit_vehicle_hz": lad["vehicle"],
+        "readout": readout,
+        "per_receptor": per_receptor,
+        "circuit_threshold_M": c_circ,
+        "threshold_frac": lad["threshold_frac"],
+        "vertebrate_threshold_M": c_vert,
+        "vertebrate_receptor": vt.get("receptor"),
+        "vertebrate_threshold_placeholder": bool(vt.get("placeholder")),
+        "circuit_si_log10": circuit_si,
+        "receptor_si_log10": receptor_si,
+        "si_gap_circuit_minus_receptor": gap,
+        "max_rel_change": lad["max_rel_change"],
+        "max_rel_change_conc_M": lad["max_rel_change_conc_M"],
+        "current_conc_M": conc_M,
+        "axis_note": (
+            "All three series are dimensionless fractions on one axis: engagement is 0-1 "
+            "and the circuit response is |treated - vehicle| / vehicle. No second y-axis."
+        ),
+        "classification": "MODEL-DERIVED",
+        "warnings": [
+            "The circuit response is a relative change of a simulated rate, not a measured "
+            "dose-response.",
+            "A positive circuit selectivity index means only that this simulation moves "
+            "before the teaching library's vertebrate receptor fills; it is not a safety margin.",
+        ],
+    }
+
+
+# -- block 8: what can I trust? --------------------------------------------
+def _trust_block(
+    evidence: list[dict[str, Any]], circuit: dict[str, Any], graph: str | None
+) -> dict[str, Any]:
+    sourced = [r for r in evidence if r["classification"] == "LITERATURE"]
+    placeholder = [r for r in evidence if r["classification"] == "NOT MODELLED"]
+    coverage, mn9_gap = _expression_coverage()
+    rows = [
+        {
+            "area": "Receptor values",
+            "status": f"{len(sourced)} of {len(evidence)} rows literature-supported",
+            "classification": "LITERATURE" if sourced else "NOT MODELLED",
+            "basis": (
+                "Every modelled row cites a paper and carries its parameter type; "
+                f"{len(placeholder)} row(s) are class placeholders and report nothing."
+            ),
+            "detail": {
+                "n_sourced": len(sourced),
+                "n_placeholder": len(placeholder),
+                "receptors_not_modelled": [r["receptor"] for r in placeholder],
+            },
+        },
+        {
+            "area": "Mechanism rule (engagement to gain)",
+            "status": "asserted, never fitted",
+            "classification": "MODEL-ASSUMPTION",
+            "basis": (
+                "The occupancy-to-gain transformation is the project's central modelling "
+                "choice. No experiment in the literature measures it for these receptors."
+            ),
+            "detail": {"gains": circuit.get("gains") or {}, "gain_floor": 0.05},
+        },
+        {
+            "area": "Exposure prediction",
+            "status": "low confidence",
+            "classification": "MODEL-ASSUMPTION",
+            "basis": (
+                "One-compartment first-order model. Nothing connects an applied dose to the "
+                "free concentration at the receptor in this species."
+            ),
+            "detail": {"model": "one-compartment C(t)", "fitted_to_animal_data": False},
+        },
+        {
+            "area": "PK constants",
+            "status": "placeholder",
+            "classification": "MODEL-ASSUMPTION",
+            "basis": "Absorption and elimination constants are teaching defaults per route.",
+            "detail": {"source": "flylab/pharm/exposure.py ROUTE_DEFAULTS"},
+        },
+        {
+            "area": "Circuit topology",
+            "status": "real MaleCNS v1.0",
+            "classification": "LITERATURE",
+            "basis": (
+                f"{circuit.get('n_nodes')} cells and {circuit.get('n_edges')} edges from the "
+                "public reconstruction, hops-limited with a synapse-count floor."
+            ),
+            "detail": {
+                "graph": graph or "named",
+                "n_nodes": circuit.get("n_nodes"),
+                "n_edges": circuit.get("n_edges"),
+            },
+        },
+        {
+            "area": "Transmitter identity",
+            "status": "predicted",
+            "classification": "PREDICTION",
+            "basis": (
+                "Edge signs follow MaleCNS predicted consensus transmitters, not staining. "
+                "A wrong label flips a synapse's sign."
+            ),
+            "detail": {"source": "MaleCNS v1.0 predicted consensus neurotransmitter"},
+        },
+        {
+            "area": "Receptor expression",
+            "status": (
+                f"{coverage * 100:.1f}% of cells mapped" if coverage is not None else "unmapped"
+            ),
+            "classification": "MODEL-ASSUMPTION",
+            "basis": (
+                "Gains are applied uniformly. Adult motor-neuron receptor expression -- the "
+                "class MN9 belongs to -- is a confirmed gap in the literature."
+            ),
+            "detail": {"fraction_cells_mapped": coverage, "motor_neuron_gap": mn9_gap},
+        },
+        {
+            "area": "Live validation",
+            "status": "none",
+            "classification": "NOT MODELLED",
+            "basis": (
+                "live_lab is null. No FlyLab code path may write a live-animal number; the "
+                "slot only holds a table a human imported."
+            ),
+            "detail": {"live_lab": (circuit.get("notebook") or {}).get("live_lab")},
+        },
+    ]
+    return {
+        "rows": rows,
+        "blended_confidence": None,
+        "note": (
+            "There is deliberately no single confidence percentage: these layers fail "
+            "independently, and one number would hide which of them is weak."
+        ),
+    }
+
+
+def _expression_coverage() -> tuple[float | None, dict[str, Any] | None]:
+    try:
+        from flylab.pharm.expression import expression_table
+
+        table = expression_table()
+    except Exception:  # pragma: no cover - optional module
+        return None, None
+    coverage = (table.get("coverage") or {}).get("fraction_known_overall")
+    gap = table.get("motor_neuron_gap")
+    slim = None
+    if isinstance(gap, dict):
+        slim = {"status": gap.get("status"), "description": gap.get("description")}
+    try:
+        coverage = float(coverage)
+    except (TypeError, ValueError):
+        coverage = None
+    return coverage, slim
+
+
+# -- block 10: why this happened -------------------------------------------
+def _why_block(
+    occ: dict[str, Any],
+    evidence: list[dict[str, Any]],
+    circuit: dict[str, Any],
+    dependence: dict[str, Any] | None,
+    conc_M: float,
+) -> dict[str, Any]:
+    """Generated from this run: saturation state, dependence class, dominant term.
+
+    Never a per-compound string: every clause below is selected by a number the
+    run produced.
+    """
+    insect, _vert = _split_rows(evidence)
+    top = max(insect, key=lambda r: r["engagement"]) if insect else None
+    theta = top["engagement"] if top else None
+    receptor = (top or {}).get("receptor")
+    param_type = (top or {}).get("param_type") or "potency"
+    value = (top or {}).get("param_value_M")
+    n = (top or {}).get("n") or 1.0
+    # how much a two-fold error in the cited parameter would move engagement
+    span = None
+    if value:
+        lo = _hill(conc_M, float(value) * 2.0, n)
+        hi = _hill(conc_M, float(value) / 2.0, n)
+        if lo is not None and hi is not None:
+            span = abs(hi - lo)
+
+    if theta is None:
+        sat = "not modelled"
+    elif theta >= 0.95:
+        sat = "essentially saturated"
+    elif theta >= 0.5:
+        sat = "past half-maximal"
+    elif theta >= 0.05:
+        sat = "only partly engaged"
+    else:
+        sat = "barely engaged"
+
+    potency_inert = span is not None and span < 0.05
+    dominant = (
+        "the occupancy-to-gain rule"
+        if potency_inert
+        else f"the cited {param_type} and the occupancy-to-gain rule together"
+    )
+
+    cls = (dependence or {}).get("class")
+    if cls == "topology-dependent":
+        structure = "the specific MaleCNS wiring pattern, which the permutation nulls do not reproduce"
+        excluded = "global transmitter composition alone"
+    elif cls == "composition-dominated":
+        structure = "the global transmitter composition of the cut"
+        excluded = "the exact MaleCNS wiring, which every structure-preserving shuffle reproduces"
+    elif cls == "network-insensitive":
+        structure = "the pharmacology alone"
+        excluded = "the graph, which no null model distinguishes here"
+    else:
+        structure = "the circuit as configured"
+        excluded = "any single layer"
+
+    mean = (circuit.get("readouts") or {}).get("mean_hz") or {}
+    direction = mean.get("direction", "change")
+    pct = mean.get("percent")
+    gains = circuit.get("gains") or {}
+    moved = sorted(
+        ((k, v) for k, v in gains.items() if isinstance(v, (int, float))),
+        key=lambda kv: -abs(float(kv[1]) - 1.0),
+    )
+    driver = moved[0][0] if moved and abs(float(moved[0][1]) - 1.0) > 1e-9 else None
+
+    conc_text = f"{conc_M:.2g} M" if conc_M else "this dose"
+    parts = []
+    if receptor:
+        parts.append(
+            f"At {conc_text} the insect {str(receptor).replace('insect_', '')} receptor is {sat} "
+            + (f"(engagement {theta:.2f}" if theta is not None else "(")
+            + (
+                f"; a two-fold error in the cited {param_type} would move it by {span:.3f})."
+                if span is not None
+                else ")."
+            )
+        )
+    else:
+        parts.append(f"At {conc_text} no insect receptor in this row carries a sourced value.")
+    if driver:
+        parts.append(
+            f"The mechanism rule turns that into {driver} = {float(gains[driver]):.3f}, "
+            f"and the circuit is {direction}"
+            + (f" by {abs(pct):.1f}%" if pct is not None else "")
+            + "."
+        )
+    else:
+        parts.append("No mechanism rule fires at this dose, so the circuit is unchanged.")
+    parts.append(
+        f"The {direction} response is therefore governed primarily by {dominant} and by "
+        f"{structure}, rather than by {excluded}."
+    )
+    return {
+        "text": " ".join(parts),
+        "inputs": {
+            "insect_receptor": receptor,
+            "insect_engagement": theta,
+            "saturation": sat,
+            "param_type": param_type,
+            "two_fold_engagement_span": span,
+            "potency_is_inert": potency_inert,
+            "dependence_class": cls,
+            "dominant_uncertainty": dominant,
+            "dominant_gain": driver,
+            "direction": direction,
+            "percent_change": pct,
+        },
+        "classification": "MODEL-DERIVED",
+        "note": "Generated from this run, not from a stored sentence per compound.",
+    }
+
+
+# -- assembly ---------------------------------------------------------------
+def dashboard_runtime_estimate(include_dependence: bool, n: int, graph: str | None) -> dict[str, Any]:
+    """Seconds this dashboard call is expected to take, before it runs."""
+    base = 0.9  # occupancy + subgraph assay + the concentration ladder
+    depend = 0.0
+    detail: dict[str, Any] = {"assembly_s": base}
+    if include_dependence:
+        try:
+            fn = _lazy("flylab.analysis.dependence", "estimate_landscape_runtime")
+            est = _invoke(fn, n_cells=1, n=int(n), graph=graph or "named")
+            depend = float(est.get("estimate_s") or 0.0)
+            detail["dependence"] = est
+        except BridgeError:
+            depend = 0.0
+    return {
+        "estimate_s": round(base + depend, 2),
+        "n": int(n),
+        "include_dependence": bool(include_dependence),
+        "detail": detail,
+        "note": "Order-of-magnitude, from the project's own per-shuffle cost model.",
+    }
+
+
+def build_dashboard(
+    compound: str,
+    conc_M: float = 1e-6,
+    *,
+    graph: str | None = "named",
+    assay: str = "subgraph",
+    genotype: str | None = None,
+    n: int = FAST_DEPENDENCE_N,
+    seed: int = 0,
+    include_dependence: bool = True,
+    include_ladder: bool = True,
+    estimate_only: bool = False,
+) -> dict[str, Any]:
+    """Everything the landing page needs, in one call."""
+    from flylab.pharm.occupancy import compare_compound, library_report, load_library
+
+    estimate = dashboard_runtime_estimate(include_dependence, n, graph)
+    if estimate_only:
+        return {
+            "compound": compound,
+            "concentration_M": conc_M,
+            "runtime_estimate": estimate,
+            "estimate_only": True,
+        }
+
+    t0 = time.perf_counter()
+    lib = load_library()
+    key = str(compound).lower().strip()
+    spec = (lib.get("compounds") or {}).get(key)
+    if spec is None:
+        raise BridgeError(404, f"unknown compound {compound!r}")
+    occ = compare_compound(key, conc_M)
+    evidence = _evidence_rows(occ)
+    headline = _headline(occ, evidence)
+    selectivity = _selectivity_block(occ, evidence, conc_M)
+    circuit = _circuit_block(key, conc_M, graph, genotype)
+    dependence = (
+        _dependence_block(key, conc_M, graph, n, assay=assay, seed=seed)
+        if include_dependence
+        else None
+    )
+    ladder = (
+        _ladder_block(key, conc_M, evidence, graph, assay=assay, occ=occ)
+        if include_ladder
+        else None
+    )
+    trust = _trust_block(evidence, circuit, graph)
+    why = _why_block(occ, evidence, circuit, dependence, conc_M)
+
+    from flylab.analysis.claims import claim_audit
+
+    notebook = circuit.get("notebook") or {}
+    claims = claim_audit(notebook)
+
+    insect_targets = [
+        {
+            "receptor": r.get("receptor"),
+            "direction": r.get("direction"),
+            "param_type": r.get("param_type"),
+            "param_value_M": r.get("param_value_M"),
+            "classification": r.get("classification"),
+        }
+        for r in evidence
+        if r["organism"] == "insect" and r.get("param_value_M") is not None
+    ]
+    insect_targets.sort(key=lambda r: r["param_value_M"])
+    primary = insect_targets[0] if insect_targets else None
+
+    warnings = list(DASHBOARD_WARNINGS)
+    for source in (occ.get("notes"), circuit.get("warnings"), (ladder or {}).get("warnings")):
+        for w in source or []:
+            if isinstance(w, str) and w not in warnings:
+                warnings.append(w)
+
+    return {
+        "compound": {
+            "key": key,
+            "name": spec.get("name", key),
+            "class": spec.get("class"),
+            "cas": spec.get("cas"),
+            "target_receptor": (primary or {}).get("receptor"),
+            "mode": (primary or {}).get("direction"),
+            "insect_targets": insect_targets,
+        },
+        "concentration_M": conc_M,
+        "graph": graph or "named",
+        "assay": assay,
+        "genotype": genotype,
+        "headline": headline,
+        "coverage": {
+            "n_rows": len(evidence),
+            "n_sourced": sum(1 for r in evidence if r["classification"] == "LITERATURE"),
+            "n_not_modelled": sum(1 for r in evidence if r["classification"] == "NOT MODELLED"),
+            "library": library_report(lib),
+        },
+        "occupancy": occ,
+        "evidence": evidence,
+        "selectivity": selectivity,
+        "circuit": circuit,
+        "dependence": dependence,
+        "ladder": ladder,
+        "trust": trust,
+        "why": why,
+        "claims": claims,
+        "runtime_estimate": estimate,
+        "runtime_s": round(time.perf_counter() - t0, 3),
+        "label": "model_derived",
+        "warnings": warnings,
+        "disclaimer": occ.get("disclaimer"),
+    }
+
+
+def compare_runtime_estimate(
+    compounds: list[str], include_dependence: bool, n: int, graph: str | None
+) -> dict[str, Any]:
+    base = COMPARE_SECONDS_PER_COMPOUND * max(1, len(compounds))
+    depend = 0.0
+    detail: dict[str, Any] = {"assembly_s": round(base, 2)}
+    if include_dependence:
+        try:
+            fn = _lazy("flylab.analysis.dependence", "estimate_landscape_runtime")
+            est = _invoke(fn, n_cells=len(compounds), n=int(n), graph=graph or "named")
+            depend = float(est.get("estimate_s") or 0.0)
+            detail["dependence"] = est
+        except BridgeError:
+            depend = 0.0
+    return {
+        "estimate_s": round(base + depend, 2),
+        "n_compounds": len(compounds),
+        "n": int(n),
+        "include_dependence": bool(include_dependence),
+        "detail": detail,
+        "note": "Order-of-magnitude, from the project's own per-shuffle cost model.",
+    }
+
+
+def build_compare(
+    compounds: list[str],
+    conc_M: float = 1e-6,
+    *,
+    assay: str = "subgraph",
+    graph: str | None = "named",
+    n: int = FAST_DEPENDENCE_N,
+    seed: int = 0,
+    include_dependence: bool = True,
+    estimate_only: bool = False,
+) -> dict[str, Any]:
+    """The decision table: receptor selectivity beside circuit selectivity."""
+    from flylab.pharm.occupancy import compare_compound, load_library
+
+    keys = [str(c).lower().strip() for c in compounds if str(c).strip()]
+    if not keys:
+        raise BridgeError(400, "compare needs at least one compound")
+    if len(keys) > 8:
+        raise BridgeError(400, "compare is limited to 8 compounds")
+    estimate = compare_runtime_estimate(keys, include_dependence, n, graph)
+    if estimate_only:
+        return {"compounds": keys, "runtime_estimate": estimate, "estimate_only": True}
+
+    lib = load_library()
+    t0 = time.perf_counter()
+    rows = []
+    for key in keys:
+        spec = (lib.get("compounds") or {}).get(key)
+        if spec is None:
+            raise BridgeError(404, f"unknown compound {key!r}")
+        occ = compare_compound(key, conc_M)
+        evidence = _evidence_rows(occ)
+        insect, vert = _split_rows(evidence)
+        top_insect = max(insect, key=lambda r: r["engagement"]) if insect else None
+        top_vert = max(vert, key=lambda r: r["engagement"]) if vert else None
+        csi = _ladder_block(key, conc_M, evidence, graph, assay=assay, occ=occ)
+        circuit = _circuit_block(key, conc_M, graph)
+        mean = (circuit.get("readouts") or {}).get("mean_hz") or {}
+        dep = (
+            _dependence_block(key, conc_M, graph, n, assay=assay, seed=seed)
+            if include_dependence
+            else None
+        )
+        targets = [r for r in evidence if r["organism"] == "insect" and r.get("param_value_M")]
+        targets.sort(key=lambda r: r["param_value_M"])
+        sourced = [r for r in evidence if r["classification"] == "LITERATURE"]
+        rows.append(
+            {
+                "compound": key,
+                "name": spec.get("name", key),
+                "class": spec.get("class"),
+                "target_receptor": (targets[0] if targets else {}).get("receptor"),
+                "mode": (targets[0] if targets else {}).get("direction"),
+                "insect_engagement": (top_insect or {}).get("engagement"),
+                "insect_receptor": (top_insect or {}).get("receptor"),
+                "vertebrate_engagement": (top_vert or {}).get("engagement"),
+                "vertebrate_receptor": (top_vert or {}).get("receptor"),
+                "receptor_si_log10": csi.get("receptor_si_log10"),
+                "circuit_si_log10": csi.get("circuit_si_log10"),
+                "si_gap_circuit_minus_receptor": csi.get("si_gap_circuit_minus_receptor"),
+                "circuit_threshold_M": csi.get("circuit_threshold_M"),
+                "vertebrate_threshold_M": csi.get("vertebrate_threshold_M"),
+                "circuit_delta_hz": mean.get("delta"),
+                "circuit_delta_percent": mean.get("percent"),
+                "circuit_direction": mean.get("direction"),
+                "topology_dependence": (dep or {}).get("class"),
+                "topology_verdict": (dep or {}).get("verdict"),
+                "topology_p": (dep or {}).get("modes"),
+                "evidence_tier": "literature_order" if sourced else "class_placeholder",
+                "n_sourced": len(sourced),
+                "n_rows": len(evidence),
+                "n_not_modelled": sum(1 for r in evidence if r["classification"] == "NOT MODELLED"),
+                "vertebrate_threshold_placeholder": csi.get("vertebrate_threshold_placeholder"),
+                "max_rel_change": csi.get("max_rel_change"),
+                "ladder": csi,
+            }
+        )
+
+    scored = [
+        r
+        for r in rows
+        if r.get("receptor_si_log10") is not None and r.get("circuit_si_log10") is not None
+    ]
+    best_receptor = max(scored, key=lambda r: r["receptor_si_log10"]) if scored else None
+    best_circuit = max(scored, key=lambda r: r["circuit_si_log10"]) if scored else None
+    findings = []
+    if best_receptor and best_circuit:
+        if best_receptor["compound"] != best_circuit["compound"]:
+            findings.append(
+                f"The highest receptor selectivity ({best_receptor['name']}, "
+                f"{best_receptor['receptor_si_log10']:.2f} log10) is NOT the highest circuit "
+                f"selectivity ({best_circuit['name']}, {best_circuit['circuit_si_log10']:.2f} log10)."
+            )
+        else:
+            findings.append(
+                f"{best_receptor['name']} leads on both receptor and circuit selectivity in this set."
+            )
+    return {
+        "concentration_M": conc_M,
+        "assay": assay,
+        "graph": graph or "named",
+        "rows": rows,
+        "findings": findings,
+        "best_receptor_si": (best_receptor or {}).get("compound"),
+        "best_circuit_si": (best_circuit or {}).get("compound"),
+        "runtime_estimate": estimate,
+        "runtime_s": round(time.perf_counter() - t0, 3),
+        "label": "model_derived",
+        "columns": [
+            "compound",
+            "target_receptor",
+            "insect_engagement",
+            "vertebrate_engagement",
+            "receptor_si_log10",
+            "circuit_si_log10",
+            "si_gap_circuit_minus_receptor",
+            "circuit_delta_percent",
+            "topology_dependence",
+            "evidence_tier",
+        ],
+        "warnings": [
+            "Receptor selectivity and circuit selectivity are different quantities; a large "
+            "receptor ratio does not buy a wide circuit window.",
+            "Eight compounds in the library have no circuit selectivity index at all: RDL / "
+            "GluCl block cannot reach the effect threshold on these cuts.",
+            "Topology dependence is a documented label from permutation nulls at the stated "
+            "n, not a hypothesis test with multiplicity control.",
+        ],
+    }
+
+
+def build_claims(
+    compound: str | None = None,
+    conc_M: float = 1e-6,
+    *,
+    notebook: dict[str, Any] | None = None,
+    assay: str = "subgraph",
+    graph: str | None = "named",
+    run_assay: bool = True,
+) -> dict[str, Any]:
+    """Claim provenance for a supplied notebook, or for a fresh run."""
+    from flylab.analysis.claims import claim_audit
+
+    payload = notebook
+    if payload is None:
+        if not compound:
+            raise BridgeError(400, "claims needs a compound or a notebook")
+        if run_assay:
+            payload = _circuit_block(str(compound).lower().strip(), conc_M, graph).get("notebook")
+        else:
+            payload = {
+                "compound": str(compound).lower().strip(),
+                "concentration_M": conc_M,
+                "assay": assay,
+            }
+    return claim_audit(payload)
+
+
+# --------------------------------------------------------------------------
+# dashboard / analysis routes
+# --------------------------------------------------------------------------
+def _h_dashboard(p: dict[str, Any]) -> dict[str, Any]:
+    compound = _opt_str(p, "compound")
+    if compound is None:
+        raise BridgeError(400, "compound is required")
+    return build_dashboard(
+        compound,
+        _num(p, "conc_M", 1e-6, lo=0, hi=MAX_CONC_M),
+        graph=_choice(p, "graph", "named", GRAPH_NAMES),
+        assay=_choice(p, "assay", "subgraph", LADDER_ASSAYS) or "subgraph",
+        genotype=_opt_str(p, "genotype"),
+        n=_int(p, "n", FAST_DEPENDENCE_N, lo=1, hi=500),
+        seed=_int(p, "seed", 0, lo=0, hi=2**31 - 1),
+        include_dependence=_bool(p, "include_dependence", True),
+        include_ladder=_bool(p, "include_ladder", True),
+        estimate_only=_bool(p, "estimate_only", False),
+    )
+
+
+def _h_compare(p: dict[str, Any]) -> dict[str, Any]:
+    compounds = _strs(p, "compounds") or []
+    return build_compare(
+        compounds,
+        _num(p, "conc_M", 1e-6, lo=0, hi=MAX_CONC_M),
+        assay=_choice(p, "assay", "subgraph", LADDER_ASSAYS) or "subgraph",
+        graph=_choice(p, "graph", "named", GRAPH_NAMES),
+        n=_int(p, "n", FAST_DEPENDENCE_N, lo=1, hi=500),
+        seed=_int(p, "seed", 0, lo=0, hi=2**31 - 1),
+        include_dependence=_bool(p, "include_dependence", True),
+        estimate_only=_bool(p, "estimate_only", False),
+    )
+
+
+def _h_claims(p: dict[str, Any]) -> dict[str, Any]:
+    notebook = p.get("notebook")
+    return build_claims(
+        _opt_str(p, "compound"),
+        _num(p, "conc_M", 1e-6, lo=0, hi=MAX_CONC_M),
+        notebook=notebook if isinstance(notebook, dict) and notebook else None,
+        assay=_choice(p, "assay", "subgraph", ASSAY_NAMES) or "subgraph",
+        graph=_choice(p, "graph", "named", GRAPH_NAMES),
+        run_assay=_bool(p, "run_assay", True),
+    )
+
+
+def _dependence_estimate(n_cells: int, n: int, graph: str | None) -> dict[str, Any]:
+    fn = _lazy("flylab.analysis.dependence", "estimate_landscape_runtime")
+    return _invoke(fn, n_cells=int(n_cells), n=int(n), graph=graph or "named")
+
+
+def _h_dependence(p: dict[str, Any]) -> dict[str, Any]:
+    compound = _str(p, "compound", "imidacloprid")
+    conc = _num(p, "conc_M", 1e-6, lo=0, hi=MAX_CONC_M)
+    graph = _choice(p, "graph", None, GRAPH_NAMES)
+    n = _int(p, "n", FAST_DEPENDENCE_N, lo=1, hi=1000)
+    estimate = _dependence_estimate(1, n, graph)
+    if _bool(p, "estimate_only", False):
+        return {"compound": compound, "runtime_estimate": estimate, "estimate_only": True}
+    fn = _lazy("flylab.analysis.dependence", "dependence_profile")
+    kw: dict[str, Any] = {}
+    if graph:
+        kw["graph"] = graph
+    modes = _strs(p, "modes")
+    out = _invoke(
+        fn,
+        compound=compound,
+        conc_M=conc,
+        assay=_choice(p, "assay", "subgraph", ASSAY_NAMES),
+        readout=_str(p, "readout", "auto"),
+        n=n,
+        seed=_int(p, "seed", 0, lo=0, hi=2**31 - 1),
+        modes=list(modes) if modes else list(DEPENDENCE_MODES),
+        **kw,
+    )
+    out["runtime_estimate"] = estimate
+    out["verdict"] = _dependence_verdict(out.get("class"))
+    return out
+
+
+def _h_dependence_landscape(p: dict[str, Any]) -> dict[str, Any]:
+    compounds = _strs(p, "compounds")
+    concs = _floats(p, "concs_M") or [1e-8, 1e-7, 1e-6, 1e-5]
+    graph = _choice(p, "graph", None, GRAPH_NAMES)
+    n = _int(p, "n", FAST_DEPENDENCE_N, lo=1, hi=1000)
+    if compounds is None:
+        from flylab.pharm.occupancy import list_compounds, load_library
+
+        compounds = list(list_compounds(load_library()))
+    if len(compounds) * len(concs) > 200:
+        raise BridgeError(400, "landscape is limited to 200 cells; narrow compounds or concs_M")
+    estimate = _dependence_estimate(len(compounds) * len(concs), n, graph)
+    if _bool(p, "estimate_only", True):
+        # a full landscape is minutes of compute: the default answer is the
+        # estimate, and the caller has to ask again to actually run it.
+        return {
+            "compounds": compounds,
+            "concs_M": concs,
+            "n": n,
+            "runtime_estimate": estimate,
+            "estimate_only": True,
+            "note": "Pass estimate_only=false to run it.",
+        }
+    fn = _lazy("flylab.analysis.dependence", "dependence_landscape")
+    kw: dict[str, Any] = {}
+    if graph:
+        kw["graph"] = graph
+    out = _invoke(
+        fn,
+        compounds=compounds,
+        concs_M=concs,
+        assay=_choice(p, "assay", "subgraph", ASSAY_NAMES),
+        n=n,
+        seed=_int(p, "seed", 0, lo=0, hi=2**31 - 1),
+        **kw,
+    )
+    out["runtime_estimate"] = estimate
+    return out
+
+
+def _h_ablation(p: dict[str, Any]) -> dict[str, Any]:
+    compounds = _strs(p, "compounds")
+    concs = _floats(p, "concs_M") or [1e-6]
+    table = _bool(p, "table", False)
+    # one ablation already scores the whole library once (that is what the
+    # information-gain block needs); the table repeats it per concentration.
+    estimate = {
+        "estimate_s": round(1.5 * len(concs), 2) if table else 1.5,
+        "table": table,
+        "note": (
+            "The ablation ladder scores every library compound at all four levels once; "
+            "the table repeats that at each concentration."
+        ),
+    }
+    if _bool(p, "estimate_only", False):
+        return {"runtime_estimate": estimate, "estimate_only": True}
+    if table:
+        fn = _lazy("flylab.analysis.baselines", "ablation_table")
+        kw: dict[str, Any] = {
+            "concs_M": concs,
+            "graph": _choice(p, "graph", "named", GRAPH_NAMES),
+            "assay": _choice(p, "assay", "subgraph", ASSAY_NAMES),
+        }
+        if compounds:
+            kw["compounds"] = compounds
+        out = _invoke(fn, **kw)
+    else:
+        fn = _lazy("flylab.analysis.baselines", "ablation")
+        out = _invoke(
+            fn,
+            compound=_str(p, "compound", "imidacloprid"),
+            conc_M=_num(p, "conc_M", 1e-6, lo=0, hi=MAX_CONC_M),
+            graph=_choice(p, "graph", "named", GRAPH_NAMES),
+            assay=_choice(p, "assay", "subgraph", ASSAY_NAMES),
+            include_information_gain=_bool(p, "include_information_gain", True),
+        )
+    out["runtime_estimate"] = estimate
+    return out
+
+
+def _h_robustness_stability(p: dict[str, Any]) -> dict[str, Any]:
+    fast = _bool(p, "fast", True)
+    estimate = {
+        "estimate_s": 20.0 if fast else 240.0,
+        "fast": fast,
+        "note": (
+            "Re-derives every pre-registered conclusion under every admissible mechanism "
+            "specification. The browser build defaults to the fast family."
+        ),
+    }
+    if _bool(p, "estimate_only", False):
+        return {"runtime_estimate": estimate, "estimate_only": True}
+    fn = _lazy("flylab.analysis.robustness", "conclusion_stability")
+    out = _invoke(
+        fn,
+        fast=fast,
+        seed=_int(p, "seed", 0, lo=0, hi=2**31 - 1),
+        conc_M=_num(p, "conc_M", 1e-6, lo=0, hi=MAX_CONC_M),
+        n_jobs=1,
+    )
+    out["runtime_estimate"] = estimate
+    return out
+
+
+def _h_robustness_thresholds(p: dict[str, Any]) -> dict[str, Any]:
+    fracs = _floats(p, "circuit_fracs") or [0.25, 0.4, 0.5]
+    limits = _floats(p, "vert_limits") or [0.1, 0.2, 0.3]
+    compounds = _strs(p, "compounds")
+    estimate = {
+        "estimate_s": round(8.0 * len(compounds or range(10)), 1),
+        "note": "Recomputes the amplify / buffer split on every cell of the threshold grid.",
+    }
+    if _bool(p, "estimate_only", False):
+        return {"runtime_estimate": estimate, "estimate_only": True}
+    fn = _lazy("flylab.analysis.robustness", "threshold_sensitivity")
+    kw: dict[str, Any] = {
+        "circuit_fracs": fracs,
+        "vert_limits": limits,
+        "assay": _choice(p, "assay", "subgraph", ASSAY_NAMES),
+    }
+    graph = _choice(p, "graph", None, GRAPH_NAMES)
+    if graph:
+        kw["graph"] = graph
+    if compounds:
+        kw["compounds"] = compounds
+    out = _invoke(fn, **kw)
+    out["runtime_estimate"] = estimate
+    return out
+
+
+def _h_uncertainty_global(p: dict[str, Any]) -> dict[str, Any]:
+    n_base = _int(p, "n_base", 32, lo=8, hi=1024)
+    estimate = {
+        # measured: ~0.21 s per base sample once the rate surrogate exists, plus a
+        # one-time ~40 s surrogate build the first time a process asks for one.
+        "estimate_s": round(n_base * 0.21 + 40.0, 1),
+        "estimate_s_warm": round(n_base * 0.21, 1),
+        "surrogate_build_s": 40.0,
+        "n_base": n_base,
+        "n_evaluations": n_base * 11,
+        "note": (
+            "Saltelli cross-sampling over 9 factors; cost is linear in n_base on top of a "
+            "one-time rate-surrogate build. The browser build defaults to n_base=32, the "
+            "paper uses 128 or more."
+        ),
+    }
+    if _bool(p, "estimate_only", False):
+        return {"runtime_estimate": estimate, "estimate_only": True}
+    fn = _lazy("flylab.analysis.uncertainty_global", "sobol_analysis")
+    out = _invoke(
+        fn,
+        compound=_str(p, "compound", "imidacloprid"),
+        conc_M=_num(p, "conc_M", 1e-6, lo=0, hi=MAX_CONC_M),
+        readout=_str(p, "readout", "mean_hz"),
+        n_base=n_base,
+        n_boot=_int(p, "n_boot", 50, lo=0, hi=2000),
+        seed=_int(p, "seed", 0, lo=0, hi=2**31 - 1),
+        graph=_choice(p, "graph", "named", GRAPH_NAMES) or "named",
+    )
+    budget = _lazy("flylab.analysis.uncertainty_global", "uncertainty_budget")
+    out["budget"] = _invoke(budget, result=out)
+    out["runtime_estimate"] = estimate
+    return out
+
+
+def _h_voi(p: dict[str, Any]) -> dict[str, Any]:
+    n_base = _int(p, "n_base", 32, lo=8, hi=1024)
+    estimate = {
+        "estimate_s": round(n_base * 0.23 + 40.0, 1),
+        "estimate_s_warm": round(n_base * 0.23, 1),
+        "surrogate_build_s": 40.0,
+        "n_base": n_base,
+        "note": (
+            "Value of information reuses one Sobol run, so it costs the same as the global "
+            "uncertainty route at the same n_base, including the one-time surrogate build."
+        ),
+    }
+    if _bool(p, "estimate_only", False):
+        return {"runtime_estimate": estimate, "estimate_only": True}
+    fn = _lazy("flylab.analysis.voi", "value_of_information")
+    factors = _strs(p, "factors")
+    kw: dict[str, Any] = {}
+    if factors:
+        kw["factors"] = factors
+    out = _invoke(
+        fn,
+        compound=_str(p, "compound", "imidacloprid"),
+        conc_M=_num(p, "conc_M", 1e-6, lo=0, hi=MAX_CONC_M),
+        readout=_str(p, "readout", "mean_hz"),
+        n_base=n_base,
+        seed=_int(p, "seed", 0, lo=0, hi=2**31 - 1),
+        **kw,
+    )
+    out["runtime_estimate"] = estimate
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -1124,8 +2540,20 @@ ROUTES: dict[str, tuple[str, Callable[[dict[str, Any]], Any]]] = {
     "/api/predictions": ("GET", _h_predictions),
     "/api/genotypes": ("GET", _h_genotypes),
     "/api/mixture": ("POST", _h_mixture),
+    "/api/genotype/panel": ("POST", _h_genotype_panel),
+    "/api/mixture/isobologram": ("POST", _h_isobologram),
     "/api/expression": ("GET", _h_expression),
     "/api/validation": ("GET", _h_validation),
+    "/api/dashboard": ("GET", _h_dashboard),
+    "/api/compare": ("POST", _h_compare),
+    "/api/dependence": ("POST", _h_dependence),
+    "/api/dependence/landscape": ("POST", _h_dependence_landscape),
+    "/api/ablation": ("POST", _h_ablation),
+    "/api/robustness/stability": ("POST", _h_robustness_stability),
+    "/api/robustness/thresholds": ("POST", _h_robustness_thresholds),
+    "/api/uncertainty/global": ("POST", _h_uncertainty_global),
+    "/api/voi": ("POST", _h_voi),
+    "/api/claims": ("POST", _h_claims),
 }
 
 
@@ -1185,6 +2613,24 @@ def _resolve(path: str) -> tuple[Callable[[dict[str, Any]], Any], dict[str, Any]
     raise BridgeError(404, f"no such route {path!r}")
 
 
+def handle(route: str, payload: dict[str, Any] | None = None) -> Any:
+    """Answer one request and let errors *raise* (:class:`BridgeError`).
+
+    ``flylab/server.py`` delegates its newer routes here after validating the
+    request with pydantic, so the served bench and the browser build cannot
+    drift: they run the same function on the same arguments.  The FastAPI layer
+    maps :class:`BridgeError` onto its own status codes.
+    """
+    _prepare()
+    path, query = _split(route)
+    handler, path_params = _resolve(path)
+    data: dict[str, Any] = dict(query)
+    if isinstance(payload, dict):
+        data.update(payload)
+    data.update(path_params)
+    return handler(data)
+
+
 def call(route: str, payload: dict[str, Any] | None = None) -> Any:
     """Answer one bench request.
 
@@ -1195,14 +2641,7 @@ def call(route: str, payload: dict[str, Any] | None = None) -> Any:
     raises for a bad request, a missing file or an unknown compound.
     """
     try:
-        _prepare()
-        path, query = _split(route)
-        handler, path_params = _resolve(path)
-        data: dict[str, Any] = dict(query)
-        if isinstance(payload, dict):
-            data.update(payload)
-        data.update(path_params)
-        return handler(data)
+        return handle(route, payload)
     except BridgeError as exc:
         return {"error": {"status": exc.status, "detail": exc.detail}}
     except KeyError as exc:

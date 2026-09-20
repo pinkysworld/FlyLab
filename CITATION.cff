@@ -1,36 +1,49 @@
 cff-version: 1.2.0
-title: "FlyLab: a dual-scorecard virtual pharmacology bench on the Drosophila MaleCNS connectome"
+title: "FlyLab: typed pharmacological evidence and connectome-dependence testing on the Drosophila MaleCNS connectome"
 message: >-
   Cite the connectome papers first (MaleCNS v1.0, FlyWire), then this software.
   Nothing in FlyLab is a measurement from a living animal.
 type: software
 authors:
   - name: "FlyLab contributors"
-version: 0.5.0
+version: 0.6.0
 date-released: "2026-09-19"
 license: MIT
 repository-code: https://github.com/pinkysworld/FlyLab
 url: https://github.com/pinkysworld/FlyLab
 abstract: >-
-  FlyLab maps a compound and a free concentration onto Hill occupancy of an
-  insect receptor panel and its vertebrate counterpart panel at the same dose,
-  converts the insect side through a fixed mechanism table into gain
+  FlyLab maps a compound and a free concentration onto a typed engagement
+  panel for insect receptors and their vertebrate counterparts at the same
+  dose, converts the insect side through a fixed mechanism table into gain
   multipliers on transmitter classes of a named MaleCNS v1.0 connectome cut,
   runs a deterministic rate model or a Shiu-style leaky integrate-and-fire
   model over that cut, and exports one notebook JSON with a provenance block
-  (version, git SHA, compound-library SHA-256, map identifiers, seeds). It adds
-  connectome null models, a receptor-versus-circuit selectivity landscape,
-  retrospective rank validation against published orderings, published
-  resistance alleles as per-compound EC50 shifts, combination-effect null
-  models and a set of pre-registered predictions. It is not a new connectome,
-  not regulatory toxicology and not a source of live-animal data.
+  (version, git SHA, compound-library SHA-256, map identifiers, seeds). The
+  evidence is typed: the parameter a source measured and its distance from the
+  modelled target decide whether FlyLab may compute a binding occupancy, a
+  functional engagement, or nothing at all, so unsupported receptors return
+  N/A rather than a small number. Around that it ships the analyses that test
+  its own predictions: connectome-dependence analysis (empirical permutation
+  probabilities against four degraded graph models, with the weakest graph
+  model that still reproduces the effect), an ablation ladder over the
+  pipeline's layers, a conclusion-stability matrix over a prespecified family
+  of gain specifications, a variance-based uncertainty budget with a
+  value-of-information ranking, a receptor-versus-circuit selectivity
+  landscape, literature concordance against published orderings, published
+  resistance alleles as per-compound potency shifts, combination-effect null
+  models and a set of prospective predictions. It is not a new connectome, not
+  regulatory toxicology and not a source of live-animal data.
+
 keywords:
   - connectomics
   - Drosophila melanogaster
   - in-silico pharmacology
-  - receptor occupancy
+  - evidence typing
+  - receptor engagement
   - insecticide selectivity
   - null models
+  - sensitivity analysis
+  - specification robustness
   - reproducible research
   - 3Rs
 identifiers:
@@ -55,3 +68,23 @@ references:
     type: article
     year: 2024
     notes: Shiu, Sterne, Spiller et al., Nature 634. Source of the LIF parameters and the bitter-veto direction used as a control.
+  - title: >-
+      Accelerating with FlyBrainLab the discovery of the functional logic of
+      the Drosophila brain in the connectomic and synaptomic era
+    type: article
+    year: 2021
+    doi: 10.7554/eLife.62362
+    notes: >-
+      Lazar, Liu, Turkcan, Zhou, eLife 10:e62362. Executable fly circuits built
+      from connectome data already exist; FlyLab is positioned against this,
+      not as the first such tool.
+  - title: >-
+      Whole brain modelling for simulating pharmacological interventions on
+      patients with disorders of consciousness
+    type: article
+    year: 2024
+    doi: 10.1038/s42003-024-06852-9
+    notes: >-
+      Mindlin et al., Commun. Biol. 7:1176. Receptor-density-weighted
+      perturbation of a human whole-brain model, which likewise found the
+      effect dominated by overall receptor presence rather than its placement.

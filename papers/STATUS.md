@@ -1,59 +1,63 @@
 # Manuscript status
 
-**File:** `papers/IJRC_FlyLab_draft.md` — generated. Edit `papers/IJRC_FlyLab_draft.md.in` and re-render; never hand-edit a number into the rendered draft.
+**Files:** `papers/IJRC_FlyLab_draft.md` and `papers/SUPPLEMENT.md` — **both generated**. Edit `papers/IJRC_FlyLab_draft.md.in` / `papers/SUPPLEMENT.md.in` and re-render; never hand-edit a number into a rendered document.
 
-**Venue:** IJRC (ijrcom.org), as a **methods / software article**.
-**State:** complete draft, v0.5, not submitted. Checklist: `papers/SUBMISSION_CHECKLIST.md`.
+**Venue:** IJRC (ijrcom.org), as a **Research Article** (Introduction, Methods, Results, Discussion, Conclusion, References).
+**State:** v0.6 revision complete, responding to a Major Revision review. Not submitted. Point-by-point response: `papers/SUBMISSION_CHECKLIST.md` §R.
 
 ```bash
-python scripts/reproduce_paper.py             # regenerate every figure, table and number
-python scripts/reproduce_paper.py --only paper   # re-render the prose only
+python scripts/reproduce_paper.py                # regenerate every figure, table and number (~8-10 min)
+python scripts/reproduce_paper.py --only paper   # re-render both documents from results.json
+python -m pytest -q                              # must be green
 ```
 
 ## What the draft contains
 
 | Part | State |
 |---|---|
-| Abstract + 8 index terms | done |
-| §1 Introduction — the gap and the dual-scorecard thesis | done |
-| §2 Related work — positioned against RatCVS/Virtual Rat Web/PharmVR and against FlyWire/MaleCNS LIF ports | done |
-| §3 Honesty rules | done |
-| §4 Methods — occupancy, mechanism rules with formulas, the two MaleCNS cuts, rate and LIF runtimes with calibration, ensembles, exposure, genotype, mixtures, expression layer, null models, selectivity indices, rank validation, provenance | done (12 subsections) |
-| §5 Results — software behaviour only, 11 subsections, all numbers from `results.json` | done |
-| §6 Pre-registered predictions H1–H7 with model-internal CIs and suggested *n* | done |
-| §7 Limitations — 11 items | done |
-| §8 Reproducibility — one command, provenance hashes, CI, the browser bench, licences, Zenodo placeholder | done |
-| §9 Conclusion + statements (AI assistance, no animal work, data/code availability) | done |
-| References — 67 entries, [13]–[67] rebuilt from `data/literature/README.md` with DOIs/PMIDs | done |
-| 10 figures + 10 tables, regenerated at 300 dpi | done |
+| Abstract (architecture + one topology result + one reproducibility result + the central limitation; individual numbers stripped) | done |
+| §1 Introduction — the four research questions, related work, and the narrow novelty claim with a comparison table | done |
+| §2 Methods — typed evidence, the circuit substrate, connectome-dependence analysis, the ablation ladder and specification family, the evaluation taxonomy, global uncertainty and VOI | done (6 subsections) |
+| §3 Results — organised RQ1 → RQ4, software behaviour only, every number from `results.json` | done (7 subsections) |
+| §4 **Discussion** — what was learned computationally; model-generated vs encoded; adjacent work; intended use; **what the software cannot support**; the four model-specific caveats discussed; prospective-not-pre-registered | done |
+| §5 Conclusion | done |
+| Statements — precise AI declaration, animal research, data/code availability, competing interests, funding | done |
+| References — 76 entries with DOIs/PMIDs, including FlyBrainLab [68] and the receptor-map whole-brain models [69], [70] | done |
+| Supplement — mechanism rationale (S1), null-model definitions (S2), runtimes and calibration (S3), supporting capabilities (S4), prospective predictions (S5), evidence-typing rules (S6), reproduction knobs (S7), notebook warnings (S8) | done |
+| 15 figures + 21 tables, regenerated at 300 dpi | done |
 
-Word count: **≈ 8 000 words of body text** (≈ 10 700 including references), against a 5 000–7 000 target. Trimming §4 and §5, or moving the mechanism rationale and the null-model definitions to a supplement, is the outstanding editorial task.
+**Body word count is generated, not estimated**, and a test fails if it leaves the 5000–7000 target: `papers/results.json → values.paper_words_body`.
 
-## True in the repo today (all reproducible with committed data)
+## True in the repo today (all reproducible with committed artifacts)
 
-- Dual occupancy scorecard over a 21-compound, 99-row, evidence-tiered library.
-- Two committed MaleCNS v1.0 cuts (1126/1360 and 1841/19 066) plus a 165 122-cell census fallback.
-- **All 16 labellar `LB*` types proven present in MaleCNS annotations** — the former open issue #2 is closed.
-- Map-extracted GRN → MN9 path with a complete bitter veto in vehicle and partial relief under fipronil, on both the rate and LIF engines.
-- Four connectome null models, a selectivity landscape, a bootstrapped model IC50, a sensitivity tornado, genotype panels, mixture verdicts and retrospective rank validation.
-- Everything above regenerated by one command in about 3.5 minutes with no downloads.
-
-## Still missing for a **results** paper
-
-1. One live PER or climbing table in `live_lab` (climbing first — the control statistics exist; the PER baseline does not).
-2. A lab-fitted parameter — and the sensitivity analysis says it must be a gain-rule coefficient, not an EC50.
-3. Subunit-resolved nicotinic receptors (α6 vs β1), which cap every quantitative nicotinic selectivity claim until done.
+- Typed evidence: 101 rows / 21 compounds / 14 receptor keys; 34 EC50, 10 IC50, **1 Kd**, 56 not modelled and returning N/A, enforced by the type system.
+- Two committed MaleCNS v1.0 cuts (1126/1360 and 1841/19 066) plus a 165 122-cell census fallback; all 16 labellar `LB*` types proven present.
+- Connectome-dependence analysis at n = 1000 with a permutation-count sweep, and a landscape over 21 compounds × 4 concentrations.
+- Ablation ladder, conclusion-stability matrix over 25 gain specifications, a 3×3 threshold grid, a Sobol' budget (11 264 evaluations) with Ishigami validation, and a VOI ranking.
+- Map-extracted GRN → MN9 path with a complete bitter veto in vehicle and partial relief under fipronil, on both engines.
+- Everything above regenerated by one command in about 8–10 minutes with no downloads.
 
 ## Honest negatives the draft reports as results
 
 These are in the manuscript on purpose and must not be removed to make it look better:
 
-- Imidacloprid's neighbourhood mean-rate effect beats an Erdős–Rényi null decisively and **fails** all three structure-preserving nulls; fipronil beats the topology nulls.
-- The fipronil bitter-veto ratio is **not** distinguishable from its shuffled controls at the shuffle count used.
-- At 1 µM the model is **exactly** insensitive to the receptor EC50 and the Hill coefficient.
-- Eight compounds get no circuit selectivity index at all.
-- Correcting fipronil's vertebrate GABA-A EC50 against its own citation removed a "vertebrate-safe" claim; vertebrate occupancy at 1 µM is 0.48.
+- Imidacloprid's neighbourhood mean-rate effect is **composition-dominated**: every structure-preserving degradation reproduces it (p = 0.275 / 0.586 / 0.472 at n = 1000). Fipronil is topology-dependent (p = 0.0060 / 0.0070).
+- Over the library, only 20 of 84 cells are topology-dependent — and they are exactly the chloride-channel blockers.
+- The fipronil bitter-veto arm is a **properly powered negative** at n = 300 (all p > 0.05, |z| < 0.25).
+- **The suppression conclusion is specification-dependent**: retained by 15/25 specifications, reversed by all ten monotone ones, where the same drug at the same engagement *excites* the network.
+- The composition-only baseline reproduces the full model's ordering (ρ 0.906–0.989); topology-only with a generic multiplier is the worst level (ρ 0.24).
+- The amplify/buffer split is **not** stable across the threshold grid.
+- At a saturating dose the model is blind to potency and Hill *n*; two assumptions carry the variance.
+- There is **no independent out-of-sample validation** of the circuit model, and the rank comparisons that share a source with the library are labelled as such.
+- The rate and LIF engines agree on **direction only** (≈0.29 Hz vs ≈105 Hz).
+
+## Still missing for a **results** paper
+
+1. One live PER or climbing table in `live_lab` (climbing first — the control statistics exist; the PER baseline does not).
+2. The one allowed fit — and the uncertainty budget now names it without argument: the engagement→gain transformation, not a potency value.
+3. Expression coverage above 0.205, with adult motor neurons resolved.
+4. An externally archived, timestamped release, without which the predictions stay *prospective* rather than pre-registered.
 
 ## Submit when
 
-Either the journal accepts a software article with no live table, **or** one PER/climbing table exists in a notebook. Do not submit H2–H7 as empirical biology without that table.
+Either the journal accepts a research article whose evaluation is of the method rather than of a biological result, **or** one PER/climbing table exists in a notebook. Do not submit H1–H7 as empirical biology without that table.

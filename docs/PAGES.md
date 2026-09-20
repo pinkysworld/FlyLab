@@ -62,7 +62,7 @@ bridge.routes()    # the 34 server paths
 bridge.version()   # version, limits, data root
 ```
 
-It mirrors all 34 routes of `flylab/server.py` — same handler bodies, same
+It mirrors all 46 routes of `flylab/server.py` — same handler bodies, same
 defaults, same bounds (`MAX_N_REP`, `MAX_T_MS`, `MAX_EXPERIMENT_ROWS`,
 `MAX_CONC_M`), same forward-compatible 501s. Two deliberate transport-level
 differences:

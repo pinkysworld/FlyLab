@@ -28,6 +28,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from flylab.analysis.impact import grn_to_mn9_paths, summarize_impact
+from flylab.browser import bridge
 from flylab.analysis.layout import graph_for_viewer
 from flylab.assays.ensemble import circuit_ic50, run_ensemble, sensitivity
 from flylab.assays.experiment import ExperimentDesign, rows_to_csv, run_experiment
@@ -979,3 +980,264 @@ def expression():
 def validation():
     fn = _lazy("flylab.validation.rank", "validate_all")
     return _call(fn)
+
+
+# --------------------------------------------------------------------------
+# dashboard / analysis (block 1-10 of the decision layer)
+# --------------------------------------------------------------------------
+# These routes validate their request here and then run the *same* function the
+# browser build runs (``flylab.browser.bridge``), so a dashboard rendered from
+# the served bench and one rendered from the static build are the same object.
+# Every route that costs more than a second states an estimated runtime, and
+# answers ``estimate_only=true`` with the estimate alone.
+def _bridged(route: str, payload: dict[str, Any]) -> Any:
+    try:
+        return bridge.handle(route, payload)
+    except bridge.BridgeError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail)
+
+
+#: the dashboard ladder runs on the rate engine, which covers these two assays
+LadderAssay = Literal["subgraph", "taste_map"]
+
+
+class DashboardRequest(BaseModel):
+    compound: str = "imidacloprid"
+    conc_M: float = Field(1e-6, ge=0, le=MAX_CONC_M)
+    graph: GraphName | None = "named"
+    assay: LadderAssay = "subgraph"
+    genotype: str | None = None
+    #: dependence shuffles; the browser build and this default are FAST_N
+    n: int = Field(bridge.FAST_DEPENDENCE_N, ge=1, le=500)
+    seed: int = Field(0, ge=0, le=2**31 - 1)
+    include_dependence: bool = True
+    include_ladder: bool = True
+    estimate_only: bool = False
+
+
+class CompareRequest(BaseModel):
+    compounds: list[str] = Field(
+        default_factory=lambda: ["imidacloprid", "fipronil", "deltamethrin"]
+    )
+    conc_M: float = Field(1e-6, ge=0, le=MAX_CONC_M)
+    assay: LadderAssay = "subgraph"
+    graph: GraphName | None = "named"
+    n: int = Field(bridge.FAST_DEPENDENCE_N, ge=1, le=500)
+    seed: int = Field(0, ge=0, le=2**31 - 1)
+    include_dependence: bool = True
+    estimate_only: bool = False
+
+
+class ClaimsRequest(BaseModel):
+    compound: str | None = "imidacloprid"
+    conc_M: float = Field(1e-6, ge=0, le=MAX_CONC_M)
+    assay: AssayName = "subgraph"
+    graph: GraphName | None = "named"
+    #: a notebook the caller already has; nothing is re-run when it is supplied
+    notebook: dict[str, Any] | None = None
+    run_assay: bool = True
+
+
+class DependenceRequest(BaseModel):
+    compound: str = "imidacloprid"
+    conc_M: float = Field(1e-6, ge=0, le=MAX_CONC_M)
+    assay: AssayName = "subgraph"
+    readout: str = "auto"
+    graph: GraphName | None = None
+    n: int = Field(bridge.FAST_DEPENDENCE_N, ge=1, le=1000)
+    seed: int = Field(0, ge=0, le=2**31 - 1)
+    modes: list[str] | None = None
+    estimate_only: bool = False
+
+
+class DependenceLandscapeRequest(BaseModel):
+    compounds: list[str] | None = None
+    concs_M: list[float] | None = None
+    assay: AssayName = "subgraph"
+    graph: GraphName | None = None
+    n: int = Field(bridge.FAST_DEPENDENCE_N, ge=1, le=1000)
+    seed: int = Field(0, ge=0, le=2**31 - 1)
+    #: a landscape is minutes of compute, so the default answer is the estimate
+    estimate_only: bool = True
+
+
+class AblationRequest(BaseModel):
+    compound: str = "imidacloprid"
+    conc_M: float = Field(1e-6, ge=0, le=MAX_CONC_M)
+    assay: AssayName = "subgraph"
+    graph: GraphName | None = "named"
+    compounds: list[str] | None = None
+    concs_M: list[float] | None = None
+    table: bool = False
+    include_information_gain: bool = True
+    estimate_only: bool = False
+
+
+class StabilityRequest(BaseModel):
+    fast: bool = True
+    conc_M: float = Field(1e-6, ge=0, le=MAX_CONC_M)
+    seed: int = Field(0, ge=0, le=2**31 - 1)
+    estimate_only: bool = False
+
+
+class ThresholdRequest(BaseModel):
+    circuit_fracs: list[float] | None = None
+    vert_limits: list[float] | None = None
+    compounds: list[str] | None = None
+    assay: AssayName = "subgraph"
+    graph: GraphName | None = None
+    estimate_only: bool = False
+
+
+class GlobalUncertaintyRequest(BaseModel):
+    compound: str = "imidacloprid"
+    conc_M: float = Field(1e-6, ge=0, le=MAX_CONC_M)
+    readout: str = "mean_hz"
+    graph: GraphName | None = "named"
+    #: the browser build defaults to the cheap design; the paper uses 128+
+    n_base: int = Field(32, ge=8, le=1024)
+    n_boot: int = Field(50, ge=0, le=2000)
+    seed: int = Field(0, ge=0, le=2**31 - 1)
+    estimate_only: bool = False
+
+
+class VoiRequest(BaseModel):
+    compound: str = "imidacloprid"
+    conc_M: float = Field(1e-6, ge=0, le=MAX_CONC_M)
+    readout: str = "mean_hz"
+    factors: list[str] | None = None
+    n_base: int = Field(32, ge=8, le=1024)
+    seed: int = Field(0, ge=0, le=2**31 - 1)
+    estimate_only: bool = False
+
+
+@app.get("/api/dashboard")
+def dashboard(
+    compound: str = "imidacloprid",
+    conc_M: float = 1e-6,
+    graph: GraphName | None = "named",
+    assay: LadderAssay = "subgraph",
+    genotype: str | None = None,
+    n: int = bridge.FAST_DEPENDENCE_N,
+    seed: int = 0,
+    include_dependence: bool = True,
+    include_ladder: bool = True,
+    estimate_only: bool = False,
+):
+    """One call with everything the landing page needs.
+
+    Blocks 1-5 and 10 of the dashboard: the compound overview and headline
+    tiles, the factual selectivity panel, the circuit consequence with its
+    connectome-dependence verdict, the concentration ladder, the per-number
+    evidence records, the trust panel and the generated explanation.
+    """
+    req = DashboardRequest(
+        compound=compound,
+        conc_M=conc_M,
+        graph=graph,
+        assay=assay,
+        genotype=genotype,
+        n=n,
+        seed=seed,
+        include_dependence=include_dependence,
+        include_ladder=include_ladder,
+        estimate_only=estimate_only,
+    )
+    return _bridged("/api/dashboard", req.model_dump())
+
+
+@app.post("/api/compare")
+def compare(req: CompareRequest):
+    """The compare-compounds screen: receptor selectivity beside circuit selectivity."""
+    return _bridged("/api/compare", req.model_dump())
+
+
+@app.get("/api/claims")
+def claims_get(
+    compound: str = "imidacloprid",
+    conc_M: float = 1e-6,
+    assay: AssayName = "subgraph",
+    graph: GraphName | None = "named",
+    run_assay: bool = True,
+):
+    """Claim provenance for a fresh run of this compound at this dose."""
+    req = ClaimsRequest(
+        compound=compound, conc_M=conc_M, assay=assay, graph=graph, run_assay=run_assay
+    )
+    return _bridged("/api/claims", req.model_dump())
+
+
+@app.post("/api/claims")
+def claims_post(req: ClaimsRequest):
+    """Claim provenance for a notebook the caller already holds."""
+    return _bridged("/api/claims", req.model_dump())
+
+
+@app.post("/api/dependence")
+def dependence(req: DependenceRequest):
+    """Connectome-dependence profile: is this effect a wiring result?"""
+    return _bridged("/api/dependence", req.model_dump())
+
+
+@app.post("/api/dependence/landscape")
+def dependence_landscape(req: DependenceLandscapeRequest):
+    """The compound x concentration dependence landscape (estimate first)."""
+    return _bridged("/api/dependence/landscape", req.model_dump())
+
+
+@app.post("/api/ablation")
+def ablation(req: AblationRequest):
+    """The four-level model ablation ladder and what each level adds."""
+    return _bridged("/api/ablation", req.model_dump())
+
+
+@app.post("/api/robustness/stability")
+def robustness_stability(req: StabilityRequest):
+    """Every pre-registered conclusion re-derived under every admissible rule."""
+    return _bridged("/api/robustness/stability", req.model_dump())
+
+
+@app.post("/api/robustness/thresholds")
+def robustness_thresholds(req: ThresholdRequest):
+    """The amplify / buffer split recomputed across the threshold grid."""
+    return _bridged("/api/robustness/thresholds", req.model_dump())
+
+
+@app.post("/api/uncertainty/global")
+def uncertainty_global(req: GlobalUncertaintyRequest):
+    """Variance-based attribution over the model's nine uncertain factors."""
+    return _bridged("/api/uncertainty/global", req.model_dump())
+
+
+@app.post("/api/voi")
+def voi(req: VoiRequest):
+    """Which experiment would remove the most model variance."""
+    return _bridged("/api/voi", req.model_dump())
+
+
+class GenotypePanelRequest(BaseModel):
+    compound: str = "deltamethrin"
+    conc_M: float = Field(1e-6, ge=0, le=MAX_CONC_M)
+    assay: AssayName = "subgraph"
+    genotypes: list[str] | None = None
+
+
+class IsobologramRequest(BaseModel):
+    compound_a: str = "imidacloprid"
+    compound_b: str = "fipronil"
+    assay: str = "occupancy"
+    readout: str | None = None
+    effect_frac: float = Field(0.5, gt=0, le=0.999)
+    n: int = Field(7, ge=3, le=25)
+
+
+@app.post("/api/genotype/panel")
+def genotype_panel(req: GenotypePanelRequest):
+    """Wild type against each relevant resistance allele: potency and circuit."""
+    return _bridged("/api/genotype/panel", req.model_dump())
+
+
+@app.post("/api/mixture/isobologram")
+def mixture_isobologram(req: IsobologramRequest):
+    """Iso-effect concentration pairs for two compounds, plus the Loewe line."""
+    return _bridged("/api/mixture/isobologram", req.model_dump())

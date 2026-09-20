@@ -1,5 +1,14 @@
 # FlyLab v0.5 design contract
 
+> **Historical.** This is the interface contract as it stood for v0.5 and is kept
+> for the module map and the endpoint list. Two things have since changed and
+> `docs/ARCHITECTURE.md` is authoritative: the library is schema v3 and every
+> row is typed, so what this file calls *occupancy* is a functional
+> **engagement** unless the row carries a measured Kd/Ki, and a row with no
+> sourced value returns `None` rather than a number; and the analysis layer has
+> grown `dependence.py`, `baselines.py`, `robustness.py`, `uncertainty_global.py`
+> and `voi.py`, which the paper's Results are now built on.
+
 This file is the interface contract for the v0.5 build. Agents working on
 separate packages must implement exactly these names and JSON shapes so the
 server, UI, CLI, tests and paper can integrate without renegotiation.

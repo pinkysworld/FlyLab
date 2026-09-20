@@ -574,3 +574,260 @@ pre.json {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ================================================================== */
+/* Dashboard: the interpretation layer                                */
+/* ================================================================== */
+
+/* --- secondary (bench) tab row ------------------------------------ */
+.tabs.bench {
+  margin-top: -6px;
+  background: transparent;
+  border-style: dashed;
+  padding: 5px 6px;
+  align-items: center;
+}
+.tabs.bench .tabs-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  padding: 0 6px 0 2px;
+  font-weight: 600;
+}
+.tabs.bench [role="tab"] { font-size: 12px; padding: 4px 9px; }
+
+/* --- dose rail: the slider every card listens to ------------------- */
+.dose-rail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 10px 14px;
+  margin-bottom: var(--gap);
+}
+.dose-rail > label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.dose-rail input[type="range"] { flex: 1 1 220px; min-width: 160px; }
+.dose-rail output {
+  font-size: 15px;
+  font-weight: 600;
+  min-width: 96px;
+  color: var(--text-1);
+}
+.dose-rail .ladder { display: flex; gap: 4px; flex-wrap: wrap; }
+.dose-rail .ladder button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+.dose-rail .hint { flex: 1 1 100%; margin: 0; }
+
+/* --- compound overview: the one hero figure on the page ------------ */
+.overview {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 18px;
+  margin-bottom: var(--gap);
+}
+.overview .hero {
+  font-size: clamp(26px, 4.2vw, 40px);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  margin: 0 0 2px;
+  /* proportional figures: tabular-nums makes a display number look loose */
+  font-variant-numeric: normal;
+}
+.overview .hero .dose { color: var(--accent); }
+.overview .facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.overview .facts b { color: var(--text-1); font-weight: 600; }
+.overview .coverage {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* --- classification chips: the defining visual feature ------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  padding: 1px 7px 1px 5px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: var(--font);
+  line-height: 1.7;
+}
+.chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: currentColor;
+  flex: none;
+}
+.chip:hover, .chip:focus-visible { border-color: currentColor; }
+.chip[data-k="LITERATURE"] { color: var(--good); }
+.chip[data-k="MODEL-DERIVED"] { color: var(--accent); }
+.chip[data-k="MODEL-ASSUMPTION"] { color: var(--serious); }
+.chip[data-k="PREDICTION"] { color: var(--nt-histamine); }
+.chip[data-k="NOT MODELLED"] { color: var(--muted); }
+.chip[data-k="NOT MODELLED"]::before {
+  background: repeating-linear-gradient(
+    45deg, currentColor 0 2px, transparent 2px 4px
+  );
+}
+.chip.static { cursor: default; }
+
+/* --- KPI tiles ----------------------------------------------------- */
+.tiles.kpi { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: var(--gap); }
+.tiles.kpi .tile { background: var(--surface); }
+.tile .v.big { font-size: 28px; font-variant-numeric: normal; }
+.tile .chiprow { margin-top: 6px; }
+.tile .note { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+/* --- generated explanation ---------------------------------------- */
+.card.why {
+  margin-bottom: var(--gap);
+  border-left: 3px solid var(--accent);
+}
+.card.why p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--text-1); }
+.card.why .src { margin-top: 8px; font-size: 11px; color: var(--muted); }
+
+/* --- verdict line (dependence) ------------------------------------- */
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 0 10px;
+}
+.verdict .mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--muted);
+  flex: none;
+}
+.verdict[data-class="topology-dependent"] .mark { background: var(--accent); }
+.verdict[data-class="composition-dominated"] .mark { background: var(--serious); }
+.verdict[data-class="network-insensitive"] .mark { background: var(--muted); }
+.verdict .why { font-weight: 400; font-size: 12px; color: var(--muted); flex: 1 1 260px; }
+
+/* --- fact / inference / unknown ------------------------------------ */
+.fiu { display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.fiu section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--surface-2);
+  min-width: 0;
+}
+.fiu h4 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+}
+.fiu ul { margin: 0; padding-left: 16px; }
+.fiu li { font-size: 12px; color: var(--text-2); margin-bottom: 7px; overflow-wrap: anywhere; }
+
+/* --- claim chain --------------------------------------------------- */
+.chain { display: grid; gap: 8px; }
+.chain .link {
+  display: grid;
+  grid-template-columns: 22px minmax(120px, 190px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border-left: 2px solid var(--grid);
+  padding: 6px 0 6px 10px;
+}
+.chain .link .n { color: var(--muted); font-size: 11px; font-family: var(--mono); }
+.chain .link .step { font-size: 12.5px; font-weight: 600; }
+.chain .link .what { font-size: 12px; color: var(--text-2); }
+
+/* --- deeper analyses ------------------------------------------------ */
+.analysis-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.analysis {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--surface-2);
+}
+.analysis h4 { margin: 0 0 3px; font-size: 12.5px; }
+.analysis p { margin: 0 0 8px; font-size: 11.5px; color: var(--muted); }
+.analysis .est { font-size: 11.5px; color: var(--text-2); margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+
+/* --- provenance drawer --------------------------------------------- */
+#provenance dl { margin: 0; }
+#provenance dt {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-top: 12px;
+  font-weight: 600;
+}
+#provenance dd {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-1);
+  overflow-wrap: anywhere;
+}
+#provenance dd.source { color: var(--text-2); font-size: 12px; line-height: 1.5; }
+#provenance .prov-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+#provenance .prov-head .name { font-family: var(--mono); font-size: 13px; }
+
+/* table cells that hold a chip stop being nowrap */
+td .chip { vertical-align: middle; }
+#tbl-dash-trust td:nth-child(3),
+#tbl-evidence td:nth-child(7),
+#tbl-dash-vert td:last-child { white-space: normal; min-width: 180px; }
+
+@media (max-width: 640px) {
+  .dose-rail { padding: 10px; }
+  .chain .link { grid-template-columns: 18px minmax(0, 1fr); }
+  .chain .link .what { grid-column: 2; }
+}
+
+/* the trust panel and the claim chain are read in full, never scrolled inside
+   their card: cutting either one hides exactly the caveat it exists to show */
+#card-trust .table-wrap { max-height: none; overflow-y: visible; }
+#card-trust td:nth-child(2) { white-space: normal; min-width: 150px; }
+.chain .link .step { overflow-wrap: anywhere; }
+.tile .v { overflow-wrap: anywhere; }
+.facts-list p { margin: 0 0 8px; font-size: 12.5px; }
+.facts-list p:last-of-type { margin-bottom: 0; }
+
+/* the close button floats over the drawer heading; keep the title clear of it */
+.drawer h2 { padding-right: 76px; }

@@ -1,15 +1,16 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-19T18:51:49+00:00",
+  "generated_utc": "2026-09-19T23:14:04+00:00",
   "fast": false,
   "seed": 0,
-  "runtime_s": 199.06,
+  "jobs": 4,
+  "runtime_s": 778.05,
   "provenance": {
     "flylab_version": "0.5.0",
-    "git_sha": "bc447af291b33a06490c13439db661242f0518fb",
-    "library_sha256": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
-    "library_version": "0.5",
-    "library_schema_version": 2,
+    "git_sha": "c4a0011d9562bf52de559f5a2105f30c78860b71",
+    "library_sha256": "e52251389c0ca969ff51f60ffbc32b27d7c6cf1eef5a06d9559ca063baa9bd92",
+    "library_version": "0.6",
+    "library_schema_version": 3,
     "notebook_schema_version": "0.3",
     "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39 python-3.11.15",
     "map_id": "male-cns:v1.0",
@@ -38,7 +39,7 @@
   "steps": {
     "provenance": {
       "status": "ok",
-      "runtime_s": 0.17,
+      "runtime_s": 0.18,
       "description": "versions, hashes, map ids, graph sizes",
       "figures": 0,
       "tables": 0,
@@ -54,16 +55,24 @@
     },
     "scorecard": {
       "status": "ok",
-      "runtime_s": 0.68,
-      "description": "dual scorecard + library table (F2, T1)",
+      "runtime_s": 0.69,
+      "description": "insect vs vertebrate panel + library table (F2, T1)",
       "figures": 1,
       "tables": 2,
       "values": 20
     },
+    "evidence": {
+      "status": "ok",
+      "runtime_s": 0.43,
+      "description": "typed evidence census, schema v3 (F11, T10)",
+      "figures": 1,
+      "tables": 2,
+      "values": 26
+    },
     "curves": {
       "status": "ok",
-      "runtime_s": 1.21,
-      "description": "occupancy curves and selectivity windows (F3)",
+      "runtime_s": 1.25,
+      "description": "engagement curves and selectivity windows (F3)",
       "figures": 1,
       "tables": 0,
       "values": 5
@@ -78,7 +87,7 @@
     },
     "graph": {
       "status": "ok",
-      "runtime_s": 1.39,
+      "runtime_s": 1.41,
       "description": "taste-motor graph and GRN->MN9 paths (F4, T7)",
       "figures": 1,
       "tables": 2,
@@ -86,23 +95,31 @@
     },
     "veto": {
       "status": "ok",
-      "runtime_s": 5.08,
+      "runtime_s": 6.1,
       "description": "map-based bitter veto, rate vs LIF (F5)",
       "figures": 1,
       "tables": 0,
       "values": 22
     },
-    "nulls": {
+    "dependence": {
       "status": "ok",
-      "runtime_s": 110.03,
-      "description": "connectome null models (F6, T6)",
+      "runtime_s": 475.5,
+      "description": "connectome dependence + landscape (F6, F12, T6, T11, T12)",
+      "figures": 2,
+      "tables": 6,
+      "values": 129
+    },
+    "ablation": {
+      "status": "ok",
+      "runtime_s": 1.42,
+      "description": "ablation ladder over the library (F13, T13, T13b)",
       "figures": 1,
-      "tables": 2,
-      "values": 33
+      "tables": 4,
+      "values": 20
     },
     "landscape": {
       "status": "ok",
-      "runtime_s": 57.61,
+      "runtime_s": 113.41,
       "description": "receptor vs circuit selectivity (F7, T8)",
       "figures": 1,
       "tables": 2,
@@ -110,15 +127,15 @@
     },
     "dose": {
       "status": "ok",
-      "runtime_s": 6.39,
-      "description": "model IC50 + sensitivity tornado (F8)",
+      "runtime_s": 9.66,
+      "description": "model dose-response + sensitivity tornado (F8)",
       "figures": 1,
       "tables": 0,
       "values": 19
     },
     "genotype": {
       "status": "ok",
-      "runtime_s": 0.5,
+      "runtime_s": 0.69,
       "description": "resistance-allele panels (F9, T9)",
       "figures": 1,
       "tables": 2,
@@ -126,23 +143,23 @@
     },
     "validation": {
       "status": "ok",
-      "runtime_s": 0.9,
-      "description": "rank validation vs published orders (F10, T4)",
+      "runtime_s": 1.28,
+      "description": "rank comparison vs published orders (F10, T4)",
       "figures": 1,
       "tables": 2,
-      "values": 9
+      "values": 14
     },
     "predictions": {
       "status": "ok",
-      "runtime_s": 14.15,
-      "description": "pre-registered predictions (T3)",
+      "runtime_s": 27.68,
+      "description": "prospective predictions (T3)",
       "figures": 0,
       "tables": 2,
       "values": 27
     },
     "mixtures": {
       "status": "ok",
-      "runtime_s": 0.34,
+      "runtime_s": 0.52,
       "description": "binary mixtures vs published verdicts (T5)",
       "figures": 0,
       "tables": 2,
@@ -150,15 +167,31 @@
     },
     "expression": {
       "status": "ok",
-      "runtime_s": 0.18,
+      "runtime_s": 0.28,
       "description": "expression-weighted sensitivity coverage",
       "figures": 0,
       "tables": 0,
       "values": 14
     },
+    "stability": {
+      "status": "ok",
+      "runtime_s": 0.96,
+      "description": "specification robustness + threshold grid (F14, T14, T14b, T15)",
+      "figures": 1,
+      "tables": 6,
+      "values": 75
+    },
+    "uncertainty": {
+      "status": "ok",
+      "runtime_s": 136.12,
+      "description": "global uncertainty budget + VOI (F15, T16, T17)",
+      "figures": 1,
+      "tables": 4,
+      "values": 52
+    },
     "architecture": {
       "status": "ok",
-      "runtime_s": 0.41,
+      "runtime_s": 0.46,
       "description": "architecture schematic (F1)",
       "figures": 2,
       "tables": 0,
@@ -167,10 +200,10 @@
     "paper": {
       "status": "ok",
       "runtime_s": 0.01,
-      "description": "render the draft from its template",
+      "description": "render the draft and supplement from their templates",
       "figures": 0,
       "tables": 0,
-      "values": 3
+      "values": 5
     }
   },
   "values": {
@@ -182,15 +215,15 @@
       "step": "provenance"
     },
     "git_sha": {
-      "value": "bc447af291b33a06490c13439db661242f0518fb",
-      "text": "bc447af291b3",
+      "value": "c4a0011d9562bf52de559f5a2105f30c78860b71",
+      "text": "c4a0011d9562",
       "unit": null,
       "note": null,
       "step": "provenance"
     },
     "library_sha256": {
-      "value": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
-      "text": "68252432a397",
+      "value": "e52251389c0ca969ff51f60ffbc32b27d7c6cf1eef5a06d9559ca063baa9bd92",
+      "text": "e52251389c0c",
       "unit": null,
       "note": null,
       "step": "provenance"
@@ -428,8 +461,8 @@
       "step": "scorecard"
     },
     "dia_insect_rdl_occ": {
-      "value": 9.999000099990002e-05,
-      "text": "1.00e-04",
+      "value": null,
+      "text": "not modelled (N/A)",
       "unit": null,
       "note": null,
       "step": "scorecard"
@@ -456,22 +489,22 @@
       "step": "scorecard"
     },
     "library_receptor_classes": {
-      "value": 12,
-      "text": "12",
+      "value": 14,
+      "text": "14",
       "unit": null,
       "note": null,
       "step": "scorecard"
     },
     "library_rows": {
-      "value": 99,
-      "text": "99",
+      "value": 101,
+      "text": "101",
       "unit": null,
       "note": null,
       "step": "scorecard"
     },
     "library_rows_sourced": {
-      "value": 43,
-      "text": "43",
+      "value": 45,
+      "text": "45",
       "unit": null,
       "note": null,
       "step": "scorecard"
@@ -489,6 +522,190 @@
       "unit": null,
       "note": null,
       "step": "scorecard"
+    },
+    "ev_schema_version": {
+      "value": 3,
+      "text": "3",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_rows": {
+      "value": 101,
+      "text": "101",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_compounds": {
+      "value": 21,
+      "text": "21",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_receptor_keys": {
+      "value": 14,
+      "text": "14",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_rows_modelled": {
+      "value": 45,
+      "text": "45",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_rows_not_modelled": {
+      "value": 56,
+      "text": "56",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_param_EC50": {
+      "value": 34,
+      "text": "34",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_param_IC50": {
+      "value": 10,
+      "text": "10",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_param_Kd": {
+      "value": 1,
+      "text": "1",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_param_Ki": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_param_Kb": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_param_unknown": {
+      "value": 56,
+      "text": "56",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_param_class_order": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_param_relative_potency": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_rel_exact_compound_exact_receptor_exact_species": {
+      "value": 9,
+      "text": "9",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_rel_exact_compound_exact_receptor_other_species": {
+      "value": 15,
+      "text": "15",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_rel_exact_compound_related_receptor": {
+      "value": 10,
+      "text": "10",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_rel_class_extrapolation": {
+      "value": 11,
+      "text": "11",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_rel_unsupported": {
+      "value": 56,
+      "text": "56",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_binding_rows": {
+      "value": 1,
+      "text": "1",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_functional_rows": {
+      "value": 44,
+      "text": "44",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_not_modelled_rows": {
+      "value": 56,
+      "text": "56",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_binding_row_names": {
+      "value": [
+        "imidacloprid at insect_nAChR_beta1 (Kd 8.3e-11 M)"
+      ],
+      "text": "imidacloprid at insect_nAChR_beta1 (Kd 8.3e-11 M)",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_n_binding_named": {
+      "value": 1,
+      "text": "1",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_library_problems": {
+      "value": [],
+      "text": "none",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
+    },
+    "ev_note": {
+      "value": "engagement is a normalised Hill response computed from the sourced potency parameter named in param_type; it is physical receptor occupancy only when engagement_model is 'binding_occupancy' (a measured Kd/Ki) and is otherwise a functional engagement, while rows with no sourced value report None (not modelled) rather than a small number.",
+      "text": "engagement is a normalised Hill response computed from the sourced potency parameter named in param_type; it is physical receptor occupancy only when engagement_model is 'binding_occupancy' (a measured Kd/Ki) and is otherwise a functional engagement, while rows with no sourced value report None (not modelled) rather than a small number.",
+      "unit": null,
+      "note": null,
+      "step": "evidence"
     },
     "window_log10_imidacloprid": {
       "value": 2.6989700043360187,
@@ -796,236 +1013,1094 @@
       "note": null,
       "step": "veto"
     },
-    "null_n_shuffles": {
-      "value": 50,
-      "text": "50",
+    "dep_n": {
+      "value": 1000,
+      "text": "1000",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_n_shuffles_taste": {
-      "value": 10,
-      "text": "10",
+    "dep_n_taste": {
+      "value": 300,
+      "text": "300",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_z_imidacloprid_sign_permute": {
-      "value": -1.227640533947596,
-      "text": "-1.228",
+    "dep_n_landscape": {
+      "value": 100,
+      "text": "100",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_p_imidacloprid_sign_permute": {
+    "dep_p_floor": {
+      "value": 0.000999000999000999,
+      "text": "0.0010",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_sign_permute_n25": {
+      "value": 0.19230769230769232,
+      "text": "0.192",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_sign_permute_n50": {
       "value": 0.2549019607843137,
       "text": "0.255",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_real_effect_imidacloprid": {
-      "value": -6.172782166134219,
-      "text": "-6.173",
-      "unit": "Hz",
-      "note": null,
-      "step": "nulls"
-    },
-    "null_z_imidacloprid_weight_permute": {
-      "value": -0.5346730469448319,
-      "text": "-0.535",
+    "sweep_named_imidacloprid_sign_permute_n100": {
+      "value": 0.26732673267326734,
+      "text": "0.267",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_p_imidacloprid_weight_permute": {
+    "sweep_named_imidacloprid_sign_permute_n200": {
+      "value": 0.25870646766169153,
+      "text": "0.259",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_sign_permute_n400": {
+      "value": 0.26683291770573564,
+      "text": "0.267",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_sign_permute_n1000": {
+      "value": 0.27472527472527475,
+      "text": "0.275",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_imidacloprid_p_sign_permute": {
+      "value": 0.27472527472527475,
+      "text": "0.275",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_imidacloprid_z_sign_permute": {
+      "value": -1.2291197992117913,
+      "text": "-1.229",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_weight_permute_n25": {
+      "value": 0.5769230769230769,
+      "text": "0.577",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_weight_permute_n50": {
       "value": 0.5294117647058824,
       "text": "0.529",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_z_imidacloprid_rewire_degree_preserving": {
-      "value": -0.7937360106107395,
-      "text": "-0.794",
+    "sweep_named_imidacloprid_weight_permute_n100": {
+      "value": 0.5841584158415841,
+      "text": "0.584",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_p_imidacloprid_rewire_degree_preserving": {
+    "sweep_named_imidacloprid_weight_permute_n200": {
+      "value": 0.5572139303482587,
+      "text": "0.557",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_weight_permute_n400": {
+      "value": 0.5985037406483791,
+      "text": "0.599",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_weight_permute_n1000": {
+      "value": 0.5864135864135864,
+      "text": "0.586",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_imidacloprid_p_weight_permute": {
+      "value": 0.5864135864135864,
+      "text": "0.586",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_imidacloprid_z_weight_permute": {
+      "value": -0.5018759338600395,
+      "text": "-0.502",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_rewire_degree_preserving_n25": {
+      "value": 0.23076923076923078,
+      "text": "0.231",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_rewire_degree_preserving_n50": {
       "value": 0.37254901960784315,
       "text": "0.373",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_z_imidacloprid_erdos_renyi": {
-      "value": -45.68337098392473,
-      "text": "-45.7",
+    "sweep_named_imidacloprid_rewire_degree_preserving_n100": {
+      "value": 0.38613861386138615,
+      "text": "0.386",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_p_imidacloprid_erdos_renyi": {
+    "sweep_named_imidacloprid_rewire_degree_preserving_n200": {
+      "value": 0.417910447761194,
+      "text": "0.418",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_rewire_degree_preserving_n400": {
+      "value": 0.4837905236907731,
+      "text": "0.484",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_rewire_degree_preserving_n1000": {
+      "value": 0.47152847152847155,
+      "text": "0.472",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_imidacloprid_p_rewire_degree_preserving": {
+      "value": 0.47152847152847155,
+      "text": "0.472",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_imidacloprid_z_rewire_degree_preserving": {
+      "value": -0.7203920758994491,
+      "text": "-0.720",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_erdos_renyi_n25": {
+      "value": 0.038461538461538464,
+      "text": "0.038",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_imidacloprid_erdos_renyi_n50": {
       "value": 0.0196078431372549,
       "text": "0.020",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "nulltaste_z_imidacloprid_sign_permute": {
-      "value": null,
-      "text": "n/a",
+    "sweep_named_imidacloprid_erdos_renyi_n100": {
+      "value": 0.009900990099009901,
+      "text": "0.010",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "nulltaste_z_imidacloprid_weight_permute": {
-      "value": null,
-      "text": "n/a",
+    "sweep_named_imidacloprid_erdos_renyi_n200": {
+      "value": 0.004975124378109453,
+      "text": "0.005",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "nulltaste_z_imidacloprid_rewire_degree_preserving": {
-      "value": null,
-      "text": "n/a",
+    "sweep_named_imidacloprid_erdos_renyi_n400": {
+      "value": 0.0024937655860349127,
+      "text": "0.002",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "nulltaste_z_imidacloprid_erdos_renyi": {
-      "value": null,
-      "text": "n/a",
+    "sweep_named_imidacloprid_erdos_renyi_n1000": {
+      "value": 0.000999000999000999,
+      "text": "9.99e-04",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_score_imidacloprid": {
-      "value": 0.25,
-      "text": "0.250",
+    "dep_named_imidacloprid_p_erdos_renyi": {
+      "value": 0.000999000999000999,
+      "text": "9.99e-04",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_z_fipronil_sign_permute": {
-      "value": 1.6817027476951987,
-      "text": "1.682",
+    "dep_named_imidacloprid_z_erdos_renyi": {
+      "value": -47.073553597145505,
+      "text": "-47.1",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_p_fipronil_sign_permute": {
+    "dep_named_imidacloprid_effect": {
+      "value": -6.17278216613422,
+      "text": "-6.173",
+      "unit": "Hz",
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_imidacloprid_class": {
+      "value": "composition-dominated",
+      "text": "composition-dominated",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_imidacloprid_level": {
+      "value": "degree_sequence",
+      "text": "degree_sequence",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_imidacloprid_max_abs_z": {
+      "value": 47.073553597145505,
+      "text": "47.1",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_imidacloprid_min_structural_p": {
+      "value": 0.47152847152847155,
+      "text": "0.472",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_sign_permute_n25": {
+      "value": 0.15384615384615385,
+      "text": "0.154",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_sign_permute_n50": {
       "value": 0.17647058823529413,
       "text": "0.176",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_real_effect_fipronil": {
-      "value": 0.899607623554787,
-      "text": "0.900",
-      "unit": "Hz",
-      "note": null,
-      "step": "nulls"
-    },
-    "null_z_fipronil_weight_permute": {
-      "value": 3.372072205632216,
-      "text": "3.372",
+    "sweep_named_fipronil_sign_permute_n100": {
+      "value": 0.12871287128712872,
+      "text": "0.129",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_p_fipronil_weight_permute": {
+    "sweep_named_fipronil_sign_permute_n200": {
+      "value": 0.11940298507462686,
+      "text": "0.119",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_sign_permute_n400": {
+      "value": 0.10224438902743142,
+      "text": "0.102",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_sign_permute_n1000": {
+      "value": 0.11288711288711288,
+      "text": "0.113",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_p_sign_permute": {
+      "value": 0.11288711288711288,
+      "text": "0.113",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_z_sign_permute": {
+      "value": 1.6804375405898477,
+      "text": "1.680",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_weight_permute_n25": {
+      "value": 0.038461538461538464,
+      "text": "0.038",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_weight_permute_n50": {
       "value": 0.0196078431372549,
       "text": "0.020",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_z_fipronil_rewire_degree_preserving": {
-      "value": 3.0160148461411396,
-      "text": "3.016",
+    "sweep_named_fipronil_weight_permute_n100": {
+      "value": 0.009900990099009901,
+      "text": "0.010",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_p_fipronil_rewire_degree_preserving": {
+    "sweep_named_fipronil_weight_permute_n200": {
+      "value": 0.009950248756218905,
+      "text": "0.010",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_weight_permute_n400": {
+      "value": 0.007481296758104738,
+      "text": "0.007",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_weight_permute_n1000": {
+      "value": 0.005994005994005994,
+      "text": "0.006",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_p_weight_permute": {
+      "value": 0.005994005994005994,
+      "text": "0.006",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_z_weight_permute": {
+      "value": 3.1081154079500792,
+      "text": "3.108",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_rewire_degree_preserving_n25": {
+      "value": 0.038461538461538464,
+      "text": "0.038",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_rewire_degree_preserving_n50": {
       "value": 0.0392156862745098,
       "text": "0.039",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_z_fipronil_erdos_renyi": {
-      "value": 1355.248227533342,
-      "text": "1355",
+    "sweep_named_fipronil_rewire_degree_preserving_n100": {
+      "value": 0.0297029702970297,
+      "text": "0.030",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_p_fipronil_erdos_renyi": {
+    "sweep_named_fipronil_rewire_degree_preserving_n200": {
+      "value": 0.014925373134328358,
+      "text": "0.015",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_rewire_degree_preserving_n400": {
+      "value": 0.007481296758104738,
+      "text": "0.007",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_rewire_degree_preserving_n1000": {
+      "value": 0.006993006993006993,
+      "text": "0.007",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_p_rewire_degree_preserving": {
+      "value": 0.006993006993006993,
+      "text": "0.007",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_z_rewire_degree_preserving": {
+      "value": 2.952113032120801,
+      "text": "2.952",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_erdos_renyi_n25": {
+      "value": 0.038461538461538464,
+      "text": "0.038",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_named_fipronil_erdos_renyi_n50": {
       "value": 0.0196078431372549,
       "text": "0.020",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "nulltaste_z_fipronil_sign_permute": {
-      "value": -0.20111407537327874,
-      "text": "-0.201",
+    "sweep_named_fipronil_erdos_renyi_n100": {
+      "value": 0.009900990099009901,
+      "text": "0.010",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "nulltaste_z_fipronil_weight_permute": {
-      "value": 0.24886859215510687,
-      "text": "0.249",
+    "sweep_named_fipronil_erdos_renyi_n200": {
+      "value": 0.004975124378109453,
+      "text": "0.005",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "nulltaste_z_fipronil_rewire_degree_preserving": {
-      "value": 0.4606512610160825,
-      "text": "0.461",
+    "sweep_named_fipronil_erdos_renyi_n400": {
+      "value": 0.0024937655860349127,
+      "text": "0.002",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "nulltaste_z_fipronil_erdos_renyi": {
-      "value": 0.7109123638282273,
-      "text": "0.711",
+    "sweep_named_fipronil_erdos_renyi_n1000": {
+      "value": 0.000999000999000999,
+      "text": "9.99e-04",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_score_fipronil": {
+    "dep_named_fipronil_p_erdos_renyi": {
+      "value": 0.000999000999000999,
+      "text": "9.99e-04",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_z_erdos_renyi": {
+      "value": 657.4085945220143,
+      "text": "657",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_effect": {
+      "value": 0.8996076235547861,
+      "text": "0.900",
+      "unit": "Hz",
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_class": {
+      "value": "topology-dependent",
+      "text": "topology-dependent",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_level": {
+      "value": "wiring_without_transmitter_identity",
+      "text": "wiring_without_transmitter_identity",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_max_abs_z": {
+      "value": 657.4085945220143,
+      "text": "657",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_named_fipronil_min_structural_p": {
+      "value": 0.005994005994005994,
+      "text": "0.006",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_sign_permute_n8": {
+      "value": 0.6666666666666666,
+      "text": "0.667",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_sign_permute_n15": {
+      "value": 0.6428571428571429,
+      "text": "0.643",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_sign_permute_n30": {
+      "value": 0.6206896551724138,
+      "text": "0.621",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_sign_permute_n60": {
+      "value": 0.45614035087719296,
+      "text": "0.456",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_sign_permute_n120": {
+      "value": 0.38738738738738737,
+      "text": "0.387",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_sign_permute_n300": {
+      "value": 0.4166666666666667,
+      "text": "0.417",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_p_sign_permute": {
+      "value": 0.4166666666666667,
+      "text": "0.417",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_z_sign_permute": {
+      "value": 0.10528405393322808,
+      "text": "0.105",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_weight_permute_n8": {
+      "value": 0.6666666666666666,
+      "text": "0.667",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_weight_permute_n15": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_weight_permute_n30": {
+      "value": 0.9655172413793104,
+      "text": "0.966",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_weight_permute_n60": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_weight_permute_n120": {
+      "value": 0.9814814814814815,
+      "text": "0.981",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_weight_permute_n300": {
+      "value": 0.8787878787878788,
+      "text": "0.879",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_p_weight_permute": {
+      "value": 0.8787878787878788,
+      "text": "0.879",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_z_weight_permute": {
+      "value": 0.08338722294294257,
+      "text": "0.083",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_rewire_degree_preserving_n8": {
+      "value": 0.6666666666666666,
+      "text": "0.667",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_rewire_degree_preserving_n15": {
+      "value": 0.5625,
+      "text": "0.562",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_rewire_degree_preserving_n30": {
+      "value": 0.3870967741935484,
+      "text": "0.387",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_rewire_degree_preserving_n60": {
+      "value": 0.3114754098360656,
+      "text": "0.311",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_rewire_degree_preserving_n120": {
+      "value": 0.2727272727272727,
+      "text": "0.273",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_rewire_degree_preserving_n300": {
+      "value": 0.2026578073089701,
+      "text": "0.203",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_p_rewire_degree_preserving": {
+      "value": 0.2026578073089701,
+      "text": "0.203",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_z_rewire_degree_preserving": {
+      "value": 0.2199798112275568,
+      "text": "0.220",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_erdos_renyi_n8": {
+      "value": 0.4444444444444444,
+      "text": "0.444",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_erdos_renyi_n15": {
       "value": 0.375,
       "text": "0.375",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_imi_max_structural_z": {
-      "value": 1.227640533947596,
-      "text": "1.228",
+    "sweep_taste_fipronil_erdos_renyi_n30": {
+      "value": 0.41935483870967744,
+      "text": "0.419",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_fip_max_structural_z": {
-      "value": 3.372072205632216,
-      "text": "3.372",
+    "sweep_taste_fipronil_erdos_renyi_n60": {
+      "value": 0.4576271186440678,
+      "text": "0.458",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
     },
-    "null_fip_taste_max_z": {
-      "value": 0.7109123638282273,
-      "text": "0.711",
+    "sweep_taste_fipronil_erdos_renyi_n120": {
+      "value": 0.30357142857142855,
+      "text": "0.304",
       "unit": null,
       "note": null,
-      "step": "nulls"
+      "step": "dependence"
+    },
+    "sweep_taste_fipronil_erdos_renyi_n300": {
+      "value": 0.24475524475524477,
+      "text": "0.245",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_p_erdos_renyi": {
+      "value": 0.24475524475524477,
+      "text": "0.245",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_z_erdos_renyi": {
+      "value": 0.19844034305095073,
+      "text": "0.198",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_effect": {
+      "value": 0.41261581231925487,
+      "text": "0.413",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_class": {
+      "value": "composition-dominated",
+      "text": "composition-dominated",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_level": {
+      "value": "size_and_composition",
+      "text": "size_and_composition",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_max_abs_z": {
+      "value": 0.2199798112275568,
+      "text": "0.220",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_taste_fipronil_min_structural_p": {
+      "value": 0.2026578073089701,
+      "text": "0.203",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_verdict_stable_from_n": {
+      "value": 50,
+      "text": "50",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_verdict_stable_to_n": {
+      "value": 400,
+      "text": "400",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_p_within_0p02_from_n": {
+      "value": 25,
+      "text": "25",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_p_within_0p02_worst_n": {
+      "value": 400,
+      "text": "400",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_land_cells": {
+      "value": 84,
+      "text": "84",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_land_compounds": {
+      "value": 21,
+      "text": "21",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_land_concs": {
+      "value": 4,
+      "text": "4",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_land_topology_dependent": {
+      "value": 20,
+      "text": "20",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_land_mixed": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_land_composition_dominated": {
+      "value": 51,
+      "text": "51",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_land_no_effect": {
+      "value": 13,
+      "text": "13",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_land_undefined": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_land_topology_compounds": {
+      "value": [
+        "chlorpyrifos_oxon",
+        "dieldrin",
+        "fipronil",
+        "gaba",
+        "ivermectin",
+        "picrotoxin"
+      ],
+      "text": "chlorpyrifos_oxon, dieldrin, fipronil, gaba, ivermectin, picrotoxin",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "dep_land_topology_cells": {
+      "value": [
+        "chlorpyrifos_oxon@1e-08",
+        "dieldrin@1e-08",
+        "dieldrin@1e-07",
+        "dieldrin@1e-06",
+        "dieldrin@1e-05",
+        "fipronil@1e-08",
+        "fipronil@1e-07",
+        "fipronil@1e-06",
+        "fipronil@1e-05",
+        "gaba@1e-07",
+        "gaba@1e-06",
+        "gaba@1e-05",
+        "ivermectin@1e-08",
+        "ivermectin@1e-07",
+        "ivermectin@1e-06",
+        "ivermectin@1e-05",
+        "picrotoxin@1e-08",
+        "picrotoxin@1e-07",
+        "picrotoxin@1e-06",
+        "picrotoxin@1e-05"
+      ],
+      "text": "chlorpyrifos_oxon 10 nM, dieldrin 10 nM, dieldrin 100 nM, dieldrin 1 \u00b5M, dieldrin 10 \u00b5M, fipronil 10 nM, fipronil 100 nM, fipronil 1 \u00b5M, fipronil 10 \u00b5M, gaba 100 nM, gaba 1 \u00b5M, gaba 10 \u00b5M, ivermectin 10 nM, ivermectin 100 nM, ivermectin 1 \u00b5M, ivermectin 10 \u00b5M, picrotoxin 10 nM, picrotoxin 100 nM, picrotoxin 1 \u00b5M, picrotoxin 10 \u00b5M",
+      "unit": null,
+      "note": null,
+      "step": "dependence"
+    },
+    "abl_compounds": {
+      "value": 21,
+      "text": "21",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_concs": {
+      "value": 4,
+      "text": "4",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_levels": {
+      "value": [
+        "A_receptor_only",
+        "B_composition_only",
+        "C_topology_only",
+        "D_full_flylab"
+      ],
+      "text": "A_receptor_only, B_composition_only, C_topology_only, D_full_flylab",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_receptor_min": {
+      "value": -0.5057464187739324,
+      "text": "-0.506",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_receptor_max": {
+      "value": -0.04620893838817564,
+      "text": "-0.046",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_composition_min": {
+      "value": 0.9061889250814332,
+      "text": "0.906",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_composition_max": {
+      "value": 0.9885475201437236,
+      "text": "0.989",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_topology_min": {
+      "value": -0.42708342384411907,
+      "text": "-0.427",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_topology_max": {
+      "value": 0.27864589238610205,
+      "text": "0.279",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_full flylab_min": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_full flylab_max": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_topology_paper": {
+      "value": 0.24159822391955538,
+      "text": "0.242",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rms_topology_hz": {
+      "value": 11.739863157102864,
+      "text": "11.7",
+      "unit": "Hz",
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_composition_paper": {
+      "value": 0.9878103669773378,
+      "text": "0.988",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_receptor_paper": {
+      "value": -0.4314654500371033,
+      "text": "-0.431",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_statements": {
+      "value": [
+        "A_receptor_only does NOT reproduce the full model at 1.0e-08 M: rho = -0.046, r = -0.403; the layers above it are doing real work.",
+        "B_composition_only REPRODUCES the full model at 1.0e-08 M (ordering only: this level's units are not the full model's): rho = 0.906, r = 0.998 over 21 compounds. The layers above it add no ordering information for this readout.",
+        "C_topology_only does NOT reproduce the full model at 1.0e-08 M: rho = -0.427, r = -0.369; the layers above it are doing real work.",
+        "A_receptor_only does NOT reproduce the full model at 1.0e-07 M: rho = -0.348, r = 0.001; the layers above it are doing real work.",
+        "B_composition_only REPRODUCES the full model at 1.0e-07 M (ordering only: this level's units are not the full model's): rho = 0.989, r = 0.717 over 21 compounds. The layers above it add no ordering information for this readout.",
+        "C_topology_only does NOT reproduce the full model at 1.0e-07 M: rho = 0.279, r = 0.054; the layers above it are doing real work.",
+        "A_receptor_only does NOT reproduce the full model at 1.0e-06 M: rho = -0.431, r = 0.082; the layers above it are doing real work.",
+        "B_composition_only REPRODUCES the full model at 1.0e-06 M (ordering only: this level's units are not the full model's): rho = 0.988, r = 0.756 over 21 compounds. The layers above it add no ordering information for this readout.",
+        "C_topology_only does NOT reproduce the full model at 1.0e-06 M: rho = 0.242, r = -0.070; the layers above it are doing real work.",
+        "A_receptor_only does NOT reproduce the full model at 1.0e-05 M: rho = -0.506, r = 0.086; the layers above it are doing real work.",
+        "B_composition_only REPRODUCES the full model at 1.0e-05 M (ordering only: this level's units are not the full model's): rho = 0.987, r = 0.754 over 21 compounds. The layers above it add no ordering information for this readout.",
+        "C_topology_only does NOT reproduce the full model at 1.0e-05 M: rho = 0.236, r = -0.118; the layers above it are doing real work."
+      ],
+      "text": "A_receptor_only does NOT reproduce the full model at 1.0e-08 M: rho = -0.046, r = -0.403; the layers above it are doing real work. B_composition_only REPRODUCES the full model at 1.0e-08 M (ordering only: this level's units are not the full model's): rho = 0.906, r = 0.998 over 21 compounds. The layers above it add no ordering information for this readout. C_topology_only does NOT reproduce the full model at 1.0e-08 M: rho = -0.427, r = -0.369; the layers above it are doing real work. A_receptor_only does NOT reproduce the full model at 1.0e-07 M: rho = -0.348, r = 0.001; the layers above it are doing real work. B_composition_only REPRODUCES the full model at 1.0e-07 M (ordering only: this level's units are not the full model's): rho = 0.989, r = 0.717 over 21 compounds. The layers above it add no ordering information for this readout. C_topology_only does NOT reproduce the full model at 1.0e-07 M: rho = 0.279, r = 0.054; the layers above it are doing real work. A_receptor_only does NOT reproduce the full model at 1.0e-06 M: rho = -0.431, r = 0.082; the layers above it are doing real work. B_composition_only REPRODUCES the full model at 1.0e-06 M (ordering only: this level's units are not the full model's): rho = 0.988, r = 0.756 over 21 compounds. The layers above it add no ordering information for this readout. C_topology_only does NOT reproduce the full model at 1.0e-06 M: rho = 0.242, r = -0.070; the layers above it are doing real work. A_receptor_only does NOT reproduce the full model at 1.0e-05 M: rho = -0.506, r = 0.086; the layers above it are doing real work. B_composition_only REPRODUCES the full model at 1.0e-05 M (ordering only: this level's units are not the full model's): rho = 0.987, r = 0.754 over 21 compounds. The layers above it add no ordering information for this readout. C_topology_only does NOT reproduce the full model at 1.0e-05 M: rho = 0.236, r = -0.118; the layers above it are doing real work.",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_nicotinic_n": {
+      "value": 9,
+      "text": "9",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_composition_nicotinic": {
+      "value": 0.9534625892455924,
+      "text": "0.953",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_rho_receptor_nicotinic": {
+      "value": -0.7866339502806552,
+      "text": "-0.787",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
+    },
+    "abl_generic_rule": {
+      "value": "g_all = max(0.05, 1 - theta_max)",
+      "text": "g_all = max(0.05, 1 - theta_max)",
+      "unit": null,
+      "note": null,
+      "step": "ablation"
     },
     "landscape_n_concs": {
       "value": 13,
@@ -1042,15 +2117,15 @@
       "step": "landscape"
     },
     "landscape_scored": {
-      "value": 22,
-      "text": "22",
+      "value": 20,
+      "text": "20",
       "unit": null,
       "note": null,
       "step": "landscape"
     },
     "landscape_compounds_scored": {
-      "value": 11,
-      "text": "11",
+      "value": 10,
+      "text": "10",
       "unit": null,
       "note": null,
       "step": "landscape"
@@ -1063,8 +2138,8 @@
       "step": "landscape"
     },
     "landscape_buffer_rows": {
-      "value": 14,
-      "text": "14",
+      "value": 12,
+      "text": "12",
       "unit": null,
       "note": null,
       "step": "landscape"
@@ -1088,10 +2163,9 @@
         "clothianidin",
         "imidacloprid",
         "nicotine",
-        "nitenpyram",
-        "spinosad"
+        "nitenpyram"
       ],
-      "text": "acetamiprid, acetylcholine, clothianidin, imidacloprid, nicotine, nitenpyram, spinosad",
+      "text": "acetamiprid, acetylcholine, clothianidin, imidacloprid, nicotine, nitenpyram",
       "unit": null,
       "note": null,
       "step": "landscape"
@@ -1104,15 +2178,15 @@
       "step": "landscape"
     },
     "landscape_buffer_mean_gap": {
-      "value": -0.8822337903153011,
-      "text": "-0.882",
+      "value": -0.8698590379450709,
+      "text": "-0.870",
       "unit": null,
       "note": null,
       "step": "landscape"
     },
     "landscape_gap_split": {
-      "value": 1.1687309735235267,
-      "text": "1.169",
+      "value": 1.1563562211532965,
+      "text": "1.156",
       "unit": null,
       "note": null,
       "step": "landscape"
@@ -1125,10 +2199,11 @@
         "gaba",
         "ivermectin",
         "picrotoxin",
+        "spinosad",
         "sulfoxaflor",
         "thiamethoxam"
       ],
-      "text": "chlordimeform, dieldrin, fipronil, gaba, ivermectin, picrotoxin, sulfoxaflor, thiamethoxam",
+      "text": "chlordimeform, dieldrin, fipronil, gaba, ivermectin, picrotoxin, spinosad, sulfoxaflor, thiamethoxam",
       "unit": null,
       "note": null,
       "step": "landscape"
@@ -1155,15 +2230,15 @@
       "step": "dose"
     },
     "ic50_lo_M": {
-      "value": 3.00737853098516e-08,
-      "text": "30.1 nM",
+      "value": 3.52381830107519e-08,
+      "text": "35.2 nM",
       "unit": null,
       "note": null,
       "step": "dose"
     },
     "ic50_hi_M": {
-      "value": 4.484102585184239e-08,
-      "text": "44.8 nM",
+      "value": 7.15055024256253e-08,
+      "text": "71.5 nM",
       "unit": null,
       "note": null,
       "step": "dose"
@@ -1333,8 +2408,8 @@
       "step": "genotype"
     },
     "geno_imidacloprid_wt_occ": {
-      "value": 0.9909367919777582,
-      "text": "0.991",
+      "value": 0.9999170068884283,
+      "text": "1.000",
       "unit": null,
       "note": null,
       "step": "genotype"
@@ -1508,29 +2583,29 @@
       "step": "validation"
     },
     "rank_evaluated": {
-      "value": 9,
-      "text": "9",
+      "value": 8,
+      "text": "8",
       "unit": null,
       "note": null,
       "step": "validation"
     },
     "rank_skipped": {
-      "value": 15,
-      "text": "15",
+      "value": 16,
+      "text": "16",
       "unit": null,
       "note": null,
       "step": "validation"
     },
     "rank_mean_rho": {
-      "value": 0.824814949689265,
-      "text": "0.825",
+      "value": 0.8779168184004231,
+      "text": "0.878",
       "unit": null,
       "note": null,
       "step": "validation"
     },
     "rank_mean_rho_occupancy": {
-      "value": 0.8511844635310912,
-      "text": "0.851",
+      "value": 0.9414213562373096,
+      "text": "0.941",
       "unit": null,
       "note": null,
       "step": "validation"
@@ -1556,12 +2631,49 @@
       "note": null,
       "step": "validation"
     },
+    "rank_species_drosophila": {
+      "value": 4,
+      "text": "4",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
     "rank_discrepancy_ids": {
       "value": [
         "nitenpyram_rank_inverted",
         "clothianidin_vs_imidacloprid_inverted"
       ],
       "text": "nitenpyram_rank_inverted, clothianidin_vs_imidacloprid_inverted",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_shared_source_entries": {
+      "value": [
+        "neonic_resistance_ratio_myzus"
+      ],
+      "text": "neonic_resistance_ratio_myzus",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_shared_source": {
+      "value": 1,
+      "text": "1",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_source_disjoint": {
+      "value": 5,
+      "text": "5",
+      "unit": null,
+      "note": null,
+      "step": "validation"
+    },
+    "rank_entries_evaluable": {
+      "value": 6,
+      "text": "6",
       "unit": null,
       "note": null,
       "step": "validation"
@@ -1574,8 +2686,8 @@
       "step": "predictions"
     },
     "pred_H1_effect": {
-      "value": 0.872069354005092,
-      "text": "0.872",
+      "value": 0.8537671990909296,
+      "text": "0.854",
       "unit": null,
       "note": null,
       "step": "predictions"
@@ -1595,8 +2707,8 @@
       "step": "predictions"
     },
     "pred_H2_effect": {
-      "value": -5.923968652900892,
-      "text": "-5.924",
+      "value": -6.145234834515873,
+      "text": "-6.145",
       "unit": null,
       "note": null,
       "step": "predictions"
@@ -1616,8 +2728,8 @@
       "step": "predictions"
     },
     "pred_H3_effect": {
-      "value": 0.863346092315895,
-      "text": "0.863",
+      "value": 0.8955929363577542,
+      "text": "0.896",
       "unit": null,
       "note": null,
       "step": "predictions"
@@ -1679,8 +2791,8 @@
       "step": "predictions"
     },
     "pred_H6_effect": {
-      "value": 0.4101604120277051,
-      "text": "0.410",
+      "value": 0.41291238946428677,
+      "text": "0.413",
       "unit": null,
       "note": null,
       "step": "predictions"
@@ -1700,8 +2812,8 @@
       "step": "predictions"
     },
     "pred_H7_effect": {
-      "value": 0.4189723305585867,
-      "text": "0.419",
+      "value": 0.561387849526776,
+      "text": "0.561",
       "unit": null,
       "note": null,
       "step": "predictions"
@@ -1895,17 +3007,973 @@
       "note": null,
       "step": "expression"
     },
+    "stab_family_size": {
+      "value": 25,
+      "text": "25",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_default_spec": {
+      "value": "flylab_biphasic@1.00x",
+      "text": "flylab_biphasic@1.00x",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_n_conclusions": {
+      "value": 7,
+      "text": "7",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_n_shuffles": {
+      "value": 6,
+      "text": "6",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C1_claim": {
+      "value": "a nicotinic agonist (imidacloprid, 1 uM) suppresses network activity",
+      "text": "a nicotinic agonist (imidacloprid, 1 uM) suppresses network activity",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C1_retained": {
+      "value": 15,
+      "text": "15",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C1_lost": {
+      "value": 10,
+      "text": "10",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C1_undecidable": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C1_fraction": {
+      "value": 0.6,
+      "text": "0.600",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C1_failing": {
+      "value": [
+        "linear@0.50x",
+        "linear@0.75x",
+        "linear@1.00x",
+        "linear@1.25x",
+        "linear@1.50x",
+        "saturating@0.50x",
+        "saturating@0.75x",
+        "saturating@1.00x",
+        "saturating@1.25x",
+        "saturating@1.50x"
+      ],
+      "text": "linear@0.50x, linear@0.75x, linear@1.00x, linear@1.25x, linear@1.50x, saturating@0.50x, saturating@0.75x, saturating@1.00x, saturating@1.25x, saturating@1.50x",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C5_claim": {
+      "value": "the neighborhood buffers nicotinic receptor selectivity",
+      "text": "the neighborhood buffers nicotinic receptor selectivity",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C5_retained": {
+      "value": 18,
+      "text": "18",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C5_lost": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C5_undecidable": {
+      "value": 7,
+      "text": "7",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C5_fraction": {
+      "value": 0.72,
+      "text": "0.720",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C5_failing": {
+      "value": [],
+      "text": "none",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C6_claim": {
+      "value": "the neighborhood amplifies Nav / AChE receptor selectivity",
+      "text": "the neighborhood amplifies Nav / AChE receptor selectivity",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C6_retained": {
+      "value": 19,
+      "text": "19",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C6_lost": {
+      "value": 6,
+      "text": "6",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C6_undecidable": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C6_fraction": {
+      "value": 0.76,
+      "text": "0.760",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C6_failing": {
+      "value": [
+        "flylab_biphasic@0.50x",
+        "linear@0.50x",
+        "strong_biphasic@0.50x",
+        "strong_biphasic@0.75x",
+        "strong_biphasic@1.00x",
+        "weak_biphasic@0.50x"
+      ],
+      "text": "flylab_biphasic@0.50x, linear@0.50x, strong_biphasic@0.50x, strong_biphasic@0.75x, strong_biphasic@1.00x, weak_biphasic@0.50x",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C2_claim": {
+      "value": "an RDL antagonist (fipronil, 1 uM) disinhibits the network",
+      "text": "an RDL antagonist (fipronil, 1 uM) disinhibits the network",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C2_retained": {
+      "value": 25,
+      "text": "25",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C2_lost": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C2_undecidable": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C2_fraction": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C2_failing": {
+      "value": [],
+      "text": "none",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C3_claim": {
+      "value": "imidacloprid's mean-rate effect is not a wiring result",
+      "text": "imidacloprid's mean-rate effect is not a wiring result",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C3_retained": {
+      "value": 25,
+      "text": "25",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C3_lost": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C3_undecidable": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C3_fraction": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C3_failing": {
+      "value": [],
+      "text": "none",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C4_claim": {
+      "value": "fipronil's topology dependence exceeds imidacloprid's",
+      "text": "fipronil's topology dependence exceeds imidacloprid's",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C4_retained": {
+      "value": 25,
+      "text": "25",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C4_lost": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C4_undecidable": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C4_fraction": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C4_failing": {
+      "value": [],
+      "text": "none",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C7_claim": {
+      "value": "on the map path, bitter drive lowers MN9 under fipronil",
+      "text": "on the map path, bitter drive lowers MN9 under fipronil",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C7_retained": {
+      "value": 25,
+      "text": "25",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C7_lost": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C7_undecidable": {
+      "value": 0,
+      "text": "0",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C7_fraction": {
+      "value": 1.0,
+      "text": "1.000",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C7_failing": {
+      "value": [],
+      "text": "none",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_fragile": {
+      "value": [
+        "C1_nicotinic_suppression",
+        "C5_nicotinic_buffering",
+        "C6_nav_ache_amplification"
+      ],
+      "text": "C1_nicotinic_suppression, C5_nicotinic_buffering, C6_nav_ache_amplification",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_specification_independent": {
+      "value": [
+        "C2_rdl_disinhibition",
+        "C3_imidacloprid_topology_weak",
+        "C4_fipronil_topology_exceeds",
+        "C7_map_bitter_veto"
+      ],
+      "text": "C2_rdl_disinhibition, C3_imidacloprid_topology_weak, C4_fipronil_topology_exceeds, C7_map_bitter_veto",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C1_n_reversing": {
+      "value": 10,
+      "text": "10",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_C1_example_spec": {
+      "value": "linear@1.00x",
+      "text": "linear@1.00x",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_default_treated_hz": {
+      "value": 0.45846211979249263,
+      "text": "0.458",
+      "unit": "Hz",
+      "note": null,
+      "step": "stability"
+    },
+    "stab_default_vehicle_hz": {
+      "value": 6.631244285926711,
+      "text": "6.631",
+      "unit": "Hz",
+      "note": null,
+      "step": "stability"
+    },
+    "stab_default_g_ach": {
+      "value": 0.05,
+      "text": "0.050",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_monotone_treated_hz": {
+      "value": 10.103618005735553,
+      "text": "10.1",
+      "unit": "Hz",
+      "note": null,
+      "step": "stability"
+    },
+    "stab_monotone_vehicle_hz": {
+      "value": 6.631244285926711,
+      "text": "6.631",
+      "unit": "Hz",
+      "note": null,
+      "step": "stability"
+    },
+    "stab_monotone_g_ach": {
+      "value": 1.3963747167911034,
+      "text": "1.396",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_monotone_pct_change": {
+      "value": 52.36383354445493,
+      "text": "+52%",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_mean_gap_nicotinic_default": {
+      "value": -0.8836082400406419,
+      "text": "-0.884",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_mean_gap_nicotinic_monotone": {
+      "value": -0.8929449323721664,
+      "text": "-0.893",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "stab_mean_gap_nicotinic_monotone_n": {
+      "value": 6,
+      "text": "6",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_stable": {
+      "value": false,
+      "text": "no",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_circuit_fracs": {
+      "value": [
+        0.25,
+        0.4,
+        0.5
+      ],
+      "text": "25%, 40%, 50%",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_vert_limits": {
+      "value": [
+        0.1,
+        0.2,
+        0.3
+      ],
+      "text": "10%, 20%, 30%",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nicotinic_matching": {
+      "value": 9,
+      "text": "9",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nicotinic_cells": {
+      "value": 9,
+      "text": "9",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nicotinic_stable": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nicotinic_failing": {
+      "value": [],
+      "text": "none",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nav_ache_matching": {
+      "value": 8,
+      "text": "8",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nav_ache_cells": {
+      "value": 9,
+      "text": "9",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nav_ache_stable": {
+      "value": false,
+      "text": "no",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nav_ache_failing": {
+      "value": [
+        "circuit_frac=0.50,vert_limit=0.10"
+      ],
+      "text": "circuit_frac=0.50,vert_limit=0.10",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nicotinic_gap_min": {
+      "value": -1.2240513408816258,
+      "text": "-1.224",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nicotinic_gap_max": {
+      "value": -0.362108493778807,
+      "text": "-0.362",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nav_ache_gap_min": {
+      "value": -0.0752461538175645,
+      "text": "-0.075",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "thr_nav_ache_gap_max": {
+      "value": 0.8131579176045398,
+      "text": "0.813",
+      "unit": null,
+      "note": null,
+      "step": "stability"
+    },
+    "unc_n_base": {
+      "value": 1024,
+      "text": "1024",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_n_factors": {
+      "value": 9,
+      "text": "9",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_evaluations": {
+      "value": 11264,
+      "text": "11\u202f264",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_estimator": {
+      "value": "jansen1999",
+      "text": "jansen1999",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_output_mean": {
+      "value": 1.4804027560720454,
+      "text": "1.480",
+      "unit": "Hz",
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_variance": {
+      "value": 3.149230029344893,
+      "text": "3.149",
+      "unit": "Hz^2",
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_interaction_share": {
+      "value": 0.3442830879951747,
+      "text": "0.344",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_S_gain_transform": {
+      "value": 0.4096497698742678,
+      "text": "0.410",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_ST_gain_transform": {
+      "value": 0.6264806479027828,
+      "text": "0.626",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_S_weight_threshold": {
+      "value": 0.29357557224259245,
+      "text": "0.294",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_ST_weight_threshold": {
+      "value": 0.5424303725151057,
+      "text": "0.542",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_S_drive": {
+      "value": 0.018555443445925905,
+      "text": "0.019",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_ST_drive": {
+      "value": 0.14121674202113985,
+      "text": "0.141",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_S_gain_coef": {
+      "value": -0.04565580230843003,
+      "text": "-0.046",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_ST_gain_coef": {
+      "value": 0.023822223893828185,
+      "text": "0.024",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_S_transmitter": {
+      "value": 0.006078670560203601,
+      "text": "0.006",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_ST_transmitter": {
+      "value": 0.023642782102253644,
+      "text": "0.024",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_S_hill_n": {
+      "value": -0.007946568350353221,
+      "text": "-0.008",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_ST_hill_n": {
+      "value": 0.0007525711738826337,
+      "text": "7.53e-04",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_S_potency": {
+      "value": -0.005989859757710479,
+      "text": "-0.006",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_ST_potency": {
+      "value": 0.0006784194893530697,
+      "text": "6.78e-04",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_S_expression": {
+      "value": -0.005809124285986339,
+      "text": "-0.006",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_ST_expression": {
+      "value": 0.00012806053442048645,
+      "text": "1.28e-04",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_S_lif_seed": {
+      "value": -0.006741189415684353,
+      "text": "-0.007",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_ST_lif_seed": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_top_factor": {
+      "value": "gain_transform",
+      "text": "gain_transform",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_second_factor": {
+      "value": "weight_threshold",
+      "text": "weight_threshold",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_noise_floor": {
+      "value": 0.006741189415684353,
+      "text": "0.007",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_at_noise_floor": {
+      "value": [
+        "expression",
+        "gain_coef",
+        "hill_n",
+        "potency",
+        "transmitter"
+      ],
+      "text": "expression, gain_coef, hill_n, potency, transmitter",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "unc_max_delta_first": {
+      "value": 0.04034953984299405,
+      "text": "0.040",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "ish_n_base": {
+      "value": 16384,
+      "text": "16\u202f384",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "ish_estimated": {
+      "value": [
+        0.3163,
+        0.4495,
+        0.0072
+      ],
+      "text": "0.3163, 0.4495, 0.0072",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "ish_analytic": {
+      "value": [
+        0.3139,
+        0.4424,
+        0.0
+      ],
+      "text": "0.3139, 0.4424, 0.0000",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "ish_max_abs_error": {
+      "value": 0.007165317322344709,
+      "text": "0.007",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_var_total": {
+      "value": 3.149230029344893,
+      "text": "3.149",
+      "unit": "Hz^2",
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank1_factor": {
+      "value": "gain_transform",
+      "text": "gain_transform",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank1_var": {
+      "value": 1.290081356802269,
+      "text": "1.290",
+      "unit": "Hz^2",
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank1_fraction": {
+      "value": 0.4096497698742678,
+      "text": "0.410",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank1_experiment": {
+      "value": "calibration of receptor engagement against synaptic gain",
+      "text": "calibration of receptor engagement against synaptic gain",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank1_cost": {
+      "value": "high",
+      "text": "high",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank2_factor": {
+      "value": "weight_threshold",
+      "text": "weight_threshold",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank2_var": {
+      "value": 0.9245370079884832,
+      "text": "0.925",
+      "unit": "Hz^2",
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank2_fraction": {
+      "value": 0.29357557224259245,
+      "text": "0.294",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank2_experiment": {
+      "value": "no experiment: a reconstruction-confidence analysis",
+      "text": "no experiment: a reconstruction-confidence analysis",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank2_cost": {
+      "value": "none (compute only)",
+      "text": "none (compute only)",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank3_factor": {
+      "value": "drive",
+      "text": "drive",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank3_var": {
+      "value": 0.05843535970772074,
+      "text": "0.058",
+      "unit": "Hz^2",
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank3_fraction": {
+      "value": 0.018555443445925905,
+      "text": "0.019",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank3_experiment": {
+      "value": "in vivo baseline firing rates of the driven cell classes",
+      "text": "in vivo baseline firing rates of the driven cell classes",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_rank3_cost": {
+      "value": "medium",
+      "text": "medium",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_recommendation": {
+      "value": "Next experiment: calibration of receptor engagement against synaptic gain. Resolving gain_transform would remove about 41% of the model variance of mean_hz for imidacloprid at 1e-06 M (1.29 of 3.15 Hz^2; the readout's SD would fall from 1.77 to 1.36 Hz). the reviewer's central objection: the nicotinic 'buffering' result follows in large part from the deliberately biphasic nAChR rule, so this is the one experiment that could convert a modelling choice into a measurement. Before spending bench time, note that weight_threshold (29%) can be reduced from existing data or compute alone.",
+      "text": "Next experiment: calibration of receptor engagement against synaptic gain. Resolving gain_transform would remove about 41% of the model variance of mean_hz for imidacloprid at 1e-06 M (1.29 of 3.15 Hz^2; the readout's SD would fall from 1.77 to 1.36 Hz). the reviewer's central objection: the nicotinic 'buffering' result follows in large part from the deliberately biphasic nAChR rule, so this is the one experiment that could convert a modelling choice into a measurement. Before spending bench time, note that weight_threshold (29%) can be reduced from existing data or compute alone.",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "voi_no_experiment_needed": {
+      "value": [
+        "weight_threshold"
+      ],
+      "text": "weight_threshold",
+      "unit": null,
+      "note": null,
+      "step": "uncertainty"
+    },
+    "paper_words_body": {
+      "value": 6555,
+      "text": "6555",
+      "unit": "words",
+      "note": null,
+      "step": "paper"
+    },
     "paper_words": {
-      "value": 10988,
-      "text": "10\u202f988",
+      "value": 9829,
+      "text": "9829",
       "unit": null,
       "note": null,
       "step": "paper"
     },
-    "paper_words_body": {
-      "value": 8350,
-      "text": "8350",
+    "paper_words_in_target": {
+      "value": true,
+      "text": "yes",
       "unit": null,
+      "note": null,
+      "step": "paper"
+    },
+    "supplement_words": {
+      "value": 2878,
+      "text": "2878",
+      "unit": "words",
       "note": null,
       "step": "paper"
     },
@@ -1919,10 +3987,10 @@
     "_provenance": {
       "value": {
         "flylab_version": "0.5.0",
-        "git_sha": "bc447af291b33a06490c13439db661242f0518fb",
-        "library_sha256": "68252432a3971cf268c07658fa5a16f09d633d2075272728a61e7ddf913548cb",
-        "library_version": "0.5",
-        "library_schema_version": 2,
+        "git_sha": "c4a0011d9562bf52de559f5a2105f30c78860b71",
+        "library_sha256": "e52251389c0ca969ff51f60ffbc32b27d7c6cf1eef5a06d9559ca063baa9bd92",
+        "library_version": "0.6",
+        "library_schema_version": 3,
         "notebook_schema_version": "0.3",
         "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39 python-3.11.15",
         "map_id": "male-cns:v1.0",
@@ -1950,7 +4018,7 @@
       },
       "text": "",
       "unit": null,
-      "note": "provenance block, not a paper scalar",
+      "note": "carried over from the previous run in this outdir",
       "step": "provenance"
     }
   },
@@ -1958,10 +4026,18 @@
     {
       "name": "F2_dual_scorecard.png",
       "path": "figures/F2_dual_scorecard.png",
-      "bytes": 241480,
+      "bytes": 293669,
       "step": "scorecard",
       "figure": "F2_dual_scorecard",
       "caption": "Dual scorecard for imidacloprid and fipronil at 1 \u00b5M. Bars are Hill occupancy of the insect target (blue) and its vertebrate counterpart (orange) for each of the five receptor pairs declared in `library.yaml:selectivity_pairs`. Hatched bars rest on a class placeholder: the compound has no sourced EC50 at that pair and the row is inert. Imidacloprid reaches 0.991 at insect nAChR against 0.091 at vertebrate a4b2; fipronil reaches 0.985 at insect RDL against 0.476 at native heteromeric vertebrate GABA-A. Teaching-tier EC50s: these are literature-order values, not measured constants."
+    },
+    {
+      "name": "F11_evidence_types.png",
+      "path": "figures/F11_evidence_types.png",
+      "bytes": 165706,
+      "step": "evidence",
+      "figure": "F11_evidence_types",
+      "caption": "What the compound library rests on, row by row. Left: the parameter each cited source actually measured. Middle: how far that source is from this compound at this receptor in this species. Right: the transformation the type system then permits. Green marks the rows that may use a physical binding-occupancy model (a measured Kd or Ki); red marks rows that carry no modellable evidence and therefore return N/A rather than a small number. The type system, not a convention, enforces this: asking for an engagement from an untyped row raises rather than returning a value."
     },
     {
       "name": "F3_occupancy_curves.png",
@@ -1988,25 +4064,41 @@
       "caption": "MN9 firing on the map-extracted labellar-GRN path, driven through the real MaleCNS sweet (34) and bitter (38) GRN body IDs at 150 Hz, never by driving MN9 directly. Left: leaky rate engine. Right: Shiu-style LIF engine with a background Poisson drive. In vehicle, adding bitter drive takes MN9 to zero on both engines (veto ratio 0.00). Fipronil at 1 \u00b5M blocks RDL, raises the sugar-only rate and partially relieves the veto (ratio 0.41 rate, 0.16 LIF). Imidacloprid silences MN9 altogether, so its ratio is undefined rather than zero. Absolute rates differ between engines by construction and are not calibrated to any recording."
     },
     {
-      "name": "F6_null_models.png",
-      "path": "figures/F6_null_models.png",
-      "bytes": 262706,
-      "step": "nulls",
-      "figure": "F6_null_models",
-      "caption": "Histograms are the drug effect (treated minus vehicle on the network mean rate) measured on 50 degraded copies of the 1-hop MN9/DNp01 cut; the red line is the same contrast on the real cut. Columns are the four degradations in increasing order of destruction: transmitter labels permuted (E/I histogram preserved), synapse weights permuted, degree-preserving double-edge rewiring, and Erdos-Renyi. Imidacloprid beats only the Erdos-Renyi null (|z| = 46) and not the structure-preserving ones (max |z| = 1.23); fipronil beats the topology nulls (|z| = 3.37 weight-permute, 3.02 degree-preserving rewiring). Read this as a negative control that worked: for an nAChR agonist the mean-rate readout is largely an E/I-balance effect."
+      "name": "F6_dependence_profile.png",
+      "path": "figures/F6_dependence_profile.png",
+      "bytes": 301415,
+      "step": "dependence",
+      "figure": "F6_dependence_profile",
+      "caption": "Histograms are the drug effect (treated minus vehicle on the network mean rate) measured on 1000 degraded copies of the 1-hop MN9/DNp01 cut; the red line is the same contrast on the real cut. Columns run in increasing order of destruction: transmitter labels permuted (E/I histogram preserved exactly), synapse weights permuted, degree-preserving double-edge rewiring, Erdos-Renyi. Titles carry the empirical two-sided permutation p, not z. Imidacloprid is composition-dominated (necessary level: degree_sequence); fipronil is topology-dependent (necessary level: wiring_without_transmitter_identity)."
+    },
+    {
+      "name": "F12_dependence_landscape.png",
+      "path": "figures/F12_dependence_landscape.png",
+      "bytes": 148240,
+      "step": "dependence",
+      "figure": "F12_dependence_landscape",
+      "caption": "Every compound of the library at four concentrations, classified by the weakest graph model that reproduces its effect on the neighbourhood mean rate. 20 of 84 cells need the wiring pattern, 51 are reproduced by every structure-preserving degradation, 13 move the readout at all. The topology-dependent set is exactly the chloride-channel blockers: chlorpyrifos_oxon, dieldrin, fipronil, gaba, ivermectin, picrotoxin."
+    },
+    {
+      "name": "F13_ablation.png",
+      "path": "figures/F13_ablation.png",
+      "bytes": 250738,
+      "step": "ablation",
+      "figure": "F13_ablation",
+      "caption": "Each level predicts the same 21 compounds with one layer of information removed, and is scored by how well it reproduces the full model's *ordering* of the library (levels have different units, so values are not comparable). Receptor engagement alone orders the library backwards; the composition-only baseline already reproduces the full ordering; the real cut with a generic, mechanism-free multiplier is the worst level of all. The connectome without the pharmacology is not a cheap substitute for the connectome with it."
     },
     {
       "name": "F7_selectivity_landscape.png",
       "path": "figures/F7_selectivity_landscape.png",
-      "bytes": 251825,
+      "bytes": 248793,
       "step": "landscape",
       "figure": "F7_selectivity_landscape",
-      "caption": "Each point is one compound on one committed graph. The x axis is the receptor selectivity index from the library alone; the y axis is the circuit index, the log10 width of the window between the concentration that moves the simulated network mean rate by 50% and the concentration at which the most potent vertebrate target reaches 20% occupancy. Points below the dashed identity line are buffered by the circuit, points above are amplified. The split is by mechanism, not by potency: chlorpyrifos_oxon, ddt, deltamethrin, permethrin (Nav modulators and the AChE inhibitor) amplify, mean gap +0.29 log10 units, while the nAChR-acting set (acetamiprid, acetylcholine, clothianidin, imidacloprid, nicotine, nitenpyram, spinosad) buffers, mean gap -0.88. Compounds with no circuit index (chlordimeform, dieldrin, fipronil, gaba, ivermectin, picrotoxin, sulfoxaflor, thiamethoxam) never reach the 50% threshold on this cut and are omitted."
+      "caption": "Each point is one compound on one committed graph. The x axis is the receptor selectivity index from the library alone; the y axis is the circuit index, the log10 width of the window between the concentration that moves the simulated network mean rate by 50% and the concentration at which the most potent vertebrate target reaches 20% occupancy. Points below the dashed identity line are buffered by the circuit, points above are amplified. The split is by mechanism, not by potency: chlorpyrifos_oxon, ddt, deltamethrin, permethrin (Nav modulators and the AChE inhibitor) amplify, mean gap +0.29 log10 units, while the nAChR-acting set (acetamiprid, acetylcholine, clothianidin, imidacloprid, nicotine, nitenpyram) buffers, mean gap -0.87. Compounds with no circuit index (chlordimeform, dieldrin, fipronil, gaba, ivermectin, picrotoxin, spinosad, sulfoxaflor, thiamethoxam) never reach the 50% threshold on this cut and are omitted."
     },
     {
       "name": "F8_dose_response_sensitivity.png",
       "path": "figures/F8_dose_response_sensitivity.png",
-      "bytes": 182706,
+      "bytes": 182736,
       "step": "dose",
       "figure": "F8_dose_response_sensitivity",
       "caption": "Left: the model's own dose-response for imidacloprid on the 1-hop MN9/DNp01 cut. Points are 4 replicates per concentration with log-normal EC50 jitter (sd 0.3 log10 units) and drive jitter; the curve is a 4-parameter Hill fit, and the band is a 200-resample bootstrap CI on the fitted IC50 (34.7 nM). This is the *model's* circuit IC50, not a receptor IC50 and not an animal IC50. Right: one-at-a-time sensitivity of the same readout at 1 \u00b5M, each parameter halved and doubled. The gain-rule coefficient dominates; the EC50 and Hill coefficient have zero span because occupancy is already saturated at this dose."
@@ -2014,7 +4106,7 @@
     {
       "name": "F9_genotype_panel.png",
       "path": "figures/F9_genotype_panel.png",
-      "bytes": 179360,
+      "bytes": 179353,
       "step": "genotype",
       "figure": "F9_genotype_panel",
       "caption": "Target-receptor occupancy at 1 uM for wild type and each published resistance allele that has a sourced fold-shift for that compound. Grey bars are alleles with no sourced number for the compound: they are left identical to wild type and reported, never extrapolated. Left and centre: fipronil and imidacloprid. Right: the specificity check that motivates the per-compound rule. *para* M918T (super-kdr) shifts deltamethrin 100-fold but leaves DDT at 1-fold, and *Rdl* A301S shifts GABA 33.9-fold while leaving fipronil at 1.1-fold. A toggle that shifted a whole receptor uniformly would be wrong in both cases."
@@ -2022,10 +4114,26 @@
     {
       "name": "F10_rank_validation.png",
       "path": "figures/F10_rank_validation.png",
-      "bytes": 262079,
+      "bytes": 250459,
       "step": "validation",
       "figure": "F10_rank_validation",
-      "caption": "Left: the model's compound ordering against each published ordering that the teaching library can cover, with Spearman's rho per entry and the mean across entries (0.82 over 9 evaluated entries; 15 entry-assay combinations are skipped because the library cannot cover them). Right: the two inversions the validation module records rather than fixes. Nitenpyram sits near the top of the library's insect nAChR potency ordering and is the least potent neonicotinoid in *Drosophila* whole-animal bioassays, and clothianidin/imidacloprid are ordered the opposite way from the bioassays. Both are receptor-EC50 versus whole-animal-potency differences: the whole-animal number contains uptake, penetration and metabolism, which FlyLab does not model."
+      "caption": "Left: the model's compound ordering against each published ordering that the teaching library can cover, with Spearman's rho per entry and the mean across entries (0.88 over 8 evaluated entries; 16 entry-assay combinations are skipped because the library cannot cover them). Right: the two inversions the validation module records rather than fixes. Nitenpyram sits near the top of the library's insect nAChR potency ordering and is the least potent neonicotinoid in *Drosophila* whole-animal bioassays, and clothianidin/imidacloprid are ordered the opposite way from the bioassays. Both are receptor-EC50 versus whole-animal-potency differences: the whole-animal number contains uptake, penetration and metabolism, which FlyLab does not model."
+    },
+    {
+      "name": "F14_conclusion_stability.png",
+      "path": "figures/F14_conclusion_stability.png",
+      "bytes": 260754,
+      "step": "stability",
+      "figure": "F14_conclusion_stability",
+      "caption": "Each row is a conclusion this paper could state; each column is one prespecified, admissible way of turning receptor engagement into synaptic gain. Green retains the conclusion, red reverses it, amber means the readout does not exist under that specification. The topology conclusions, the RDL disinhibition and the map bitter-veto direction survive every specification; the nicotinic suppression conclusion is reversed by every monotone rule, which is how a result that depends on a modelling choice looks when it is tested rather than asserted."
+    },
+    {
+      "name": "F15_uncertainty_voi.png",
+      "path": "figures/F15_uncertainty_voi.png",
+      "bytes": 184593,
+      "step": "uncertainty",
+      "figure": "F15_uncertainty_voi",
+      "caption": "Left: the share of the variance of the neighbourhood mean rate attributable to each assumption, first-order and total-order, from a Saltelli cross-sample with Jansen estimators. A deliberately null factor (the spiking seed, which the deterministic rate engine ignores) marks the estimator's noise floor: any index of that size is indistinguishable from zero. Right: the same shares scaled back into the readout's variance and mapped onto the experiment that would resolve each assumption. Green marks a factor that needs no experiment at all, only a re-analysis of data already held."
     },
     {
       "name": "F1_architecture.png",
@@ -2062,16 +4170,30 @@
     {
       "name": "T1_library.csv",
       "path": "tables/T1_library.csv",
-      "bytes": 21836,
-      "rows": 99,
+      "bytes": 30364,
+      "rows": 101,
       "step": "scorecard"
     },
     {
       "name": "T1_library.md",
       "path": "tables/T1_library.md",
-      "bytes": 9249,
-      "rows": 99,
+      "bytes": 10365,
+      "rows": 101,
       "step": "scorecard"
+    },
+    {
+      "name": "T10_evidence_types.csv",
+      "path": "tables/T10_evidence_types.csv",
+      "bytes": 26492,
+      "rows": 101,
+      "step": "evidence"
+    },
+    {
+      "name": "T10_evidence_types.md",
+      "path": "tables/T10_evidence_types.md",
+      "bytes": 9928,
+      "rows": 101,
+      "step": "evidence"
     },
     {
       "name": "T2_mechanisms.csv",
@@ -2102,65 +4224,121 @@
       "step": "graph"
     },
     {
-      "name": "T6_nullmodels.csv",
-      "path": "tables/T6_nullmodels.csv",
-      "bytes": 2356,
-      "rows": 16,
-      "step": "nulls"
+      "name": "T6_dependence_profile.csv",
+      "path": "tables/T6_dependence_profile.csv",
+      "bytes": 3048,
+      "rows": 12,
+      "step": "dependence"
     },
     {
-      "name": "T6_nullmodels.md",
-      "path": "tables/T6_nullmodels.md",
-      "bytes": 1770,
+      "name": "T6_dependence_profile.md",
+      "path": "tables/T6_dependence_profile.md",
+      "bytes": 2156,
+      "rows": 12,
+      "step": "dependence"
+    },
+    {
+      "name": "T11_permutation_sweep.csv",
+      "path": "tables/T11_permutation_sweep.csv",
+      "bytes": 7610,
+      "rows": 72,
+      "step": "dependence"
+    },
+    {
+      "name": "T11_permutation_sweep.md",
+      "path": "tables/T11_permutation_sweep.md",
+      "bytes": 5054,
+      "rows": 72,
+      "step": "dependence"
+    },
+    {
+      "name": "T12_dependence_landscape.csv",
+      "path": "tables/T12_dependence_landscape.csv",
+      "bytes": 12178,
+      "rows": 84,
+      "step": "dependence"
+    },
+    {
+      "name": "T12_dependence_landscape.md",
+      "path": "tables/T12_dependence_landscape.md",
+      "bytes": 6809,
+      "rows": 84,
+      "step": "dependence"
+    },
+    {
+      "name": "T13_ablation.csv",
+      "path": "tables/T13_ablation.csv",
+      "bytes": 8879,
+      "rows": 84,
+      "step": "ablation"
+    },
+    {
+      "name": "T13_ablation.md",
+      "path": "tables/T13_ablation.md",
+      "bytes": 7194,
+      "rows": 84,
+      "step": "ablation"
+    },
+    {
+      "name": "T13b_ablation_information.csv",
+      "path": "tables/T13b_ablation_information.csv",
+      "bytes": 1864,
       "rows": 16,
-      "step": "nulls"
+      "step": "ablation"
+    },
+    {
+      "name": "T13b_ablation_information.md",
+      "path": "tables/T13b_ablation_information.md",
+      "bytes": 1759,
+      "rows": 16,
+      "step": "ablation"
     },
     {
       "name": "T8_landscape.csv",
       "path": "tables/T8_landscape.csv",
-      "bytes": 7178,
+      "bytes": 6960,
       "rows": 42,
       "step": "landscape"
     },
     {
       "name": "T8_landscape.md",
       "path": "tables/T8_landscape.md",
-      "bytes": 3150,
+      "bytes": 3106,
       "rows": 42,
       "step": "landscape"
     },
     {
       "name": "T9_genotype.csv",
       "path": "tables/T9_genotype.csv",
-      "bytes": 2768,
+      "bytes": 2777,
       "rows": 16,
       "step": "genotype"
     },
     {
       "name": "T9_genotype.md",
       "path": "tables/T9_genotype.md",
-      "bytes": 1351,
+      "bytes": 1357,
       "rows": 16,
       "step": "genotype"
     },
     {
       "name": "T4_rank_validation.csv",
       "path": "tables/T4_rank_validation.csv",
-      "bytes": 8283,
+      "bytes": 8670,
       "rows": 24,
       "step": "validation"
     },
     {
       "name": "T4_rank_validation.md",
       "path": "tables/T4_rank_validation.md",
-      "bytes": 3023,
+      "bytes": 3747,
       "rows": 24,
       "step": "validation"
     },
     {
       "name": "T3_predictions.csv",
       "path": "tables/T3_predictions.csv",
-      "bytes": 2558,
+      "bytes": 2566,
       "rows": 7,
       "step": "predictions"
     },
@@ -2184,14 +4362,87 @@
       "bytes": 706,
       "rows": 3,
       "step": "mixtures"
+    },
+    {
+      "name": "T14b_specification_diagnostics.csv",
+      "path": "tables/T14b_specification_diagnostics.csv",
+      "bytes": 2183,
+      "rows": 25,
+      "step": "stability"
+    },
+    {
+      "name": "T14b_specification_diagnostics.md",
+      "path": "tables/T14b_specification_diagnostics.md",
+      "bytes": 2074,
+      "rows": 25,
+      "step": "stability"
+    },
+    {
+      "name": "T14_conclusion_stability.csv",
+      "path": "tables/T14_conclusion_stability.csv",
+      "bytes": 1614,
+      "rows": 7,
+      "step": "stability"
+    },
+    {
+      "name": "T14_conclusion_stability.md",
+      "path": "tables/T14_conclusion_stability.md",
+      "bytes": 925,
+      "rows": 7,
+      "step": "stability"
+    },
+    {
+      "name": "T15_threshold_grid.csv",
+      "path": "tables/T15_threshold_grid.csv",
+      "bytes": 752,
+      "rows": 9,
+      "step": "stability"
+    },
+    {
+      "name": "T15_threshold_grid.md",
+      "path": "tables/T15_threshold_grid.md",
+      "bytes": 1097,
+      "rows": 9,
+      "step": "stability"
+    },
+    {
+      "name": "T16_uncertainty_budget.csv",
+      "path": "tables/T16_uncertainty_budget.csv",
+      "bytes": 1286,
+      "rows": 10,
+      "step": "uncertainty"
+    },
+    {
+      "name": "T16_uncertainty_budget.md",
+      "path": "tables/T16_uncertainty_budget.md",
+      "bytes": 1339,
+      "rows": 10,
+      "step": "uncertainty"
+    },
+    {
+      "name": "T17_value_of_information.csv",
+      "path": "tables/T17_value_of_information.csv",
+      "bytes": 2339,
+      "rows": 9,
+      "step": "uncertainty"
+    },
+    {
+      "name": "T17_value_of_information.md",
+      "path": "tables/T17_value_of_information.md",
+      "bytes": 1495,
+      "rows": 9,
+      "step": "uncertainty"
     }
   ],
   "notes": [
     "[veto] imidacloprid at 1 uM silences MN9 on the map path on both engines (sugar-driven MN9 = 0 Hz), so its bitter-veto ratio is undefined, not 0. g_ach hits the 0.05 floor, which removes the cholinergic GRN->MN9 drive itself. This is a property of the agonist patch rule, and it is why the taste-map arm of the null panel is undefined for imidacloprid.",
-    "[nulls] imidacloprid's neighbourhood mean-rate effect does NOT beat any structure-preserving null (max |z| = 1.23 over sign_permute, weight_permute and rewire_degree_preserving); it beats only the Erdos-Renyi null. The mean-rate readout is an E/I-balance effect for nAChR agonists, not a wiring effect.",
-    "[nulls] the fipronil bitter-veto ratio on the taste-motor cut is NOT distinguishable from its shuffled controls either (max |z| = 0.71 at n=10 shuffles); the veto ratio is reported as a model behaviour, not as evidence that the specific MaleCNS wiring carries it.",
-    "[landscape] no circuit selectivity index exists for chlordimeform, dieldrin, fipronil, gaba, ivermectin, picrotoxin, sulfoxaflor, thiamethoxam: on this neighbourhood their largest relative change in the mean rate never reaches the 50% threshold (RDL/GluCl blockers are bounded by the GABA/glutamate share of the cut and by the 0.05 gain floor).",
-    "[dose] at 1 uM imidacloprid the model is exactly insensitive to a 2x change in the insect_nAChR EC50 and in the Hill coefficient (span 0 Hz): occupancy is saturated, so the gain-rule coefficient is the only parameter that still moves the readout. A dose-response experiment, not a single high dose, is what constrains the EC50."
+    "[dependence] imidacloprid's neighbourhood mean-rate effect is composition-dominated: every structure-preserving degradation of the MaleCNS cut reproduces it (sign p = 0.275, weight p = 0.586, degree p = 0.472), and only the Erdos-Renyi control is beaten. For an nAChR agonist this readout tracks the cut's excitation/inhibition balance, not its wiring.",
+    "[dependence] the fipronil bitter-veto ratio on the taste-motor cut is a negative at n=300 shuffles (all four modes p > 0.05, max |z| = 0.220, p resolution 0.003): the veto ratio is model behaviour, not evidence about the wiring.",
+    "[ablation] the composition-only baseline reproduces the full model's ordering of the library (Spearman rho = 0.988 at 1 uM): on this readout almost all the information is in the mechanism rules and the cut's transmitter composition, not in its wiring.",
+    "[landscape] no circuit selectivity index exists for chlordimeform, dieldrin, fipronil, gaba, ivermectin, picrotoxin, spinosad, sulfoxaflor, thiamethoxam: on this neighbourhood their largest relative change in the mean rate never reaches the 50% threshold (RDL/GluCl blockers are bounded by the GABA/glutamate share of the cut and by the 0.05 gain floor).",
+    "[dose] at 1 uM imidacloprid the model is exactly insensitive to a 2x change in the insect_nAChR EC50 and in the Hill coefficient (span 0 Hz): occupancy is saturated, so the gain-rule coefficient is the only parameter that still moves the readout. A dose-response experiment, not a single high dose, is what constrains the EC50.",
+    "[stability] the suppression conclusion is specification-dependent: 10 of 25 prespecified specifications reverse it. Under linear@1.00x the same compound at the same engagement EXCITES the network (10.1 Hz treated vs 6.631 Hz vehicle) instead of suppressing it. Suppression is a property of the biphasic desensitisation term, not of the pharmacology-connectome integration.",
+    "[stability] the amplify/buffer split is NOT stable across the 3x3 threshold grid: nav_ache fails at circuit_frac=0.50,vert_limit=0.10. The paper quotes the range over the grid, never the point estimate."
   ],
   "partial": false,
   "honesty": [

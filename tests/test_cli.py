@@ -25,6 +25,13 @@ runner = CliRunner(env={"COLUMNS": "250", "TERM": "dumb", "NO_COLOR": "1"})
 COMMANDS = [
     ["occupancy"],
     ["compare"],
+    ["dashboard"],
+    ["dependence"],
+    ["ablation"],
+    ["stability"],
+    ["uncertainty"],
+    ["voi"],
+    ["claims"],
     ["list-drugs"],
     ["meta"],
     ["assay"],
@@ -86,9 +93,108 @@ def test_occupancy_unknown_compound_is_an_error_not_a_crash():
 
 
 def test_compare_two_compounds():
-    result = runner.invoke(app, ["compare", "imidacloprid", "fipronil", "--conc", "1e-6"])
+    result = runner.invoke(
+        app, ["compare", "imidacloprid", "fipronil", "--conc", "1e-6", "--no-dependence"]
+    )
     assert result.exit_code == 0
     assert "Imidacloprid" in result.output and "Fipronil" in result.output
+    # the decision columns, then the per-compound occupancy tables
+    assert "recSI" in result.output and "cirSI" in result.output
+    assert "insect_RDL" in result.output
+
+
+def test_compare_json_is_the_compare_endpoint_payload():
+    payload = json.loads(
+        runner.invoke(
+            app,
+            [
+                "compare",
+                "imidacloprid",
+                "deltamethrin",
+                "--conc",
+                "1e-6",
+                "--no-dependence",
+                "--json",
+            ],
+        ).output
+    )
+    assert {r["compound"] for r in payload["rows"]} == {"imidacloprid", "deltamethrin"}
+    assert payload["best_receptor_si"] == "imidacloprid"
+    assert payload["best_circuit_si"] == "deltamethrin"
+    assert payload["runtime_estimate"]["estimate_s"] > 0
+
+
+# --------------------------------------------------------------------------
+# dashboard / decision layer
+# --------------------------------------------------------------------------
+def test_dashboard_prints_the_decision_blocks():
+    result = runner.invoke(app, ["dashboard", "fipronil", "--conc", "1e-6", "--n", "20"])
+    assert result.exit_code == 0, result.output
+    out = result.output
+    assert "Fipronil" in out and "1.00e-06 M" in out
+    assert "insect engagement" in out and "vertebrate engagement" in out
+    # the vertebrate number the v0.5 correction made unhideable
+    assert "0.476" in out
+    assert "vertebrate reaches 20% engagement at" in out
+    assert "specific wiring evidence: present (topology-dependent)" in out
+    assert "what can I trust?" in out
+    assert "Live validation" in out and "none" in out
+    assert "why this happened" in out
+
+
+def test_dashboard_json_matches_the_endpoint():
+    payload = json.loads(
+        runner.invoke(
+            app, ["dashboard", "imidacloprid", "--conc", "1e-6", "--no-dependence", "--json"]
+        ).output
+    )
+    assert payload["compound"]["key"] == "imidacloprid"
+    assert payload["headline"]["insect_engagement"]["value"] > 0.9
+    assert payload["trust"]["blended_confidence"] is None
+    assert payload["why"]["inputs"]["potency_is_inert"] is True
+
+
+def test_dependence_command_names_the_verdict():
+    result = runner.invoke(app, ["dependence", "imidacloprid", "--conc", "1e-6", "--n", "20"])
+    assert result.exit_code == 0, result.output
+    assert "composition-dominated" in result.output
+    assert "resolution" in result.output
+
+
+def test_dependence_landscape_estimates_before_running():
+    result = runner.invoke(app, ["dependence", "--landscape"])
+    assert result.exit_code == 0, result.output
+    assert "estimated" in result.output
+    assert "--run" in result.output
+
+
+def test_ablation_command():
+    result = runner.invoke(app, ["ablation", "imidacloprid", "--conc", "1e-6"])
+    assert result.exit_code == 0, result.output
+    for level in ("A_receptor_only", "B_composition_only", "C_topology_only", "D_full_flylab"):
+        assert level in result.output
+
+
+@pytest.mark.parametrize("cmd", [["stability"], ["uncertainty"], ["voi"]])
+def test_expensive_commands_can_print_an_estimate_only(cmd):
+    result = runner.invoke(app, cmd + ["--estimate"])
+    assert result.exit_code == 0, result.output
+    assert "estimated" in result.output
+
+
+def test_claims_command_prints_the_chain_and_the_three_columns():
+    result = runner.invoke(app, ["claims", "imidacloprid", "--conc", "1e-6"])
+    assert result.exit_code == 0, result.output
+    out = result.output
+    for step in ("parameter_source", "mechanism_rule", "malecns_edges", "readout"):
+        assert step in out
+    assert "FACT" in out and "INFERENCE" in out and "UNKNOWN" in out
+    assert "MaleCNS v1.0" in out
+
+    payload = json.loads(
+        runner.invoke(app, ["claims", "fipronil", "--conc", "1e-6", "--json"]).output
+    )
+    assert payload["label_counts"]["OBSERVED"] == 1
 
 
 def test_list_drugs():

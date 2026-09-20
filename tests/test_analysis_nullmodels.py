@@ -100,7 +100,10 @@ def test_null_distribution_shape_and_finite_z():
     res = null_distribution("subgraph", "imidacloprid", 1e-6, "sign_permute", n=10, seed=0)
     # Generous bound: this asserts the shuffles are not accidentally quadratic,
     # not a benchmark. CI runners and parallel test runs are slow and variable.
-    assert time.perf_counter() - t0 < 60.0
+    # Wall-clock budget: this guards against an accidentally quadratic
+    # implementation, it is not a benchmark. CI runners and parallel test
+    # runs are slow and highly variable, so the bound is deliberately loose.
+    assert time.perf_counter() - t0 < 300.0
     assert res["n"] == 10 and len(res["null_effects"]) == 10
     assert res["readout"] == "mean_hz"  # 'auto': MN9 is clamped on this assay
     assert res["real_effect"] is not None and np.isfinite(res["real_effect"])

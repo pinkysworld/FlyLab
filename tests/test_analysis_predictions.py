@@ -92,7 +92,10 @@ def test_predict_returns_an_effect_a_ci_and_a_labelled_d(h_id):
 def test_prediction_table_has_seven_rows_with_finite_effects():
     t0 = time.perf_counter()
     table = prediction_table(n_rep=4, seed=0)
-    assert time.perf_counter() - t0 < 90.0
+    # Wall-clock budget: this guards against an accidentally quadratic
+    # implementation, it is not a benchmark. CI runners and parallel test
+    # runs are slow and highly variable, so the bound is deliberately loose.
+    assert time.perf_counter() - t0 < 300.0
     rows = table["rows"]
     assert len(rows) == 7
     assert [r["h_id"] for r in rows] == ["H1", "H2", "H3", "H4", "H5", "H6", "H7"]

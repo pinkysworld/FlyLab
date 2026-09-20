@@ -47,6 +47,16 @@ def _fmt(value: Any, width: int = 10, digits: int = 3) -> str:
     return str(value).rjust(width)
 
 
+def _sci(value: Any, width: int = 10, digits: int = 2) -> str:
+    """Scientific notation, right-aligned; a missing value prints 'not modelled'."""
+    if value is None:
+        return "not modelled".rjust(width)
+    try:
+        return f"{float(value):{width}.{digits}e}"
+    except (TypeError, ValueError):
+        return str(value).rjust(width)
+
+
 def _warnings(payload: dict[str, Any]) -> None:
     for w in payload.get("warnings") or []:
         typer.secho(f"  ! {w}", fg=typer.colors.YELLOW)
@@ -82,6 +92,34 @@ def _readout_table(nb: dict[str, Any], keys: tuple[str, ...]) -> None:
     _warnings(nb)
 
 
+def _bridge(route: str, payload: dict[str, Any]) -> Any:
+    """Run one bench route through the transport-free bridge.
+
+    The CLI, the HTTP API and the browser build all end up in the same
+    function, so a number obtained at the terminal is the number the dashboard
+    shows.
+    """
+    from flylab.browser import bridge
+
+    out = bridge.call(route, payload)
+    if isinstance(out, dict) and isinstance(out.get("error"), dict):
+        typer.secho(
+            f"{route}: {out['error'].get('detail')}", fg=typer.colors.YELLOW, err=True
+        )
+        raise typer.Exit(code=2)
+    return out
+
+
+def _estimate_line(payload: dict[str, Any]) -> None:
+    est = payload.get("runtime_estimate") or {}
+    if est.get("estimate_s") is not None:
+        typer.secho(
+            f"  ~{est['estimate_s']} s estimated"
+            + (f" - {est['note']}" if est.get("note") else ""),
+            fg=typer.colors.BLUE,
+        )
+
+
 def _lazy_call(dotted: str, name: str, *args: Any, **kw: Any) -> Any:
     """Import and call, or exit(2) with a message naming the missing module."""
     try:
@@ -112,14 +150,61 @@ def occupancy(
 
 
 @app.command()
-def compare(compounds: list[str], conc: float = typer.Option(..., "--conc"), json_out: bool = JSON_OPT):
-    """Occupancy tables for several compounds at the same dose."""
-    results = [compare_compound(name, conc) for name in compounds]
+def compare(
+    compounds: list[str],
+    conc: float = typer.Option(..., "--conc"),
+    dependence: bool = typer.Option(
+        True, "--dependence/--no-dependence", help="Include the topology-dependence column."
+    ),
+    n: int = typer.Option(20, "--n", help="Permutation shuffles for the dependence column."),
+    occupancy_tables: bool = typer.Option(
+        True, "--occupancy/--no-occupancy", help="Also print the per-compound occupancy tables."
+    ),
+    json_out: bool = JSON_OPT,
+):
+    """Compare compounds: receptor selectivity beside circuit selectivity.
+
+    The same payload the dashboard's compare screen uses. It makes visible that
+    the highest receptor selectivity is not the highest circuit selectivity.
+    """
+    out = _bridge(
+        "/api/compare",
+        {
+            "compounds": list(compounds),
+            "conc_M": conc,
+            "include_dependence": dependence,
+            "n": n,
+        },
+    )
     if json_out:
-        _dump(results)
+        _dump(out)
         return
-    for result in results:
-        _print_table(result)
+    est = out.get("runtime_estimate") or {}
+    typer.echo(f"compare @ {conc:.2e} M  (estimated {est.get('estimate_s')} s)")
+    head = (
+        f"{'compound':16} {'target':22} {'insect':>7} {'vert':>7} "
+        f"{'recSI':>7} {'cirSI':>7} {'gap':>7} {'circuit d%':>11}  topology"
+    )
+    typer.echo(head)
+    for row in out.get("rows") or []:
+        typer.echo(
+            f"{str(row.get('name'))[:16]:16} "
+            f"{str(row.get('target_receptor') or '-')[:22]:22} "
+            f"{_fmt(row.get('insect_engagement'), 7, 3)} "
+            f"{_fmt(row.get('vertebrate_engagement'), 7, 3)} "
+            f"{_fmt(row.get('receptor_si_log10'), 7, 2)} "
+            f"{_fmt(row.get('circuit_si_log10'), 7, 2)} "
+            f"{_fmt(row.get('si_gap_circuit_minus_receptor'), 7, 2)} "
+            f"{_fmt(row.get('circuit_delta_percent'), 11, 1)}  "
+            f"{row.get('topology_dependence') or '-'}"
+        )
+    for line in out.get("findings") or []:
+        typer.secho("  * " + line, fg=typer.colors.CYAN)
+    _warnings(out)
+    if occupancy_tables:
+        for name in compounds:
+            typer.echo("")
+            _print_table(compare_compound(name, conc))
 
 
 @app.command("list-drugs")
@@ -427,6 +512,269 @@ def predictions(n_rep: int = 4, seed: int = 0, json_out: bool = JSON_OPT):
         typer.echo(f"{row.get('id', '?')}: {row.get('statement') or row.get('hypothesis') or row}")
     if isinstance(out, dict):
         _warnings(out)
+
+
+# --------------------------------------------------------------------------
+# dashboard / decision layer
+# --------------------------------------------------------------------------
+@app.command()
+def dashboard(
+    compound: str = typer.Argument("imidacloprid"),
+    conc: float = typer.Option(1e-6, "--conc"),
+    graph: str = typer.Option("named", "--graph"),
+    dependence: bool = typer.Option(True, "--dependence/--no-dependence"),
+    n: int = typer.Option(20, "--n", help="Permutation shuffles for the wiring verdict."),
+    json_out: bool = JSON_OPT,
+):
+    """The decision dashboard for one compound at one dose, as one payload."""
+    out = _bridge(
+        "/api/dashboard",
+        {
+            "compound": compound,
+            "conc_M": conc,
+            "graph": graph,
+            "include_dependence": dependence,
+            "n": n,
+        },
+    )
+    if json_out:
+        _dump(out)
+        return
+    c = out["compound"]
+    typer.secho(f"{c['name']}  -  {conc:.2e} M", bold=True)
+    typer.echo(f"  class {c.get('class') or '-'}   target {c.get('target_receptor') or '-'}  ({c.get('mode') or '-'})")
+    h = out["headline"]
+    cov = out["coverage"]
+    typer.echo(
+        f"  insect engagement {_fmt(h['insect_engagement']['value'], 6, 3)} "
+        f"[{h['insect_engagement']['classification']}] at {h['insect_engagement']['receptor']}"
+    )
+    typer.echo(
+        f"  vertebrate engagement {_fmt(h['vertebrate_engagement']['value'], 6, 3)} "
+        f"[{h['vertebrate_engagement']['classification']}] at {h['vertebrate_engagement']['receptor']}"
+    )
+    rs = h["receptor_selectivity"]
+    typer.echo(
+        f"  receptor selectivity {_fmt(rs.get('ratio_vert_over_insect'), 8, 1)}x "
+        f"({rs.get('pair')})   evidence {h['evidence_tier']['value']} "
+        f"({cov['n_sourced']} sourced / {cov['n_not_modelled']} not modelled)"
+    )
+    sel = out["selectivity"]
+    typer.echo("\nselectivity (values, not a verdict)")
+    typer.echo(
+        f"  insect {_fmt(sel.get('insect_engagement'), 6, 3)} vs vertebrate "
+        f"{_fmt(sel.get('vertebrate_engagement'), 6, 3)}  "
+        f"difference {_fmt(sel.get('engagement_difference'), 6, 3)}"
+    )
+    lim = sel.get("limiting_vertebrate_receptor") or {}
+    typer.echo(
+        f"  vertebrate reaches {sel['occ_limit']:.0%} engagement at "
+        f"{_sci(sel.get('vertebrate_limit_conc_M'))} M"
+        + (f"; limiting receptor {lim.get('receptor')}" if lim else "")
+    )
+    typer.echo("\ncircuit")
+    for key, r in (out["circuit"].get("readouts") or {}).items():
+        typer.echo(
+            f"  {r['label']:20} {r['vehicle']:8.3f} -> {r['treated']:8.3f} Hz "
+            f"({r['percent']:+.1f}%) {r['direction']}"
+        )
+    dep = out.get("dependence")
+    if dep:
+        typer.echo(f"  {dep['verdict']}")
+        for m in dep["modes"]:
+            floor = " (at resolution floor)" if m["at_resolution_floor"] else ""
+            typer.echo(
+                f"    {m['mode']:26} p={m['p_two_sided']:.4f} "
+                f"(resolution {m['p_resolution']:.4f}){floor} "
+                f"{'beaten' if m['beats_null'] else 'not beaten'}"
+            )
+    typer.echo("\nwhat can I trust?")
+    for row in out["trust"]["rows"]:
+        typer.echo(f"  {row['area']:34} {row['status']:34} [{row['classification']}]")
+    typer.echo(f"  {out['trust']['note']}")
+    typer.echo("\nwhy this happened")
+    typer.echo("  " + out["why"]["text"])
+    _warnings(out)
+
+
+@app.command()
+def dependence(
+    compound: str = typer.Argument("imidacloprid"),
+    conc: float = typer.Option(1e-6, "--conc"),
+    n: int = typer.Option(20, "--n"),
+    graph: str | None = typer.Option(None, "--graph"),
+    landscape: bool = typer.Option(False, "--landscape", help="The compound x conc landscape."),
+    run: bool = typer.Option(False, "--run", help="Actually run the landscape (it is slow)."),
+    json_out: bool = JSON_OPT,
+):
+    """Is this effect a wiring result? Permutation nulls over the MaleCNS cut."""
+    if landscape:
+        out = _bridge(
+            "/api/dependence/landscape",
+            {"n": n, "graph": graph, "estimate_only": not run},
+        )
+        if json_out:
+            _dump(out)
+            return
+        _estimate_line(out)
+        if out.get("estimate_only"):
+            typer.echo("  pass --run to compute it")
+            return
+        _dump(out)
+        return
+    out = _bridge(
+        "/api/dependence",
+        {"compound": compound, "conc_M": conc, "n": n, "graph": graph},
+    )
+    if json_out:
+        _dump(out)
+        return
+    _estimate_line(out)
+    typer.secho(f"{compound} @ {conc:.2e} M  -  {out.get('verdict')}", bold=True)
+    typer.echo(f"  real effect {_fmt(out.get('real_effect'))} ({out.get('readout')})")
+    for m in out.get("modes") or []:
+        typer.echo(
+            f"  {m['mode']:26} p={m['p_two_sided']:.4f} "
+            f"(resolution {m['p_resolution']:.4f})  "
+            f"{'beats null' if m['beats_null'] else 'does not beat null'}   z={m['z']:.2f}"
+        )
+    level = out.get("necessary_information_level") or {}
+    if level:
+        typer.echo(f"  necessary information level: {level.get('level')} - {level.get('description')}")
+    _warnings(out)
+
+
+@app.command()
+def ablation(
+    compound: str = typer.Argument("imidacloprid"),
+    conc: float = typer.Option(1e-6, "--conc"),
+    table: bool = typer.Option(False, "--table", help="Every compound at every concentration."),
+    json_out: bool = JSON_OPT,
+):
+    """What each modelling layer adds: receptor, composition, topology, full."""
+    out = _bridge("/api/ablation", {"compound": compound, "conc_M": conc, "table": table})
+    if json_out:
+        _dump(out)
+        return
+    _estimate_line(out)
+    for level in out.get("level_order") or []:
+        effect = (out.get("effects") or {}).get(level)
+        typer.echo(f"  {level:22} {_fmt(effect)}")
+    for row in (out.get("information_gain") or {}).get("levels") or []:
+        typer.echo(
+            f"  {row['level']:22} r={_fmt(row.get('pearson_r_vs_full'), 6, 2)} "
+            f"rho={_fmt(row.get('spearman_rho_vs_full'), 6, 2)} "
+            f"reproduces_full={row.get('reproduces_full')}"
+        )
+    _warnings(out)
+
+
+@app.command()
+def stability(
+    fast: bool = typer.Option(True, "--fast/--full"),
+    conc: float = typer.Option(1e-6, "--conc"),
+    estimate: bool = typer.Option(False, "--estimate", help="Print the runtime estimate only."),
+    json_out: bool = JSON_OPT,
+):
+    """Every pre-registered conclusion, re-derived under every admissible rule."""
+    out = _bridge(
+        "/api/robustness/stability",
+        {"fast": fast, "conc_M": conc, "estimate_only": estimate},
+    )
+    if json_out:
+        _dump(out)
+        return
+    _estimate_line(out)
+    if out.get("estimate_only"):
+        return
+    for row in out.get("rows") or []:
+        typer.echo(
+            f"  {row['conclusion']:34} retained {row['n_retained']}/{row['n_specs']} "
+            f"{'FRAGILE' if row.get('fragile') else 'stable'}"
+        )
+    _warnings(out)
+
+
+@app.command()
+def uncertainty(
+    compound: str = typer.Argument("imidacloprid"),
+    conc: float = typer.Option(1e-6, "--conc"),
+    n_base: int = typer.Option(32, "--n-base"),
+    estimate: bool = typer.Option(False, "--estimate", help="Print the runtime estimate only."),
+    json_out: bool = JSON_OPT,
+):
+    """Global (Sobol) attribution of this model's output variance."""
+    out = _bridge(
+        "/api/uncertainty/global",
+        {"compound": compound, "conc_M": conc, "n_base": n_base, "estimate_only": estimate},
+    )
+    if json_out:
+        _dump(out)
+        return
+    _estimate_line(out)
+    if out.get("estimate_only"):
+        return
+    typer.echo(f"  output sd {_fmt(out.get('output_sd'))}  n_evaluations {out.get('n_evaluations')}")
+    for row in out.get("budget") or []:
+        typer.echo(f"  {str(row.get('source')):28} share {_fmt(row.get('share_of_variance'), 8, 3)}")
+    _warnings(out)
+
+
+@app.command()
+def voi(
+    compound: str = typer.Argument("imidacloprid"),
+    conc: float = typer.Option(1e-6, "--conc"),
+    n_base: int = typer.Option(32, "--n-base"),
+    estimate: bool = typer.Option(False, "--estimate", help="Print the runtime estimate only."),
+    json_out: bool = JSON_OPT,
+):
+    """Which experiment would remove the most model variance."""
+    out = _bridge(
+        "/api/voi",
+        {"compound": compound, "conc_M": conc, "n_base": n_base, "estimate_only": estimate},
+    )
+    if json_out:
+        _dump(out)
+        return
+    _estimate_line(out)
+    if out.get("estimate_only"):
+        return
+    for row in out.get("rows") or []:
+        typer.echo(
+            f"  {row.get('rank')}. {str(row.get('factor')):20} "
+            f"variance removed {_fmt(row.get('voi_fraction'), 7, 3)}  {row.get('experiment')}"
+        )
+    _warnings(out)
+
+
+@app.command()
+def claims(
+    compound: str = typer.Argument("imidacloprid"),
+    conc: float = typer.Option(1e-6, "--conc"),
+    markdown: bool = typer.Option(False, "--markdown", help="Render the audit as markdown."),
+    json_out: bool = JSON_OPT,
+):
+    """The dependency chain behind a result: fact, inference and unknown."""
+    out = _bridge("/api/claims", {"compound": compound, "conc_M": conc})
+    if json_out:
+        _dump(out)
+        return
+    if markdown:
+        from flylab.analysis.claims import to_markdown
+
+        typer.echo(to_markdown(out))
+        return
+    typer.secho(f"claim provenance - {compound} @ {conc:.2e} M", bold=True)
+    for link in out.get("chain") or []:
+        typer.echo(f"  {link['order']}. {link['step']:26} {link['label']:18} [{link['classification']}]")
+        typer.echo(f"     {link['statement']}")
+    fiu = out.get("fact_inference_unknown") or {}
+    for key, title in (("facts", "FACT"), ("model_inference", "INFERENCE"), ("unknown", "UNKNOWN")):
+        typer.echo("")
+        typer.secho(title, bold=True)
+        for item in fiu.get(key) or []:
+            typer.echo(f"  - {item.get('statement')}")
+    _warnings(out)
 
 
 @app.command("reproduce-paper")

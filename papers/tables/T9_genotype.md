@@ -6,7 +6,7 @@
 | fipronil | rdl_A302G_dsim | insect_RDL | 20000 | whole_animal_RR | 4.63e-04 |
 | fipronil | rdl_A301S_nlug | insect_RDL | 1.100 | receptor_shift | 0.984 |
 | fipronil | rdl_A302S_dmel | insect_RDL | -- | -- | 0.985 |
-| imidacloprid | wt | insect_nAChR | 1.000 | -- | 0.991 |
+| imidacloprid | wt | insect_nAChR_beta1 | 1.000 | -- | 1.000 |
 | imidacloprid | nachr_beta1_R81T_mper | insect_nAChR | 50.0 | receptor_shift | 0.500 |
 | deltamethrin | wt | insect_Nav | 1.000 | -- | 0.959 |
 | deltamethrin | para_L1014F_kdr | insect_Nav | 20.0 | receptor_shift | 0.538 |

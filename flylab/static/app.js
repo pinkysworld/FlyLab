@@ -384,7 +384,8 @@
     blindKey: null,
     revealed: false,
     cy: null,
-    activeTab: "scorecard",
+    prov: {},
+    activeTab: "dashboard",
   };
 
   function design() {
@@ -514,12 +515,34 @@
     multi.innerHTML = meta.compounds
       .map((c) => `<option value="${esc(c.key)}">${esc(c.name)}</option>`)
       .join("");
+    const options = meta.compounds
+      .map((c) => `<option value="${esc(c.key)}">${esc(c.name)}</option>`)
+      .join("");
+    ["#f-cmp-compounds", "#f-mix-a", "#f-mix-b", "#f-geno-other"].forEach((id) => {
+      const node = $(id);
+      if (node) node.innerHTML = options;
+    });
+    const pick = (id, key) => {
+      const node = $(id);
+      if (node && meta.compounds.some((c) => c.key === key)) node.value = key;
+    };
+    pick("#f-mix-a", "imidacloprid");
+    pick("#f-mix-b", "fipronil");
+    pick("#f-geno-other", "ddt");
+    $$("#f-cmp-compounds option").forEach((o) => {
+      o.selected = ["imidacloprid", "fipronil", "deltamethrin"].indexOf(o.value) >= 0;
+    });
+
     const saved = store("design") || {};
     if (saved.compound && meta.compounds.some((c) => c.key === saved.compound)) sel.value = saved.compound;
     else if (meta.compounds.some((c) => c.key === "imidacloprid")) sel.value = "imidacloprid";
     if (saved.graph) $("#f-graph").value = saved.graph;
     if (saved.engine) $("#f-engine").value = saved.engine;
     if (saved.conc_M) setConc(Number(saved.conc_M));
+
+    // re-apply the current concentration so the dashboard rail and its ladder
+    // buttons show the right value on the first paint, saved design or not
+    setConc(Number($("#f-conc").value) || 1e-6);
 
     $("#status-version").textContent = "v" + meta.version;
     $("#status-hash").textContent = "lib " + String(meta.library.sha256 || "").slice(0, 12);
@@ -581,12 +604,23 @@
         : '<div class="hint">no sourced insect target in the library</div>');
   }
 
+  /* One concentration, three controls: the sidebar slider, the sidebar box and
+     the dashboard dose rail all read and write the same value. */
   function setConc(value) {
     const v = Number(value);
     if (!Number.isFinite(v) || v <= 0) return;
+    const log = String(Math.max(-11, Math.min(-3, Math.log10(v))));
     $("#f-conc").value = v.toExponential(2).replace("e+", "e");
-    $("#f-logconc").value = String(Math.max(-11, Math.min(-3, Math.log10(v))));
+    $("#f-logconc").value = log;
     $("#conc-hint").textContent = sci(v) + " M";
+    const rail = $("#f-dash-logconc");
+    if (rail) rail.value = log;
+    const read = $("#dash-conc-read");
+    if (read) read.textContent = sci(v) + " M";
+    $$("#dash-ladder button").forEach((b) => {
+      const step = Number(b.getAttribute("data-conc"));
+      b.setAttribute("aria-pressed", String(Math.abs(Math.log10(step) - Number(log)) < 0.02));
+    });
   }
 
   // ==================================================================
@@ -2229,9 +2263,1347 @@
   }
 
   // ==================================================================
+  // 0. DASHBOARD - the interpretation layer
+  // ==================================================================
+  /* Two vocabularies, both from flylab/analysis/claims.py: CLASSIFICATIONS is
+     what a reader sees on a chip, LABELS is what the machine-readable claim
+     chain carries. Nothing on this page may print a verdict ("safe", "toxic",
+     "87% confident"); it prints values, and says where each one came from. */
+  const CHIPS = ["LITERATURE", "MODEL-DERIVED", "MODEL-ASSUMPTION", "PREDICTION", "NOT MODELLED"];
+  const CHIP_NOTE = {
+    LITERATURE: "a measured value from a cited paper (a potency, an affinity, or the MaleCNS reconstruction itself)",
+    "MODEL-DERIVED": "computed from a literature value by a transformation FlyLab chose, such as the Hill engagement or a selectivity index",
+    "MODEL-ASSUMPTION": "asserted by the model and never fitted to animal data: the gain rules, uniform expression, the engine constants",
+    PREDICTION: "simulation output, including the predicted transmitter labels the signs rest on",
+    "NOT MODELLED": "no sourced value exists; the row reports nothing rather than zero",
+  };
+
+  function chip(kind, provKey, label) {
+    const k = CHIPS.indexOf(kind) >= 0 ? kind : "NOT MODELLED";
+    const text = esc(label || k.toLowerCase());
+    if (!provKey) return `<span class="chip static" data-k="${esc(k)}">${text}</span>`;
+    return (
+      `<button type="button" class="chip" data-k="${esc(k)}" data-prov="${esc(provKey)}" ` +
+      `title="${esc(CHIP_NOTE[k])} — click for provenance">${text}</button>`
+    );
+  }
+
+  function provPut(key, record) {
+    state.prov[key] = record;
+    return key;
+  }
+
+  function provRow(label, value, cls) {
+    if (value === null || value === undefined || value === "") return "";
+    return `<dt>${esc(label)}</dt><dd class="${cls || ""}">${esc(value)}</dd>`;
+  }
+
+  function openProvenance(key) {
+    const rec = state.prov[key];
+    const drawer = $("#provenance");
+    const body = $("#prov-body");
+    const title = $("#prov-title");
+    if (!drawer || !body) return;
+    if (!rec) {
+      body.innerHTML = '<p class="empty">No provenance recorded for this value.</p>';
+    } else if (rec.kind === "receptor") {
+      const r = rec.row || {};
+      title.textContent = "Where this number came from";
+      body.innerHTML =
+        `<div class="prov-head"><span class="name">${esc(r.receptor)}</span>${chip(r.classification)}</div>` +
+        "<dl>" +
+        provRow("parameter type", r.param_type) +
+        provRow("value", r.param_value_M === null || r.param_value_M === undefined ? "not modelled" : `${Number(r.param_value_M).toExponential(3)} M`) +
+        provRow("Hill n", r.n) +
+        provRow("direction", r.direction) +
+        provRow("engagement at this dose", r.engagement === null || r.engagement === undefined ? "not modelled" : Number(r.engagement).toFixed(4)) +
+        provRow("engagement model", r.engagement_model) +
+        provRow("what that means", r.engagement_model_note) +
+        provRow("what the parameter is", r.param_type_note) +
+        provRow("source relation", r.relation) +
+        provRow("relation means", r.relation_note) +
+        provRow("species / preparation", r.species) +
+        provRow("evidence tier", r.evidence_tier) +
+        provRow("why not modelled", r.not_modelled_reason) +
+        provRow("source", r.source, "source") +
+        (r.doi ? `<dt>DOI</dt><dd><a href="https://doi.org/${esc(r.doi)}" rel="noreferrer noopener" target="_blank">${esc(r.doi)}</a></dd>` : "") +
+        (r.pmid ? `<dt>PMID</dt><dd><a href="https://pubmed.ncbi.nlm.nih.gov/${esc(r.pmid)}/" rel="noreferrer noopener" target="_blank">${esc(r.pmid)}</a></dd>` : "") +
+        "</dl>";
+    } else if (rec.kind === "claim") {
+      const l = rec.link || {};
+      title.textContent = "Claim chain link";
+      body.innerHTML =
+        `<div class="prov-head"><span class="name">${esc(l.step)}</span>${chip(l.classification)}` +
+        `<span class="badge">${esc(l.label)}</span></div>` +
+        `<p>${esc(l.statement)}</p>` +
+        ((l.assumptions || []).length
+          ? "<dt>assumptions it introduces</dt><dd><ul>" +
+            l.assumptions.map((a) => `<li>${esc(a)}</li>`).join("") +
+            "</ul></dd>"
+          : "") +
+        ((l.unknowns || []).length
+          ? "<dt>what it leaves unknown</dt><dd><ul>" +
+            l.unknowns.map((a) => `<li>${esc(a)}</li>`).join("") +
+            "</ul></dd>"
+          : "") +
+        ((l.sources || []).length
+          ? "<dt>sources</dt><dd class=\"source\">" +
+            l.sources
+              .map((sc) => `<p>${esc(sc.receptor ? sc.receptor + ": " : "")}${esc(sc.source || "")}</p>`)
+              .join("") +
+            "</dd>"
+          : "") +
+        `<dt>detail</dt><dd><pre class="json">${esc(JSON.stringify(l.detail || {}, null, 2))}</pre></dd>`;
+    } else {
+      title.textContent = rec.title || "Provenance";
+      body.innerHTML =
+        `<div class="prov-head"><span class="name">${esc(rec.title || "")}</span>${chip(rec.classification)}</div>` +
+        `<p>${esc(rec.basis || rec.statement || "")}</p>` +
+        `<dt>detail</dt><dd><pre class="json">${esc(JSON.stringify(rec.detail || {}, null, 2))}</pre></dd>`;
+    }
+    drawer.dataset.open = "true";
+    drawer.setAttribute("aria-hidden", "false");
+  }
+
+  function closeProvenance() {
+    const drawer = $("#provenance");
+    if (!drawer) return;
+    drawer.dataset.open = "false";
+    drawer.setAttribute("aria-hidden", "true");
+  }
+
+  // ---- data --------------------------------------------------------
+  /* The browser build asks for FAST_N shuffles and says so in the caption:
+     a dependence verdict at n=20 resolves p no finer than 1/(n+1). */
+  const BROWSER_DEPENDENCE_N = 20;
+
+  async function runDashboard() {
+    const d = design();
+    const out = await api(
+      `/api/dashboard?compound=${encodeURIComponent(d.compound)}&conc_M=${d.conc_M}` +
+        `&graph=${encodeURIComponent(d.graph)}&n=${BROWSER_DEPENDENCE_N}` +
+        (d.genotype ? `&genotype=${encodeURIComponent(d.genotype)}` : "")
+    );
+    state.cache.dashboard = out;
+    if (out.circuit && out.circuit.notebook) setNotebook(out.circuit.notebook, "dashboard · subgraph");
+    renderDashboard();
+    return (out.runtime_s || 0) * 1000;
+  }
+
+  function indexProvenance(out) {
+    state.prov = state.prov || {};
+    (out.evidence || []).forEach((r) => provPut("receptor:" + r.receptor, { kind: "receptor", row: r }));
+    ((out.claims || {}).chain || []).forEach((l) => provPut("claim:" + l.step, { kind: "claim", link: l }));
+    ((out.trust || {}).rows || []).forEach((r) =>
+      provPut("trust:" + r.area, {
+        kind: "trust",
+        title: r.area,
+        classification: r.classification,
+        basis: r.basis,
+        detail: r.detail,
+      })
+    );
+  }
+
+  // ---- render ------------------------------------------------------
+  function renderDashboard() {
+    const out = state.cache.dashboard;
+    if (!out) return;
+    indexProvenance(out);
+    renderOverview(out);
+    renderTiles(out);
+    renderWhy(out, "dash-why");
+    renderLadder(out, "plot-dash-ladder", "legend-dash-ladder", 300);
+    renderLadderTable(out);
+    renderSelectivityPanel(out);
+    renderCircuitConsequence(out);
+    renderDependence(out);
+    renderTrust(out);
+    if (state.cache.compare) renderCompare();
+  }
+
+  function renderOverview(out) {
+    const host = $("#dash-overview");
+    if (!host) return;
+    const c = out.compound || {};
+    const cov = out.coverage || {};
+    const conc = Number(out.concentration_M);
+    const dose =
+      conc >= 1e-6 ? `${(conc * 1e6).toPrecision(3)} µM` : conc >= 1e-9 ? `${(conc * 1e9).toPrecision(3)} nM` : `${conc.toExponential(2)} M`;
+    const target = c.target_receptor
+      ? `${esc(String(c.target_receptor).replace("insect_", ""))} <span class="muted">(${esc(c.mode || "—")})</span>`
+      : '<span class="muted">no sourced insect target</span>';
+    const warn = (out.warnings || []).slice(0, 3);
+    host.className = "overview";
+    host.innerHTML =
+      `<p class="hero">${esc(c.name || c.key)} <span class="dose">· ${esc(dose)}</span></p>` +
+      `<div class="facts">` +
+      `<span>class <b>${esc(c.class || "unclassified")}</b></span>` +
+      `<span>target <b>${target}</b></span>` +
+      (c.cas ? `<span>CAS <b>${esc(c.cas)}</b></span>` : "") +
+      `<span>graph <b>${esc(out.graph)}</b></span>` +
+      `</div>` +
+      `<div class="coverage">Evidence coverage: <b>${cov.n_sourced}</b> of <b>${cov.n_rows}</b> receptor rows are literature-sourced, ` +
+      `<b>${cov.n_not_modelled}</b> are not modelled (no value exists — they are not zero). ` +
+      `${chip("LITERATURE", "claim:parameter_source", "sourced")} ${chip("NOT MODELLED", null, "not modelled")}</div>` +
+      (warn.length ? warn.map((w) => `<div class="notice">${esc(w)}</div>`).join("") : "");
+  }
+
+  function tileHtml(label, value, unit, kind, provKey, note) {
+    return (
+      `<div class="tile"><div class="k">${esc(label)}</div>` +
+      `<div class="v big">${value}</div>` +
+      `<div class="u">${esc(unit || "")}</div>` +
+      (note ? `<div class="note">${esc(note)}</div>` : "") +
+      `<div class="chiprow">${chip(kind, provKey)}</div></div>`
+    );
+  }
+
+  function renderTiles(out) {
+    const host = $("#dash-tiles");
+    if (!host) return;
+    const h = out.headline || {};
+    const ie = h.insect_engagement || {};
+    const ve = h.vertebrate_engagement || {};
+    const rs = h.receptor_selectivity || {};
+    const et = h.evidence_tier || {};
+    host.innerHTML =
+      tileHtml(
+        "Insect engagement",
+        engagement(ie.value, 3),
+        ie.receptor ? String(ie.receptor).replace("insect_", "") + " · " + (ie.param_type || "") : "no sourced target",
+        ie.classification,
+        ie.receptor ? "receptor:" + ie.receptor : null
+      ) +
+      tileHtml(
+        "Vertebrate engagement",
+        engagement(ve.value, 3),
+        ve.receptor ? String(ve.receptor).replace("vertebrate_", "") + " · " + (ve.param_type || "") : "no sourced target",
+        ve.classification,
+        ve.receptor ? "receptor:" + ve.receptor : null
+      ) +
+      tileHtml(
+        "Receptor selectivity",
+        rs.ratio_vert_over_insect === null || rs.ratio_vert_over_insect === undefined
+          ? NOT_MODELLED
+          : Number(rs.ratio_vert_over_insect).toPrecision(3) + "&times;",
+        rs.pair ? rs.pair + " pair · potency ratio" : "no comparable pair",
+        rs.classification,
+        "claim:engagement_transformation",
+        "ratio of potencies — not a safety margin"
+      ) +
+      tileHtml(
+        "Evidence tier",
+        esc(String(et.value || "—").replace(/_/g, " ")),
+        `${et.n_sourced} sourced / ${et.n_not_modelled} not modelled`,
+        et.classification,
+        "claim:parameter_source"
+      );
+  }
+
+  function renderWhy(out, hostId) {
+    const host = document.getElementById(hostId);
+    if (!host) return;
+    const why = out.why || {};
+    const inputs = why.inputs || {};
+    host.innerHTML =
+      `<h3>Why this happened</h3>` +
+      `<p>${esc(why.text || "—")}</p>` +
+      `<div class="src">Generated from this run — saturation ${esc(inputs.saturation || "—")}, ` +
+      `dependence class ${esc(inputs.dependence_class || "not run")}, ` +
+      `dominant term ${esc(inputs.dominant_uncertainty || "—")}. ${chip("MODEL-DERIVED", "claim:mechanism_rule")}</div>`;
+  }
+
+  // ---- block 4: one concentration axis ------------------------------
+  function ladderTraces(out) {
+    const lad = out.ladder;
+    if (!lad) return null;
+    const c = colors();
+    const x = (lad.concs_M || []).map((v) => Math.log10(v));
+    const series = [
+      { name: "insect engagement", y: lad.insect_engagement, color: c.insect, dash: "solid" },
+      { name: "vertebrate engagement", y: lad.vertebrate_engagement, color: c.vertebrate, dash: "dash" },
+      { name: "circuit response", y: lad.circuit_response, color: cssVar("--nt-glutamate"), dash: "solid" },
+    ];
+    const traces = series
+      .filter((s) => (s.y || []).some((v) => v !== null && v !== undefined))
+      .map((s) => ({
+        type: "scatter",
+        mode: "lines",
+        name: s.name,
+        x: x,
+        y: s.y,
+        line: { color: s.color, width: 2, shape: "spline", smoothing: 0.4, dash: s.dash },
+        hovertemplate: `${esc(s.name)}<br>10^%{x:.1f} M · %{y:.3f}<extra></extra>`,
+      }));
+    return { traces: traces, x: x, series: series, lad: lad };
+  }
+
+  function renderLadder(out, plotId, legendId, height) {
+    const built = ladderTraces(out);
+    if (!built) return;
+    const { traces, x, series, lad } = built;
+    const c = colors();
+    const shapes = [];
+    const annotations = [];
+    /* Three vertical rules can land within a decade of each other, so their
+       labels are stepped down the plot instead of stacked on one line. Series
+       identity comes from the legend below the chart: the three curves converge
+       at the right edge, where end-labels would detach from their lines. */
+    const rule = (value, label, color, slot) => {
+      if (!value || !Number.isFinite(Math.log10(value))) return;
+      const lx = Math.log10(value);
+      if (lx < x[0] || lx > x[x.length - 1]) return;
+      shapes.push({ type: "line", x0: lx, x1: lx, yref: "paper", y0: 0, y1: 1, line: { color: color, width: 2 } });
+      const right = lx > (x[0] + x[x.length - 1]) / 2;
+      annotations.push({
+        x: lx,
+        y: [1.0, 0.9, 0.8][slot] || 0.7,
+        text: (right ? label + " " : " " + label),
+        showarrow: false,
+        yanchor: "top",
+        xanchor: right ? "right" : "left",
+        font: { color: color, size: 10.5 },
+      });
+    };
+    rule(lad.circuit_threshold_M, "circuit 50%", cssVar("--nt-glutamate"), 0);
+    rule(lad.vertebrate_threshold_M, "vertebrate 20%", c.vertebrate, 1);
+    rule(lad.current_conc_M, "current dose", c.muted, 2);
+    draw(plotId, traces, {
+      showlegend: true,
+      height: height || 320,
+      shapes: shapes,
+      annotations: annotations,
+      margin: { t: 34, r: 18, b: 44, l: 56 },
+      xaxis: axis({ title: "log10 concentration (M)" }),
+      yaxis: axis({ title: "fraction (0–1)", range: [0, 1.04] }),
+    });
+    const host = document.getElementById(legendId);
+    if (host) {
+      host.innerHTML =
+        `<span class="item" style="color:${c.insect}"><span class="solid"></span>insect engagement</span>` +
+        `<span class="item" style="color:${c.vertebrate}"><span class="dash"></span>vertebrate engagement</span>` +
+        `<span class="item" style="color:${cssVar("--nt-glutamate")}"><span class="solid"></span>circuit response = |treated − vehicle| / vehicle</span>` +
+        `<span class="item">readout ${esc(lad.readout || "")} on ${esc(out.graph)} · one axis, no second scale</span>`;
+    }
+  }
+
+  function renderLadderTable(out) {
+    const lad = out.ladder;
+    if (!lad) return;
+    table(
+      "tbl-dash-ladder",
+      [
+        { label: "conc (M)", num: true },
+        { label: "insect engagement", num: true },
+        { label: "vertebrate engagement", num: true },
+        { label: "circuit response", num: true },
+        { label: "treated (Hz)", num: true },
+      ],
+      (lad.concs_M || []).map((conc, i) => [
+        sci(conc, 1),
+        engagement(lad.insect_engagement[i], 3),
+        engagement(lad.vertebrate_engagement[i], 3),
+        engagement(lad.circuit_response[i], 3),
+        num(lad.circuit_treated_hz[i], 3),
+      ]),
+      { empty: "No ladder for this compound." }
+    );
+  }
+
+  // ---- block 2: selectivity ----------------------------------------
+  function meter(name, value, color, max) {
+    const v = Number(value);
+    const pct = Number.isFinite(v) ? Math.max(0, Math.min(1, v / (max || 1))) * 100 : 0;
+    return (
+      `<div class="meter"><span class="name">${esc(name)}</span>` +
+      `<span class="track"><span class="fill" style="left:0;width:${pct.toFixed(1)}%;background:${color}"></span></span>` +
+      `<span class="val">${Number.isFinite(v) ? v.toFixed(3) : "—"}</span></div>`
+    );
+  }
+
+  function renderSelectivityPanel(out) {
+    const sel = out.selectivity || {};
+    const c = colors();
+    const host = $("#meters-dash-sel");
+    if (host) {
+      host.innerHTML =
+        meter(
+          String(sel.insect_receptor || "insect").replace("insect_", ""),
+          sel.insect_engagement,
+          c.insect
+        ) +
+        meter(
+          String(sel.vertebrate_receptor || "vertebrate").replace("vertebrate_", ""),
+          sel.vertebrate_engagement,
+          c.vertebrate
+        );
+    }
+    const facts = $("#dash-sel-facts");
+    const lim = sel.limiting_vertebrate_receptor || null;
+    if (facts) {
+      facts.innerHTML =
+        `<div class="facts-list">` +
+        `<p><b>${sel.ratio_vert_over_insect === null || sel.ratio_vert_over_insect === undefined ? "—" : Number(sel.ratio_vert_over_insect).toPrecision(3) + "×"}</b> ` +
+        `insect/vertebrate potency ratio on the ${esc(sel.pair || "—")} pair ${chip("MODEL-DERIVED", "claim:engagement_transformation")}</p>` +
+        `<p><b>${engagement(sel.engagement_difference, 3)}</b> engagement difference at this dose ` +
+        `(insect ${engagement(sel.insect_engagement, 3)} − vertebrate ${engagement(sel.vertebrate_engagement, 3)})</p>` +
+        `<p><b>${sci(sel.vertebrate_limit_conc_M, 2)} M</b> is where vertebrate engagement first reaches ` +
+        `${Math.round((sel.occ_limit || 0.2) * 100)}%` +
+        (lim
+          ? `, and <b>${esc(String(lim.receptor).replace("vertebrate_", ""))}</b> is the receptor that becomes limiting first ` +
+            chip(lim.classification, "receptor:" + lim.receptor)
+          : "") +
+        `</p>` +
+        (sel.dose_over_vertebrate_limit
+          ? `<p>The current dose is <b>${Number(sel.dose_over_vertebrate_limit).toPrecision(3)}×</b> that concentration.</p>`
+          : "") +
+        `<p class="hint">${esc(sel.statement || "")}</p>` +
+        `</div>`;
+    }
+    table(
+      "tbl-dash-vert",
+      [
+        { label: "vertebrate receptor" },
+        { label: "engagement here", num: true },
+        { label: "sourced value", num: true },
+        { label: "20% at (M)", num: true },
+        { label: "evidence" },
+      ],
+      (sel.vertebrate_rows || []).map((r) => [
+        `<span class="swatch" style="background:${c.vertebrate}"></span>${esc(String(r.receptor).replace("vertebrate_", ""))}`,
+        engagement(r.engagement_at_dose, 3),
+        r.param_value_M === null || r.param_value_M === undefined
+          ? NOT_MODELLED
+          : `${esc(r.param_type)} ${sci(r.param_value_M, 2)}`,
+        sci(r.conc_at_limit_M, 2),
+        chip(r.classification, "receptor:" + r.receptor),
+      ]),
+      { empty: "This compound lists no vertebrate receptor." }
+    );
+  }
+
+  // ---- block 3: circuit consequence ---------------------------------
+  function renderCircuitConsequence(out) {
+    const cir = out.circuit || {};
+    const rows = cir.readouts || {};
+    const keys = Object.keys(rows);
+    const c = colors();
+    const labels = keys.map((k) => rows[k].label);
+    // dumbbell: before -> after per item, one hue in two shades
+    const traces = [
+      {
+        type: "scatter",
+        mode: "lines",
+        x: keys.flatMap((k) => [rows[k].vehicle, rows[k].treated, null]),
+        y: keys.flatMap((k) => [rows[k].label, rows[k].label, null]),
+        line: { color: c.grid, width: 2 },
+        hoverinfo: "skip",
+        showlegend: false,
+      },
+      {
+        type: "scatter",
+        mode: "markers",
+        name: "vehicle",
+        x: keys.map((k) => rows[k].vehicle),
+        y: labels,
+        marker: { color: cssVar("--seq-250"), size: 12, line: { width: 2, color: c.surface } },
+        hovertemplate: "vehicle %{x:.3f} Hz<extra></extra>",
+      },
+      {
+        type: "scatter",
+        mode: "markers+text",
+        name: "treated",
+        x: keys.map((k) => rows[k].treated),
+        y: labels,
+        text: keys.map((k) => (rows[k].percent === null ? "" : `${rows[k].percent > 0 ? "+" : ""}${rows[k].percent.toFixed(1)}%`)),
+        textposition: "middle right",
+        textfont: { color: c.text2, size: 10.5 },
+        marker: { color: cssVar("--seq-550"), size: 12, line: { width: 2, color: c.surface } },
+        hovertemplate: "treated %{x:.3f} Hz<extra></extra>",
+      },
+    ];
+    draw("plot-dash-circuit", traces, {
+      showlegend: true,
+      height: 250,
+      margin: { t: 34, r: 60, b: 44, l: 120 },
+      xaxis: axis({ title: "firing rate (Hz, simulated)" }),
+      yaxis: axis({ title: "", automargin: true }),
+    });
+    const legend = $("#legend-dash-circuit");
+    if (legend) {
+      legend.innerHTML =
+        `<span class="item" style="color:${cssVar("--seq-250")}"><span class="swatch" style="background:${cssVar("--seq-250")}"></span>vehicle</span>` +
+        `<span class="item" style="color:${cssVar("--seq-550")}"><span class="swatch" style="background:${cssVar("--seq-550")}"></span>treated</span>` +
+        `<span class="item">${chip("PREDICTION", "claim:readout")} every rate here is model output</span>`;
+    }
+    table(
+      "tbl-dash-circuit",
+      [
+        { label: "readout" },
+        { label: "vehicle (Hz)", num: true },
+        { label: "treated (Hz)", num: true },
+        { label: "Δ (Hz)", num: true },
+        { label: "change", num: true },
+        { label: "direction" },
+      ],
+      keys.map((k) => [
+        esc(rows[k].label),
+        num(rows[k].vehicle, 3),
+        num(rows[k].treated, 3),
+        num(rows[k].delta, 3),
+        rows[k].percent === null ? "—" : `${rows[k].percent > 0 ? "+" : ""}${num(rows[k].percent, 1)}%`,
+        esc(rows[k].direction),
+      ]),
+      { empty: "No circuit readouts." }
+    );
+  }
+
+  function renderDependence(out) {
+    const dep = out.dependence;
+    const host = $("#dash-dep-verdict");
+    if (!dep) {
+      if (host) host.innerHTML = '<div class="empty">Dependence not requested for this run.</div>';
+      table("tbl-dash-dep", [{ label: "" }], [], { empty: "Not run." });
+      return;
+    }
+    if (host) {
+      host.innerHTML =
+        `<div class="verdict" data-class="${esc(dep.class)}"><span class="mark"></span>` +
+        `<span>${esc(dep.verdict)}</span>${chip("MODEL-DERIVED", "claim:malecns_edges")}` +
+        `<span class="why">${esc(dep.reason || "")}</span></div>` +
+        `<div class="hint">${dep.n} shuffles per mode, so the empirical p resolves no finer than ` +
+        `${num(dep.p_resolution, 4)}. Browser default is the fast setting; raise n for a quotable p. ` +
+        `${esc(dep.note || "")}</div>`;
+    }
+    table(
+      "tbl-dash-dep",
+      [
+        { label: "null model" },
+        { label: "information it keeps" },
+        { label: "p (two-sided)", num: true },
+        { label: "resolution", num: true },
+        { label: "verdict" },
+      ],
+      (dep.modes || []).map((m) => [
+        `<span class="mono">${esc(m.mode)}</span>`,
+        esc(m.information_kept || ""),
+        (m.at_resolution_floor ? "≤ " : "") + num(m.p_two_sided, 4),
+        num(m.p_resolution, 4),
+        m.beats_null
+          ? '<span class="badge tier-literature_order">real effect stands out</span>'
+          : '<span class="badge">shuffle reproduces it</span>',
+      ]),
+      { empty: "No null modes ran." }
+    );
+  }
+
+  // ---- block 8: what can I trust? ------------------------------------
+  function renderTrust(out) {
+    const trust = out.trust || {};
+    table(
+      "tbl-dash-trust",
+      [{ label: "layer" }, { label: "status" }, { label: "on what basis" }, { label: "classification" }],
+      (trust.rows || []).map((r) => [
+        `<b>${esc(r.area)}</b>`,
+        esc(r.status),
+        esc(r.basis),
+        chip(r.classification, "trust:" + r.area),
+      ]),
+      { empty: "Not run yet." }
+    );
+    const note = $("#trust-note");
+    if (note) note.textContent = trust.note || "";
+  }
+
+  // ---- block 9: compare compounds ------------------------------------
+  async function estimateCompare() {
+    const picked = $$("#f-cmp-compounds option")
+      .filter((o) => o.selected)
+      .map((o) => o.value);
+    const host = $("#cmp-estimate");
+    if (!host) return picked;
+    if (!picked.length) {
+      host.textContent = "pick two or more compounds";
+      return picked;
+    }
+    try {
+      const est = await post("/api/compare", {
+        compounds: picked,
+        conc_M: design().conc_M,
+        include_dependence: $("#f-cmp-dependence").checked,
+        n: BROWSER_DEPENDENCE_N,
+        estimate_only: true,
+      });
+      const s = (est.runtime_estimate || {}).estimate_s;
+      host.textContent = `estimated ${s} s for ${picked.length} compounds`;
+    } catch (err) {
+      host.textContent = "";
+    }
+    return picked;
+  }
+
+  async function runCompare() {
+    const picked = await estimateCompare();
+    if (picked.length < 1) throw new Error("pick at least one compound");
+    const out = await post("/api/compare", {
+      compounds: picked,
+      conc_M: design().conc_M,
+      include_dependence: $("#f-cmp-dependence").checked,
+      n: BROWSER_DEPENDENCE_N,
+    });
+    state.cache.compare = out;
+    renderCompare();
+    return (out.runtime_s || 0) * 1000;
+  }
+
+  function renderCompare() {
+    const out = state.cache.compare;
+    if (!out) return;
+    const c = colors();
+    const rows = out.rows || [];
+    const scored = rows.filter(
+      (r) => r.receptor_si_log10 !== null && r.circuit_si_log10 !== null
+    );
+    const lo = Math.min(0, ...scored.map((r) => Math.min(r.receptor_si_log10, r.circuit_si_log10)));
+    const hi = Math.max(1, ...scored.map((r) => Math.max(r.receptor_si_log10, r.circuit_si_log10)));
+    draw(
+      "plot-compare",
+      [
+        {
+          type: "scatter",
+          mode: "markers+text",
+          x: scored.map((r) => r.receptor_si_log10),
+          y: scored.map((r) => r.circuit_si_log10),
+          text: scored.map((r) => r.name),
+          textposition: "top center",
+          textfont: { color: c.text2, size: 10.5 },
+          cliponaxis: false,
+          marker: { color: cssVar("--seq-550"), size: 12, line: { width: 2, color: c.surface } },
+          hovertemplate: "%{text}<br>receptor SI %{x:.2f}<br>circuit SI %{y:.2f}<extra></extra>",
+        },
+      ],
+      {
+        height: 320,
+        margin: { t: 40, r: 30, b: 44, l: 56 },
+        xaxis: axis({ title: "receptor selectivity (log10)", range: [lo - 0.5, hi + 0.5] }),
+        yaxis: axis({ title: "circuit selectivity (log10)", range: [lo - 0.5, hi + 0.9] }),
+        shapes: [
+          {
+            type: "line",
+            x0: lo - 0.5,
+            y0: lo - 0.5,
+            x1: hi + 0.5,
+            y1: hi + 0.5,
+            line: { color: c.base, width: 1 },
+          },
+        ],
+        annotations: [
+          {
+            x: hi + 0.5,
+            y: hi + 0.5,
+            text: "equal selectivity",
+            showarrow: false,
+            xanchor: "right",
+            yanchor: "bottom",
+            font: { color: c.muted, size: 10.5 },
+          },
+        ],
+      }
+    );
+    const findings = $("#cmp-findings");
+    if (findings) {
+      const missing = rows.filter((r) => r.circuit_si_log10 === null).map((r) => r.name);
+      findings.innerHTML =
+        (out.findings || []).map((f) => `<div class="notice info">${esc(f)}</div>`).join("") +
+        (missing.length
+          ? `<div class="notice">${esc(missing.join(", "))} ${missing.length > 1 ? "are" : "is"} ` +
+            "not on the plot: the circuit never reaches a 50% change on this cut, so no circuit " +
+            "selectivity index exists. That is a result, not a missing value.</div>"
+          : "");
+    }
+    table(
+      "tbl-compare",
+      [
+        { label: "compound" },
+        { label: "target" },
+        { label: "insect eng.", num: true },
+        { label: "vert eng.", num: true },
+        { label: "receptor SI", num: true },
+        { label: "circuit SI", num: true },
+        { label: "SI gap", num: true },
+        { label: "circuit Δ", num: true },
+        { label: "topology dependence" },
+        { label: "evidence" },
+      ],
+      rows.map((r) => [
+        `<b>${esc(r.name)}</b>`,
+        esc(String(r.target_receptor || "—").replace("insect_", "")),
+        engagement(r.insect_engagement, 3),
+        engagement(r.vertebrate_engagement, 3),
+        r.receptor_si_log10 === null ? NOT_MODELLED : num(r.receptor_si_log10, 2),
+        r.circuit_si_log10 === null
+          ? '<span class="muted">50% never reached</span>'
+          : num(r.circuit_si_log10, 2),
+        r.si_gap_circuit_minus_receptor === null ? "—" : num(r.si_gap_circuit_minus_receptor, 2),
+        r.circuit_delta_percent === null
+          ? "—"
+          : `${r.circuit_delta_percent > 0 ? "+" : ""}${num(r.circuit_delta_percent, 1)}%`,
+        esc(r.topology_dependence || "not run"),
+        chip(
+          r.evidence_tier === "literature_order" ? "LITERATURE" : "MODEL-ASSUMPTION",
+          null,
+          `${r.n_sourced}/${r.n_rows} sourced`
+        ),
+      ]),
+      { empty: "Pick compounds and press Run compare." }
+    );
+  }
+
+  // ==================================================================
+  // 0b. DOSE-RESPONSE
+  // ==================================================================
+  async function runDose() {
+    /* The dose panel is a second view of the dashboard payload: one call feeds
+       both, so opening either after the other costs nothing. */
+    if (!state.cache.dashboard) {
+      await runDashboard();
+      state.loaded.dashboard = true;
+    }
+    renderDose();
+    return null;
+  }
+
+  function renderDose() {
+    const out = state.cache.dashboard;
+    if (!out) return;
+    renderLadder(out, "plot-dose-ladder", "legend-dose-ladder", 420);
+    const inputs = (out.why || {}).inputs || {};
+    const span = inputs.two_fold_engagement_span;
+    const tiles = $("#tiles-saturation");
+    if (tiles) {
+      tiles.innerHTML =
+        tile("insect engagement", engagement(inputs.insect_engagement, 3), inputs.saturation || "") +
+        tile(
+          "two-fold parameter error",
+          span === null || span === undefined ? "—" : "±" + num(span, 3),
+          "moves engagement by this much"
+        ) +
+        tile("dominant term", esc(inputs.potency_is_inert ? "gain rule" : "potency + gain rule"), "at this dose") +
+        tile("dependence", esc(inputs.dependence_class || "not run"), "permutation nulls");
+    }
+    const text = $("#saturation-text");
+    if (text) {
+      const receptor = String(inputs.insect_receptor || "").replace("insect_", "");
+      text.innerHTML =
+        `<p>${
+          inputs.potency_is_inert
+            ? `Halving or doubling the cited ${esc(inputs.param_type || "potency")} for ${esc(receptor)} moves engagement by ${num(span, 3)} — ` +
+              "effectively nothing. A saturated receptor cannot report a potency change, so at this dose the model's answer is set by " +
+              "the occupancy-to-gain rule, not by the library value. Move the slider left until the curve leaves its plateau to see the potency matter again."
+            : `A two-fold error in the cited ${esc(inputs.param_type || "potency")} for ${esc(receptor)} moves engagement by ${num(span, 3)}, ` +
+              "so this dose sits on the informative part of the curve and the library value still matters."
+        }</p>` +
+        `<div class="src">${chip("MODEL-DERIVED", "claim:engagement_transformation")} derived from this run's Hill parameters.</div>`;
+    }
+    const lad = out.ladder || {};
+    const c = colors();
+    const x = (lad.concs_M || []).map((v) => Math.log10(v));
+    /* Colour follows the receptor FAMILY, so nAChR is the same hue everywhere in
+       the bench. Two receptors of one family in one organism would then share a
+       colour, so the line style is the second channel: insect solid then dotted,
+       vertebrate dashed then dash-dot. The legend and the table carry the names. */
+    const seen = {};
+    const traces = (lad.per_receptor || [])
+      .filter((r) => (r.values || []).some((v) => v !== null && v !== undefined))
+      .map((r) => {
+        const m = receptorMeta(r.receptor);
+        const slot = m.family + ":" + r.organism;
+        const i = seen[slot] === undefined ? (seen[slot] = 0) : (seen[slot] += 1);
+        const dashes = r.organism === "insect" ? ["solid", "dot", "longdash"] : ["dash", "dashdot", "longdashdot"];
+        return {
+          type: "scatter",
+          mode: "lines",
+          name: r.receptor,
+          x: x,
+          y: r.values,
+          line: {
+            color: familyColor(m.family),
+            width: 2,
+            dash: dashes[Math.min(i, dashes.length - 1)],
+          },
+          hovertemplate: `${esc(r.receptor)}<br>10^%{x:.1f} M · %{y:.3f}<extra></extra>`,
+        };
+      });
+    draw("plot-dose-receptors", traces, {
+      showlegend: true,
+      height: 340,
+      margin: { t: 34, r: 18, b: 44, l: 56 },
+      xaxis: axis({ title: "log10 concentration (M)" }),
+      yaxis: axis({ title: "engagement (0–1)", range: [0, 1.04] }),
+    });
+    table(
+      "tbl-dose-receptors",
+      [
+        { label: "receptor" },
+        { label: "organism" },
+        { label: "param" },
+        { label: "value (M)", num: true },
+        { label: "evidence" },
+      ],
+      (out.evidence || []).map((r) => [
+        `<span class="swatch" style="background:${r.organism === "insect" ? c.insect : c.vertebrate}"></span>${esc(r.receptor)}`,
+        esc(r.organism),
+        esc(r.param_type || ""),
+        sci(r.param_value_M, 2),
+        chip(r.classification, "receptor:" + r.receptor),
+      ]),
+      { empty: "No rows." }
+    );
+  }
+
+  // ==================================================================
+  // 0c. GENOTYPE
+  // ==================================================================
+  async function runGenotype() {
+    const d = design();
+    const out = await post("/api/genotype/panel", { compound: d.compound, conc_M: d.conc_M });
+    state.cache.genotype = { panel: out, other: state.cache.genotype && state.cache.genotype.other };
+    renderGenotype();
+    return null;
+  }
+
+  async function runGenotypeOther() {
+    const other = $("#f-geno-other").value;
+    if (!other) return;
+    const out = await post("/api/genotype/panel", { compound: other, conc_M: design().conc_M });
+    state.cache.genotype = Object.assign({}, state.cache.genotype, { other: out });
+    renderGenotype();
+  }
+
+  function genotypeRows(panel) {
+    return (panel && panel.rows) || [];
+  }
+
+  function renderGenotype() {
+    const data = state.cache.genotype;
+    if (!data || !data.panel) return;
+    const rows = genotypeRows(data.panel);
+    const c = colors();
+    const labels = rows.map((r) => (r.allele === "wild type" ? "wild type" : `${r.gene || ""} ${r.allele}`.trim()));
+    notices("genotype-notices", data.panel.warnings || [], "");
+    draw(
+      "plot-geno-occ",
+      [
+        {
+          type: "bar",
+          x: labels,
+          y: rows.map((r) => r.occupancy),
+          text: rows.map((r) => (r.occupancy === null ? "" : Number(r.occupancy).toFixed(3))),
+          textposition: "outside",
+          textfont: { color: c.text2, size: 10.5 },
+          width: rows.length > 3 ? 0.45 : 0.2,
+          marker: { color: cssVar("--seq-550"), cornerradius: 4, line: { width: 2, color: c.surface } },
+          hovertemplate: "%{x}<br>engagement %{y:.3f}<extra></extra>",
+        },
+      ],
+      {
+        height: 280,
+        bargap: 0.55,
+        margin: { t: 26, r: 18, b: 60, l: 56 },
+        xaxis: axis({ title: "" }),
+        yaxis: axis({ title: "engagement at this dose (0–1)", range: [0, 1.12] }),
+      }
+    );
+    const mn9 = rows.map((r) => (r.readouts || {}).mn9_hz);
+    draw(
+      "plot-geno-circuit",
+      [
+        {
+          type: "bar",
+          x: labels,
+          y: mn9,
+          text: mn9.map((v) => (v === null || v === undefined ? "" : Number(v).toFixed(1))),
+          textposition: "outside",
+          textfont: { color: c.text2, size: 10.5 },
+          width: rows.length > 3 ? 0.45 : 0.2,
+          marker: { color: cssVar("--seq-400"), cornerradius: 4, line: { width: 2, color: c.surface } },
+          hovertemplate: "%{x}<br>MN9 %{y:.2f} Hz<extra></extra>",
+        },
+      ],
+      {
+        height: 280,
+        bargap: 0.55,
+        margin: { t: 26, r: 18, b: 60, l: 56 },
+        xaxis: axis({ title: "" }),
+        yaxis: axis({
+          title: "MN9 rate (Hz, simulated)",
+          range: [0, Math.max(1, ...mn9.filter((v) => Number.isFinite(v))) * 1.18],
+        }),
+      }
+    );
+    const head = [
+      { label: "genotype" },
+      { label: "gene" },
+      { label: "fold shift", num: true },
+      { label: "value (M)", num: true },
+      { label: "engagement", num: true },
+      { label: "MN9 (Hz)", num: true },
+      { label: "mean (Hz)", num: true },
+    ];
+    const body = (panel) =>
+      genotypeRows(panel).map((r) => [
+        esc(r.allele === "wild type" ? "wild type" : r.allele),
+        esc(r.gene || "—"),
+        r.fold_shift === null || r.fold_shift === undefined ? "—" : `${num(r.fold_shift, 1)}×`,
+        sci(r.ec50_M, 2),
+        engagement(r.occupancy, 3),
+        num((r.readouts || {}).mn9_hz, 2),
+        num((r.readouts || {}).mean_hz, 3),
+      ]);
+    table("tbl-genotype", head, body(data.panel), { empty: "No allele in the library touches this compound." });
+    table("tbl-genotype-other", head, body(data.other), {
+      empty: "Pick a second compound and press Run to see the same alleles applied to it.",
+    });
+  }
+
+  // ==================================================================
+  // 0d. MIXTURES
+  // ==================================================================
+  async function runMixtures() {
+    const a = $("#f-mix-a").value;
+    const b = $("#f-mix-b").value;
+    const ca = Number($("#f-mix-a-conc").value);
+    const cb = Number($("#f-mix-b-conc").value);
+    const model = $("#f-mix-model").value;
+    const mix = await post("/api/mixture", {
+      components: [
+        { compound: a, conc_M: Number.isFinite(ca) ? ca : 0 },
+        { compound: b, conc_M: Number.isFinite(cb) ? cb : 0 },
+      ],
+      assay: "subgraph",
+      model: model,
+    });
+    let iso = null;
+    try {
+      iso = await post("/api/mixture/isobologram", { compound_a: a, compound_b: b });
+    } catch (err) {
+      iso = null;
+    }
+    state.cache.mixtures = { mix: mix, iso: iso, a: a, b: b };
+    setNotebook(mix, `mixture · ${a} + ${b}`);
+    renderMixtures();
+    return null;
+  }
+
+  function renderMixtures() {
+    const data = state.cache.mixtures;
+    if (!data) return;
+    const { mix, iso } = data;
+    const c = colors();
+    const r = mix.readouts || {};
+    const syn = mix.synergy || {};
+    const singles = r.singles || [];
+    const observed = r.effect_fraction;
+    const expected = expectedFromWhy(syn.why);
+    notices("mixture-notices", mix.warnings || [], "");
+    const tiles = $("#tiles-mixture");
+    if (tiles) {
+      tiles.innerHTML =
+        tile("observed effect", engagement(observed, 3), "|treated − vehicle| / vehicle") +
+        tile(`${esc(syn.model || "bliss")} expectation`, expected === null ? "—" : num(expected, 3), "null model") +
+        tile("interaction", esc(syn.verdict || "—"), "classification") +
+        singles
+          .map((s) =>
+            tile(
+              esc(s.compound),
+              engagement(s.effect_fraction === undefined ? s.relative_change : s.effect_fraction, 3),
+              sci(s.conc_M, 1) + " M alone"
+            )
+          )
+          .join("");
+    }
+    const labels = singles.map((s) => s.compound).concat(["combination"]);
+    const values = singles
+      .map((s) => (s.effect_fraction === undefined ? s.relative_change : s.effect_fraction))
+      .concat([observed]);
+    const shapes = [];
+    const annotations = [];
+    if (expected !== null) {
+      shapes.push({
+        type: "line",
+        xref: "paper",
+        x0: 0,
+        x1: 1,
+        y0: expected,
+        y1: expected,
+        line: { color: c.base, width: 1 },
+      });
+
+    }
+    draw(
+      "plot-mixture",
+      [
+        {
+          type: "bar",
+          x: labels,
+          y: values,
+          text: values.map((v) => (v === null || v === undefined ? "" : Number(v).toFixed(3))),
+          textposition: "outside",
+          textfont: { color: c.text2, size: 10.5 },
+          width: labels.length > 3 ? 0.45 : 0.2,
+          marker: { color: cssVar("--seq-550"), cornerradius: 4, line: { width: 2, color: c.surface } },
+          hovertemplate: "%{x}<br>effect %{y:.3f}<extra></extra>",
+        },
+      ],
+      {
+        height: 280,
+        bargap: 0.55,
+        shapes: shapes,
+        annotations: annotations,
+        margin: { t: 26, r: 18, b: 56, l: 56 },
+        xaxis: axis({ title: "" }),
+        yaxis: axis({
+          title: "effect fraction (0–1)",
+          range: [0, Math.max(0.1, ...values.filter((v) => Number.isFinite(v)), expected || 0) * 1.2],
+        }),
+      }
+    );
+    const legend = $("#legend-mixture");
+    if (legend) {
+      legend.innerHTML =
+        `<span class="item">bars = simulated effect fraction</span>` +
+        `<span class="item">hairline = the ${esc(syn.model || "bliss")} expectation` +
+        `${expected === null ? "" : " (" + num(expected, 3) + ")"} for two independent agents</span>` +
+        `<span class="item">${chip("PREDICTION", "claim:readout")}</span>`;
+    }
+    if (iso && (iso.points || []).length) {
+      /* Normalised isobologram: each axis is the compound's own iso-effect dose,
+         so the additivity line is the unit diagonal whatever the two potencies
+         are. Raw molar axes put an 8e-11 M and a 3e-8 M compound on scales three
+         decades apart and the line reads as flat. */
+      const da = Number(iso.d_a) || 1;
+      const db = Number(iso.d_b) || 1;
+      const pts = iso.points;
+      draw(
+        "plot-isobologram",
+        [
+          {
+            type: "scatter",
+            mode: "lines",
+            name: "Loewe additivity",
+            x: [1, 0],
+            y: [0, 1],
+            line: { color: c.base, width: 1 },
+            hoverinfo: "skip",
+          },
+          {
+            type: "scatter",
+            mode: "markers",
+            name: "iso-effect pairs",
+            x: pts.map((p) => p.conc_a_M / da),
+            y: pts.map((p) => p.conc_b_M / db),
+            customdata: pts.map((p) => [p.conc_a_M, p.conc_b_M, p.combination_index]),
+            marker: { color: cssVar("--seq-550"), size: 11, line: { width: 2, color: c.surface } },
+            hovertemplate:
+              "A %{customdata[0]:.2e} M<br>B %{customdata[1]:.2e} M<br>CI %{customdata[2]:.2f}<extra></extra>",
+          },
+        ],
+        {
+          height: 280,
+          showlegend: true,
+          margin: { t: 34, r: 18, b: 52, l: 64 },
+          xaxis: axis({ title: `${esc(data.a)} / its own dose`, range: [-0.05, 1.3] }),
+          yaxis: axis({ title: `${esc(data.b)} / its own dose`, range: [-0.05, 1.3] }),
+        }
+      );
+      const il = $("#legend-isobologram");
+      if (il) {
+        il.innerHTML =
+          `<span class="item">effect fraction ${num(iso.effect_frac, 2)} on ${esc(iso.readout || iso.assay)}</span>` +
+          `<span class="item">A alone = ${sci(iso.d_a, 2)} M · B alone = ${sci(iso.d_b, 2)} M</span>` +
+          `<span class="item">combination index = 1 on the line</span>` +
+          `<span class="item">${chip("MODEL-DERIVED", "claim:engagement_transformation")}</span>`;
+      }
+    } else {
+      const node = $("#plot-isobologram");
+      if (node) node.innerHTML = '<div class="empty">No iso-effect pair exists for this combination.</div>';
+    }
+    table(
+      "tbl-mixture",
+      [
+        { label: "receptor" },
+        { label: "engagement", num: true },
+        { label: "model" },
+        { label: "components" },
+        { label: "not modelled for" },
+      ],
+      ((mix.mixture || {}).receptors || []).map((row) => [
+        esc(row.receptor),
+        engagement(row.engagement === undefined ? row.occupancy : row.engagement, 3),
+        esc(row.model || ""),
+        esc((row.components || []).map((x) => x.compound).join(", ")),
+        esc((row.not_modelled_components || []).join(", ") || "—"),
+      ]),
+      { empty: "No shared receptor." }
+    );
+  }
+
+  /* mixtures.py states the expectation inside its `why` sentence; parse it so
+     the chart's reference line is the library's own number, not a recomputation. */
+  function expectedFromWhy(why) {
+    const m = /expectation\s+(-?\d+(?:\.\d+)?)/.exec(String(why || ""));
+    return m ? Number(m[1]) : null;
+  }
+
+  // ==================================================================
+  // 0e. EVIDENCE
+  // ==================================================================
+  const ANALYSES = [
+    {
+      id: "ablation",
+      title: "Model ablation ladder",
+      note: "Receptor only, composition only, topology only, full FlyLab — and what each level adds.",
+      route: "/api/ablation",
+      body: () => ({ compound: design().compound, conc_M: design().conc_M }),
+    },
+    {
+      id: "dependence-landscape",
+      title: "Dependence landscape",
+      note: "Every compound at every concentration. Minutes of compute; the browser default is the estimate only.",
+      route: "/api/dependence/landscape",
+      body: () => ({ n: BROWSER_DEPENDENCE_N, estimate_only: false }),
+    },
+    {
+      id: "stability",
+      title: "Conclusion stability",
+      note: "Every pre-registered conclusion re-derived under every admissible mechanism rule.",
+      route: "/api/robustness/stability",
+      body: () => ({ fast: true, conc_M: design().conc_M }),
+    },
+    {
+      id: "thresholds",
+      title: "Threshold sensitivity",
+      note: "The amplify / buffer split recomputed across the whole threshold grid.",
+      route: "/api/robustness/thresholds",
+      body: () => ({}),
+    },
+    {
+      id: "uncertainty",
+      title: "Global uncertainty (Sobol)",
+      note: "Variance attribution over the nine uncertain factors. Browser default n_base = 32.",
+      route: "/api/uncertainty/global",
+      body: () => ({ compound: design().compound, conc_M: design().conc_M, n_base: 32 }),
+    },
+    {
+      id: "voi",
+      title: "Value of information",
+      note: "Which experiment would remove the most model variance.",
+      route: "/api/voi",
+      body: () => ({ compound: design().compound, conc_M: design().conc_M, n_base: 32 }),
+    },
+  ];
+
+  function renderAnalysisCards() {
+    const host = $("#analysis-grid");
+    if (!host) return;
+    host.innerHTML = ANALYSES.map(
+      (a) =>
+        `<div class="analysis" id="an-${esc(a.id)}"><h4>${esc(a.title)}</h4>` +
+        `<p>${esc(a.note)}</p>` +
+        `<div class="est" id="est-${esc(a.id)}">estimating…</div>` +
+        `<button class="small" type="button" data-analysis="${esc(a.id)}">Run</button></div>`
+    ).join("");
+    ANALYSES.forEach(async (a) => {
+      const node = document.getElementById("est-" + a.id);
+      if (!node) return;
+      try {
+        const est = await post(a.route, Object.assign({}, a.body(), { estimate_only: true }));
+        const e = est.runtime_estimate || {};
+        node.textContent =
+          e.estimate_s === undefined ? "runtime unknown" : `estimated ${e.estimate_s} s before it runs`;
+        node.title = e.note || "";
+      } catch (err) {
+        node.textContent = "estimate unavailable";
+      }
+    });
+  }
+
+  async function runAnalysis(id) {
+    const spec = ANALYSES.find((a) => a.id === id);
+    const host = $("#analysis-out");
+    if (!spec || !host) return;
+    host.innerHTML = `<div class="notice info">Running ${esc(spec.title)}…</div>`;
+    try {
+      const out = await post(spec.route, spec.body());
+      host.innerHTML =
+        `<h4>${esc(spec.title)}</h4>` +
+        `<div class="hint">estimated ${esc((out.runtime_estimate || {}).estimate_s)} s · actual ` +
+        `${esc(out.runtime_s === undefined ? "—" : Number(out.runtime_s).toFixed(1))} s</div>` +
+        `<pre class="json">${esc(JSON.stringify(out, null, 2).slice(0, 60000))}</pre>`;
+      (out.warnings || []).slice(0, 4).forEach((w) => toast(w, "info"));
+    } catch (err) {
+      host.innerHTML = `<div class="notice">${esc(spec.title)}: ${esc(err.message)}</div>`;
+    }
+  }
+
+  async function runEvidence() {
+    if (!state.cache.dashboard) {
+      await runDashboard();
+      state.loaded.dashboard = true;
+    }
+    let validation = state.cache.validation;
+    if (!validation) {
+      try {
+        validation = await api("/api/validation");
+        state.cache.validation = validation;
+      } catch (err) {
+        validation = null;
+      }
+    }
+    renderEvidence();
+    return null;
+  }
+
+  function renderEvidence() {
+    const out = state.cache.dashboard;
+    if (!out) return;
+    indexProvenance(out);
+    const c = colors();
+    const key = $("#legend-chips");
+    if (key) {
+      key.innerHTML = CHIPS.map(
+        (k) => `<span class="item">${chip(k)} ${esc(CHIP_NOTE[k])}</span>`
+      ).join("");
+    }
+    table(
+      "tbl-evidence",
+      [
+        { label: "receptor" },
+        { label: "engagement", num: true },
+        { label: "param" },
+        { label: "value (M)", num: true },
+        { label: "relation" },
+        { label: "species / preparation" },
+        { label: "classification" },
+      ],
+      (out.evidence || []).map((r) => [
+        `<span class="swatch" style="background:${r.organism === "insect" ? c.insect : c.vertebrate}"></span>${esc(r.receptor)}`,
+        engagement(r.engagement, 3),
+        esc(r.param_type || ""),
+        sci(r.param_value_M, 2),
+        esc(r.relation || ""),
+        esc(r.species || ""),
+        chip(r.classification, "receptor:" + r.receptor),
+      ]),
+      { empty: "Run the dashboard first." }
+    );
+
+    const claims = out.claims || {};
+    const fiu = claims.fact_inference_unknown || {};
+    const host = $("#fiu");
+    if (host) {
+      const col = (title, items, kind) =>
+        `<section><h4>${esc(title)} ${chip(kind)}</h4><ul>` +
+        (items || []).map((i) => `<li>${esc(i.statement)}</li>`).join("") +
+        (items && items.length ? "" : "<li>—</li>") +
+        "</ul></section>";
+      host.innerHTML =
+        col("Fact", fiu.facts, "LITERATURE") +
+        col("Model inference", fiu.model_inference, "PREDICTION") +
+        col("Unknown", fiu.unknown, "NOT MODELLED");
+    }
+    const chain = $("#claim-chain");
+    if (chain) {
+      chain.innerHTML =
+        '<div class="chain">' +
+        (claims.chain || [])
+          .map(
+            (l) =>
+              `<div class="link"><span class="n">${l.order}</span>` +
+              `<span class="step">${esc(l.step)}<br>${chip(l.classification, "claim:" + l.step)}</span>` +
+              `<span class="what">${esc(l.statement)}</span></div>`
+          )
+          .join("") +
+        "</div>" +
+        `<div class="hint">Labels used by the machine-readable audit: ${esc((claims.labels || []).join(", "))}. ` +
+        `Counts for this run: ${esc(JSON.stringify(claims.label_counts || {}))}.</div>`;
+    }
+    const lib = (out.coverage || {}).library || {};
+    const rows = [];
+    Object.keys(lib.by_param_type || {}).forEach((k) =>
+      rows.push(["parameter type", esc(k), lib.by_param_type[k]])
+    );
+    Object.keys(lib.by_evidence_tier || {}).forEach((k) =>
+      rows.push(["evidence tier", esc(k.replace(/_/g, " ")), lib.by_evidence_tier[k]])
+    );
+    Object.keys(lib.by_engagement_model || {}).forEach((k) =>
+      rows.push(["engagement model", esc(k.replace(/_/g, " ")), lib.by_engagement_model[k]])
+    );
+    table(
+      "tbl-library",
+      [{ label: "dimension" }, { label: "value" }, { label: "rows", num: true }],
+      rows,
+      { empty: "No library census." }
+    );
+
+    const val = state.cache.validation || {};
+    const vrows = [];
+    Object.keys(val.assays || {}).forEach((assayName) => {
+      ((val.assays[assayName] || {}).rows || []).forEach((r) =>
+        vrows.push(Object.assign({ model_assay: assayName }, r))
+      );
+    });
+    table(
+      "tbl-validation",
+      [
+        { label: "published dataset" },
+        { label: "model assay" },
+        { label: "compounds", num: true },
+        { label: "spearman", num: true },
+        { label: "status" },
+      ],
+      vrows.map((r) => [
+        esc(r.id || "—"),
+        esc(r.model_assay || "—"),
+        esc(r.n_compounds === undefined ? "—" : r.n_compounds),
+        r.skipped ? "—" : num(r.spearman_rho, 3),
+        r.skipped
+          ? `<span class="badge">skipped</span>`
+          : r.exact_match
+          ? '<span class="badge tier-literature_order">exact order</span>'
+          : '<span class="badge tier-class_placeholder">partial</span>',
+      ]),
+      { empty: "Rank validation is not available in this build." }
+    );
+    const vhost = $("#tbl-validation").closest(".card");
+    let vnote = vhost && vhost.querySelector(".validation-note");
+    if (vhost && !vnote) {
+      vnote = document.createElement("div");
+      vnote.className = "hint validation-note";
+      vhost.appendChild(vnote);
+    }
+    if (vnote) {
+      const sum = val.summary || {};
+      const kd = val.known_discrepancies || {};
+      const n = (Array.isArray(kd) ? kd : kd.discrepancies || []).length;
+      vnote.textContent =
+        `${sum.n_evaluated || 0} of ${sum.n_runs || 0} runs were scorable (mean rho ` +
+        `${sum.mean_rho === undefined ? "—" : Number(sum.mean_rho).toFixed(3)}); ` +
+        `${n} literature-vs-library contradictions are on record and are reported, not silently fixed.`;
+    }
+    renderAnalysisCards();
+  }
+
+  // ==================================================================
   // tabs
   // ==================================================================
   const TABS = {
+    dashboard: { run: runDashboard, render: renderDashboard },
+    dose: { run: runDose, render: renderDose },
+    genotype: { run: runGenotype, render: renderGenotype },
+    mixtures: { run: runMixtures, render: renderMixtures },
+    evidence: { run: runEvidence, render: renderEvidence },
     scorecard: { run: runScorecard, render: renderScorecard },
     curves: { run: runCurves, render: () => { renderOccCurve(); renderIc50(); } },
     circuit: { run: runCircuit, render: renderCircuit },
@@ -2320,9 +3692,11 @@
   }
 
   function invalidate() {
-    state.cache = {};
+    const validation = state.cache.validation; // library-wide, dose-independent
+    state.cache = validation ? { validation: validation } : {};
     state.loaded = {};
     state.dirty = {};
+    state.prov = {};
   }
 
   // ==================================================================
@@ -2365,6 +3739,65 @@
       })
     );
 
+    /* The dose rail drives every dashboard card. `input` only moves the label
+       (so dragging stays smooth); the run happens on `change`, i.e. release. */
+    const rail = $("#f-dash-logconc");
+    if (rail) {
+      rail.addEventListener("input", (e) => {
+        const v = Math.pow(10, Number(e.target.value));
+        const read = $("#dash-conc-read");
+        if (read) read.textContent = sci(v) + " M";
+      });
+      rail.addEventListener("change", (e) => {
+        setConc(Math.pow(10, Number(e.target.value)));
+        invalidate();
+        store("design", design());
+        runTab(state.activeTab);
+      });
+    }
+    $$("#dash-ladder button").forEach((b) =>
+      b.addEventListener("click", () => {
+        setConc(Number(b.getAttribute("data-conc")));
+        invalidate();
+        store("design", design());
+        runTab(state.activeTab);
+      })
+    );
+
+    const cmp = $("#f-cmp-compounds");
+    if (cmp) cmp.addEventListener("change", () => estimateCompare());
+    const cmpDep = $("#f-cmp-dependence");
+    if (cmpDep) cmpDep.addEventListener("change", () => estimateCompare());
+    const cmpRun = $("#btn-cmp-run");
+    if (cmpRun) {
+      cmpRun.addEventListener("click", () => {
+        cmpRun.disabled = true;
+        status("busy", "running compare…");
+        runCompare()
+          .then((ms) => status("ok", "compare ready", ms))
+          .catch((err) => {
+            status("error", "compare failed");
+            toast("compare: " + err.message, "error");
+          })
+          .finally(() => {
+            cmpRun.disabled = false;
+          });
+      });
+    }
+
+    const genoOther = $("#btn-geno-other");
+    if (genoOther) {
+      genoOther.addEventListener("click", () =>
+        runGenotypeOther().catch((err) => toast("genotype: " + err.message, "error"))
+      );
+    }
+
+    const provClose = $("#btn-prov-close");
+    if (provClose) provClose.addEventListener("click", closeProvenance);
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") closeProvenance();
+    });
+
     $("#btn-ic50").addEventListener("click", () =>
       runIc50().catch((err) => toast("IC50: " + err.message, "error"))
     );
@@ -2374,6 +3807,19 @@
     });
 
     document.addEventListener("click", (ev) => {
+      const chipEl = ev.target.closest && ev.target.closest(".chip[data-prov]");
+      if (chipEl) {
+        openProvenance(chipEl.getAttribute("data-prov"));
+        return;
+      }
+      const an = ev.target.closest && ev.target.closest("[data-analysis]");
+      if (an) {
+        an.disabled = true;
+        runAnalysis(an.getAttribute("data-analysis")).finally(() => {
+          an.disabled = false;
+        });
+        return;
+      }
       const pathRow = ev.target.closest && ev.target.closest("[data-path]");
       if (pathRow) {
         $$("#tbl-paths tr").forEach((tr) => tr.classList.remove("selected"));
@@ -2568,8 +4014,9 @@
     }
     $("#f-exp-reps").value = $("#f-exp-reps").value || 2;
 
+    estimateCompare().catch(() => {});
     status("ok", "ready");
-    activate("scorecard");
+    activate("dashboard");
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

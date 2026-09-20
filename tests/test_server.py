@@ -529,3 +529,408 @@ def test_missing_graph_file_is_a_404_not_a_500(client, monkeypatch):
     r = client.get("/api/graph", params={"graph": "named"})
     assert r.status_code == 404
     assert "missing" in r.json()["detail"]
+
+
+# --------------------------------------------------------------------------
+# dashboard / decision layer
+# --------------------------------------------------------------------------
+@pytest.fixture(scope="module")
+def imidacloprid_dashboard(client):
+    r = client.get(
+        "/api/dashboard",
+        params={"compound": "imidacloprid", "conc_M": 1e-6, "n": 20, "graph": "named"},
+    )
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+@pytest.fixture(scope="module")
+def fipronil_dashboard(client):
+    r = client.get(
+        "/api/dashboard",
+        params={"compound": "fipronil", "conc_M": 1e-6, "n": 20, "graph": "named"},
+    )
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_dashboard_is_one_round_trip_for_every_landing_block(imidacloprid_dashboard):
+    d = imidacloprid_dashboard
+    # block 1-5, 8 and 10 all arrive together
+    for key in (
+        "compound",
+        "headline",
+        "coverage",
+        "selectivity",
+        "circuit",
+        "dependence",
+        "ladder",
+        "evidence",
+        "trust",
+        "why",
+        "claims",
+    ):
+        assert key in d, key
+    assert d["compound"]["name"] == "Imidacloprid"
+    assert d["compound"]["mode"] == "agonist"
+    assert str(d["compound"]["target_receptor"]).startswith("insect_")
+
+
+def test_dashboard_headline_tiles_carry_values_and_classifications(imidacloprid_dashboard):
+    h = imidacloprid_dashboard["headline"]
+    assert h["insect_engagement"]["value"] > 0.9
+    assert 0.0 < h["vertebrate_engagement"]["value"] < 0.2
+    assert h["receptor_selectivity"]["ratio_vert_over_insect"] > 100
+    assert h["evidence_tier"]["value"] == "literature_order"
+    for tile in h.values():
+        assert tile["classification"] in (
+            "LITERATURE",
+            "MODEL-DERIVED",
+            "MODEL-ASSUMPTION",
+            "PREDICTION",
+            "NOT MODELLED",
+        )
+
+
+def test_dashboard_coverage_separates_sourced_from_not_modelled(imidacloprid_dashboard):
+    cov = imidacloprid_dashboard["coverage"]
+    assert cov["n_rows"] == cov["n_sourced"] + cov["n_not_modelled"]
+    assert cov["n_not_modelled"] >= 1
+    assert cov["library"]["n_rows_not_modelled"] > 0
+
+
+def test_fipronil_selectivity_shows_the_vertebrate_number_not_just_a_ratio(fipronil_dashboard):
+    """The v0.5 library correction: fipronil is not 'vertebrate-safe' at 1 uM."""
+    sel = fipronil_dashboard["selectivity"]
+    assert sel["pair"] == "GABA_A"
+    assert sel["vertebrate_receptor"] == "vertebrate_GABA_A"
+    assert sel["vertebrate_engagement"] == pytest.approx(0.48, abs=0.01)
+    assert sel["insect_engagement"] > sel["vertebrate_engagement"]
+    assert sel["engagement_difference"] == pytest.approx(
+        sel["insect_engagement"] - sel["vertebrate_engagement"]
+    )
+    # the concentration at which the vertebrate arm reaches 20%, and who is limiting
+    assert sel["vertebrate_limit_conc_M"] == pytest.approx(2.75e-7, rel=1e-6)
+    assert sel["limiting_vertebrate_receptor"]["receptor"] == "vertebrate_GABA_A"
+    assert sel["limiting_vertebrate_receptor"]["source"]
+
+
+def test_selectivity_lists_every_vertebrate_row_with_its_threshold(fipronil_dashboard):
+    rows = fipronil_dashboard["selectivity"]["vertebrate_rows"]
+    assert rows
+    for row in rows:
+        assert row["classification"] in ("LITERATURE", "MODEL-ASSUMPTION", "NOT MODELLED")
+        if row["classification"] == "NOT MODELLED":
+            assert row["param_value_M"] is None and row["conc_at_limit_M"] is None
+
+
+def test_circuit_block_reports_vehicle_treated_percent_and_direction(imidacloprid_dashboard):
+    cir = imidacloprid_dashboard["circuit"]["readouts"]
+    assert set(cir) == {"mean_hz", "mn9_hz", "dnp01_hz"}
+    mean = cir["mean_hz"]
+    assert mean["vehicle"] > mean["treated"]
+    assert mean["direction"] == "suppressed"
+    assert mean["percent"] < -50
+    assert imidacloprid_dashboard["circuit"]["classification"] == "PREDICTION"
+
+
+def test_dependence_is_reported_separately_from_the_effect(imidacloprid_dashboard, fipronil_dashboard):
+    """HANDOFF finding 1: imidacloprid's mean-rate effect is not a wiring result."""
+    imi = imidacloprid_dashboard["dependence"]
+    fip = fipronil_dashboard["dependence"]
+    assert imi["class"] == "composition-dominated"
+    assert imi["verdict"] == "specific wiring evidence: weak (composition-dominated)"
+    assert fip["class"] == "topology-dependent"
+    assert "topology-dependent" in fip["verdict"]
+    assert not imi["structural_modes_beaten"]
+    assert set(fip["structural_modes_beaten"]) >= {"weight_permute", "rewire_degree_preserving"}
+
+
+def test_dependence_reports_p_and_its_resolution_never_a_bare_z(imidacloprid_dashboard):
+    dep = imidacloprid_dashboard["dependence"]
+    assert dep["p_resolution"] == pytest.approx(1.0 / (dep["n"] + 1))
+    for mode in dep["modes"]:
+        assert 0.0 < mode["p_two_sided"] <= 1.0
+        assert mode["p_resolution"] == pytest.approx(1.0 / (mode["n"] + 1))
+        assert "at_resolution_floor" in mode
+    assert "permutation p" in dep["note"]
+
+
+def test_ladder_puts_three_fractions_on_one_axis(imidacloprid_dashboard):
+    lad = imidacloprid_dashboard["ladder"]
+    n = len(lad["concs_M"])
+    assert n >= 10
+    for key in ("insect_engagement", "vertebrate_engagement", "circuit_response"):
+        assert len(lad[key]) == n
+        for value in lad[key]:
+            assert value is None or 0.0 <= value <= 1.0001, key
+    assert "one axis" in lad["axis_note"]
+    assert lad["concs_M"] == sorted(lad["concs_M"])
+
+
+def test_ladder_matches_the_analysis_layers_own_selectivity_index():
+    """The dashboard uses the rate-engine path; it must agree with the slow one."""
+    from flylab.analysis.selectivity import circuit_selectivity_index
+    from flylab.browser import bridge
+
+    slow = circuit_selectivity_index("imidacloprid", assay="subgraph", graph="named")
+    fast = bridge.build_dashboard(
+        "imidacloprid", 1e-6, graph="named", include_dependence=False
+    )["ladder"]
+    assert fast["circuit_threshold_M"] == pytest.approx(slow["circuit_threshold_M"], rel=1e-9)
+    assert fast["vertebrate_threshold_M"] == pytest.approx(slow["vertebrate_threshold_M"], rel=1e-9)
+    assert fast["circuit_si_log10"] == pytest.approx(slow["circuit_si_log10"], rel=1e-9)
+    assert fast["receptor_si_log10"] == pytest.approx(slow["receptor_si_log10"], rel=1e-9)
+    assert fast["si_gap_circuit_minus_receptor"] == pytest.approx(
+        slow["si_gap_circuit_minus_receptor"], rel=1e-9
+    )
+    for a, b in zip(fast["circuit_treated_hz"], [p["treated"] for p in slow["curve"]]):
+        assert a == pytest.approx(b, rel=1e-9)
+
+
+def test_trust_panel_is_per_layer_and_never_blended(imidacloprid_dashboard):
+    trust = imidacloprid_dashboard["trust"]
+    areas = {row["area"] for row in trust["rows"]}
+    assert {
+        "Receptor values",
+        "Exposure prediction",
+        "Circuit topology",
+        "Transmitter identity",
+        "Receptor expression",
+        "PK constants",
+        "Live validation",
+    } <= areas
+    assert trust["blended_confidence"] is None
+    expression = next(r for r in trust["rows"] if r["area"] == "Receptor expression")
+    assert "20." in expression["status"]  # 20.5% mapped
+    topology = next(r for r in trust["rows"] if r["area"] == "Circuit topology")
+    assert topology["classification"] == "LITERATURE"
+    transmitters = next(r for r in trust["rows"] if r["area"] == "Transmitter identity")
+    assert transmitters["classification"] == "PREDICTION"
+    live = next(r for r in trust["rows"] if r["area"] == "Live validation")
+    assert live["status"] == "none" and live["detail"]["live_lab"] is None
+
+
+def test_why_is_generated_from_the_run_not_stored_per_compound(
+    imidacloprid_dashboard, fipronil_dashboard, client
+):
+    imi = imidacloprid_dashboard["why"]
+    fip = fipronil_dashboard["why"]
+    assert imi["text"] != fip["text"]
+    assert imi["inputs"]["saturation"] == "essentially saturated"
+    assert imi["inputs"]["potency_is_inert"] is True
+    assert "occupancy-to-gain rule" in imi["text"]
+    assert "composition" in imi["text"]
+    assert "wiring" in fip["text"]
+    # the same compound at a dose far below its EC50 gets a different sentence
+    low = client.get(
+        "/api/dashboard",
+        params={"compound": "imidacloprid", "conc_M": 1e-10, "include_dependence": False},
+    ).json()["why"]
+    assert low["text"] != imi["text"]
+    assert low["inputs"]["saturation"] != "essentially saturated"
+    assert low["inputs"]["potency_is_inert"] is False
+
+
+def test_dashboard_never_prints_a_verdict_or_a_confidence_score(
+    imidacloprid_dashboard, fipronil_dashboard
+):
+    """No 'Toxicity: HIGH', no 'Safety: GOOD', no 'confidence 87%'."""
+    import json as _json
+    import re
+
+    for payload in (imidacloprid_dashboard, fipronil_dashboard):
+        blob = _json.dumps(payload).lower()
+        for banned in ("toxicity:", "safety:", "safe\"", "prediction confidence"):
+            assert banned not in blob, banned
+        assert not re.search(r"confidence[^.\"]{0,12}\d{1,3}\s?%", blob)
+    trust = imidacloprid_dashboard["trust"]
+    assert trust["blended_confidence"] is None
+
+
+def test_dashboard_states_a_runtime_estimate_before_running(client):
+    r = client.get(
+        "/api/dashboard", params={"compound": "imidacloprid", "estimate_only": True}
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["estimate_only"] is True
+    assert body["runtime_estimate"]["estimate_s"] > 0
+    assert "headline" not in body
+
+
+def test_dashboard_rejects_an_unknown_compound(client):
+    r = client.get("/api/dashboard", params={"compound": "unobtainium"})
+    assert r.status_code == 404
+
+
+# ---- compare -------------------------------------------------------------
+@pytest.fixture(scope="module")
+def compare_three(client):
+    r = client.post(
+        "/api/compare",
+        json={
+            "compounds": ["imidacloprid", "fipronil", "deltamethrin"],
+            "conc_M": 1e-6,
+            "n": 20,
+        },
+    )
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_compare_screen_has_every_decision_column(compare_three):
+    for column in (
+        "target_receptor",
+        "insect_engagement",
+        "vertebrate_engagement",
+        "receptor_si_log10",
+        "circuit_si_log10",
+        "si_gap_circuit_minus_receptor",
+        "circuit_delta_percent",
+        "topology_dependence",
+        "evidence_tier",
+    ):
+        assert column in compare_three["columns"] or column in compare_three["rows"][0], column
+    assert {r["compound"] for r in compare_three["rows"]} == {
+        "imidacloprid",
+        "fipronil",
+        "deltamethrin",
+    }
+
+
+def test_compare_makes_the_receptor_circuit_divergence_visible(compare_three):
+    """The point of the screen: best receptor SI is not best circuit SI."""
+    assert compare_three["best_receptor_si"] == "imidacloprid"
+    assert compare_three["best_circuit_si"] == "deltamethrin"
+    assert compare_three["findings"]
+    assert "NOT the highest circuit selectivity" in compare_three["findings"][0]
+    imi = next(r for r in compare_three["rows"] if r["compound"] == "imidacloprid")
+    assert imi["si_gap_circuit_minus_receptor"] < 0
+
+
+def test_compare_reports_an_absent_circuit_index_as_absent(compare_three):
+    """Eight library compounds never reach the circuit threshold; that is a fact."""
+    fip = next(r for r in compare_three["rows"] if r["compound"] == "fipronil")
+    assert fip["circuit_si_log10"] is None
+    assert fip["si_gap_circuit_minus_receptor"] is None
+    assert fip["topology_dependence"] == "topology-dependent"
+
+
+def test_compare_bounds_and_estimate(client):
+    assert client.post("/api/compare", json={"compounds": []}).status_code == 400
+    assert client.post("/api/compare", json={"compounds": ["x"] * 9}).status_code == 400
+    body = client.post(
+        "/api/compare", json={"compounds": ["imidacloprid"], "estimate_only": True}
+    ).json()
+    assert body["runtime_estimate"]["estimate_s"] > 0
+
+
+# ---- claims --------------------------------------------------------------
+def test_claims_get_walks_the_whole_chain(client):
+    body = client.get("/api/claims", params={"compound": "fipronil", "conc_M": 1e-6}).json()
+    steps = [link["step"] for link in body["chain"]]
+    assert steps[0] == "result" and steps[-1] == "readout"
+    assert "malecns_edges" in steps
+    fiu = body["fact_inference_unknown"]
+    assert fiu["facts"] and fiu["model_inference"] and fiu["unknown"]
+
+
+def test_claims_post_accepts_a_notebook_the_caller_already_has(client):
+    nb = client.post(
+        "/api/assay/subgraph", json={"compound": "imidacloprid", "conc_M": 1e-6}
+    ).json()
+    body = client.post("/api/claims", json={"notebook": nb}).json()
+    assert body["subject"]["compound"] == "imidacloprid"
+    assert body["provenance"]["library_sha256"] == nb["provenance"]["library_sha256"]
+
+
+# ---- the remaining analysis routes --------------------------------------
+def test_dependence_route_matches_the_dashboard_verdict(client):
+    body = client.post(
+        "/api/dependence", json={"compound": "fipronil", "conc_M": 1e-6, "n": 20}
+    ).json()
+    assert body["class"] == "topology-dependent"
+    assert body["verdict"].startswith("specific wiring evidence")
+    assert body["runtime_estimate"]["estimate_s"] > 0
+
+
+def test_dependence_landscape_defaults_to_the_estimate(client):
+    body = client.post("/api/dependence/landscape", json={}).json()
+    assert body["estimate_only"] is True
+    assert body["runtime_estimate"]["estimate_s"] > 0
+    assert "Pass estimate_only=false" in body["note"]
+
+
+def test_dependence_landscape_refuses_an_oversized_grid(client):
+    r = client.post(
+        "/api/dependence/landscape",
+        json={"compounds": ["imidacloprid"] * 21, "concs_M": [1e-6] * 11},
+    )
+    assert r.status_code == 400
+
+
+def test_ablation_route(client):
+    body = client.post("/api/ablation", json={"compound": "imidacloprid", "conc_M": 1e-6}).json()
+    assert body["level_order"] == [
+        "A_receptor_only",
+        "B_composition_only",
+        "C_topology_only",
+        "D_full_flylab",
+    ]
+    assert set(body["effects"]) == set(body["level_order"])
+
+
+@pytest.mark.parametrize(
+    "route",
+    [
+        "/api/robustness/stability",
+        "/api/robustness/thresholds",
+        "/api/uncertainty/global",
+        "/api/voi",
+    ],
+)
+def test_expensive_routes_estimate_before_they_run(client, route):
+    body = client.post(route, json={"estimate_only": True}).json()
+    assert body["estimate_only"] is True
+    assert body["runtime_estimate"]["estimate_s"] > 0
+    assert body["runtime_estimate"]["note"]
+
+
+def test_uncertainty_browser_default_is_the_cheap_design(client):
+    body = client.post("/api/uncertainty/global", json={"estimate_only": True}).json()
+    assert body["runtime_estimate"]["n_base"] == 32
+    assert body["runtime_estimate"]["estimate_s_warm"] < body["runtime_estimate"]["estimate_s"]
+
+
+# ---- genotype and mixtures (blocks 6 and 7) ------------------------------
+def test_genotype_panel_is_per_compound_not_per_receptor(client):
+    """Rdl / para alleles move the compounds they were measured on, and no others."""
+    delta = client.post(
+        "/api/genotype/panel", json={"compound": "deltamethrin", "conc_M": 1e-6}
+    ).json()
+    ddt = client.post("/api/genotype/panel", json={"compound": "ddt", "conc_M": 1e-6}).json()
+    folds = {r["genotype"]: r["fold_shift"] for r in delta["rows"]}
+    assert folds["para_M918T_superkdr"] == pytest.approx(100.0)
+    ddt_folds = {r["genotype"]: r["fold_shift"] for r in ddt["rows"]}
+    assert ddt_folds["para_M918T_superkdr"] == pytest.approx(1.0)
+    wt = next(r for r in delta["rows"] if r["genotype"] == "wt")
+    mut = next(r for r in delta["rows"] if r["genotype"] == "para_M918T_superkdr")
+    assert mut["occupancy"] < wt["occupancy"]
+    assert mut["readouts"]["mn9_hz"] < wt["readouts"]["mn9_hz"]
+
+
+def test_isobologram_route(client):
+    body = client.post(
+        "/api/mixture/isobologram",
+        json={"compound_a": "imidacloprid", "compound_b": "fipronil", "n": 5},
+    ).json()
+    assert len(body["points"]) == 5
+    assert len(body["additivity_line"]) == 2
+
+
+def test_isobologram_needs_two_compounds(client):
+    assert (
+        client.post("/api/mixture/isobologram", json={"compound_a": "", "compound_b": ""}).status_code
+        == 400
+    )
