@@ -40,10 +40,12 @@ Spearman correlation of its prediction against the full model across the
 library, the residual it leaves after standardising both, and, for the levels
 that are in Hz, the residual in Hz.
 
-The expected - and publishable - result is that for the nicotinic agonists the
-composition-only baseline already reproduces the full model: their mean-rate
-effect is an E/I-balance effect, which is exactly what the null models say
-independently.  The output says so in words when it happens, and says the
+For the nicotinic agonists the composition-only baseline tracks the full
+model's ordering closely. That agreement is largely structural: both levels are
+functions of the same gain vector, matched pharmacology-free pseudo-compounds
+already reach a median near 0.85, shuffling compound labels leaves the value
+unchanged, and it does not survive a degree-corrected engine. Quote it only
+against its matched reference distribution and the normalisation used.  The output says so in words when it happens, and says the
 opposite when a level fails.
 
 Three things a reader of the ablation numbers has to know
@@ -1801,7 +1803,7 @@ def ablation_table(
     ``rows`` is one record per ``(compound, conc)`` with all four level
     predictions; ``information_gain`` is computed per concentration over the
     whole set, and ``statements`` says in words where a cheaper baseline
-    already reproduces the full model.
+    tracks the full model's ordering, against its matched reference.
     """
     t0 = time.perf_counter()
     if readout == "auto":

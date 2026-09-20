@@ -583,6 +583,119 @@ def verdict_stability(
 
 
 # --------------------------------------------------------------------------
+# what does the verdict actually track?
+# --------------------------------------------------------------------------
+#: Structural statistics of a cut that a verdict might plausibly track, as
+#: :func:`~flylab.analysis.dependence.cut_census` names them.  ``n_nodes`` and
+#: ``n_edges`` are included precisely so that "it is just size" stays a
+#: falsifiable alternative rather than an unexamined assumption.
+STRUCTURE_KEYS: tuple[str, ...] = (
+    "n_nodes",
+    "n_edges",
+    "mean_degree",
+    "share_onto_seeds",
+    "share_nodes_with_in_degree",
+    "share_edges_from_nodes_with_input",
+)
+
+
+def verdict_vs_structure(
+    result: dict[str, Any] | Sequence[dict[str, Any]],
+    key: str = "class",
+    statistics: Sequence[str] = STRUCTURE_KEYS,
+) -> dict[str, Any]:
+    """Which structural statistic, if any, separates the verdicts?
+
+    For every statistic in ``statistics`` this reports the range taken by each
+    verdict class and whether those ranges are **disjoint**, i.e. whether a
+    single threshold on that statistic reproduces the verdict over the cuts
+    that were run.  It also cross-tabulates the boolean ``in_star`` flag that
+    :func:`~flylab.analysis.dependence.cut_census` already computes.
+
+    This is an association over a handful of cuts, not a causal claim, and the
+    returned ``strength`` says so: with a minority class of one or two cells
+    every statistic that happens to be extreme on those cuts will separate,
+    and the honest way to break the tie is a controlled cut -- the same node
+    set with its edge structure changed -- not more statistics.
+    """
+    rows = list(result["rows"]) if isinstance(result, dict) else list(result)
+    classes: dict[str, list[dict[str, Any]]] = {}
+    for r in rows:
+        classes.setdefault(str(r.get(key)), []).append(r)
+    minority = min((len(v) for v in classes.values()), default=0)
+    out: dict[str, Any] = {}
+    for stat in statistics:
+        per_class = {
+            k: [r[stat] for r in v if r.get(stat) is not None]
+            for k, v in classes.items()
+        }
+        per_class = {k: v for k, v in per_class.items() if v}
+        if len(per_class) < 2:
+            out[stat] = {"separates": None, "by_class": per_class}
+            continue
+        lo = {k: min(v) for k, v in per_class.items()}
+        hi = {k: max(v) for k, v in per_class.items()}
+        order = sorted(per_class, key=lambda k: lo[k])
+        disjoint = all(
+            hi[order[i]] < lo[order[i + 1]] for i in range(len(order) - 1)
+        )
+        out[stat] = {
+            "separates": bool(disjoint),
+            "by_class": {k: {"min": lo[k], "max": hi[k], "n": len(per_class[k])} for k in per_class},
+            "threshold": (
+                (hi[order[0]] + lo[order[1]]) / 2.0 if disjoint and len(order) == 2 else None
+            ),
+            "ascending_classes": order,
+        }
+    in_star = {}
+    for k, v in classes.items():
+        flags = [r.get("in_star") for r in v if r.get("in_star") is not None]
+        in_star[k] = {"n": len(flags), "n_in_star": sum(1 for f in flags if f)}
+    separating = [s for s, b in out.items() if b.get("separates")]
+    if len(classes) < 2:
+        statement = (
+            f"every cut gave the same verdict ({next(iter(classes), None)!r}), so "
+            "nothing here separates: the question of what the verdict tracks "
+            "does not arise over these cuts."
+        )
+    elif minority <= 2:
+        statement = (
+            f"the minority verdict class has only {minority} cell(s), so the "
+            + (
+                "statistics " + ", ".join(separating)
+                if separating
+                else "statistics tested"
+            )
+            + " separate it trivially and cannot be told apart from one another. "
+            "Read this as 'the cuts that differ are extreme on all of these at "
+            "once', and settle it with a controlled cut (the same node set, a "
+            "different edge structure) rather than with more statistics."
+        )
+    else:
+        statement = (
+            ("separated by " + ", ".join(separating))
+            if separating
+            else "no single statistic tested separates the verdict classes"
+        ) + f" over {len(rows)} cut x compound cells."
+    return {
+        "key": key,
+        "n_rows": len(rows),
+        "classes": {k: len(v) for k, v in classes.items()},
+        "minority_class_size": minority,
+        "by_statistic": out,
+        "separating_statistics": separating,
+        "in_star_by_class": in_star,
+        "strength": (
+            "trivial (minority class <= 2)" if minority <= 2 and len(classes) > 1
+            else "degenerate (one class)" if len(classes) < 2
+            else "observational"
+        ),
+        "statement": statement,
+        "label": "model_derived",
+    }
+
+
+# --------------------------------------------------------------------------
 # the paper-ready table
 # --------------------------------------------------------------------------
 #: Columns of :func:`scale_report`, in order.
@@ -827,6 +940,8 @@ __all__ = [
     "MEASURED_RUN_COSTS",
     "run_cost_s",
     "SCALE_WARNINGS",
+    "STRUCTURE_KEYS",
+    "verdict_vs_structure",
     "available_cuts",
     "cut_path",
     "dependence_vs_scale",

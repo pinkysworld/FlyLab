@@ -31,6 +31,8 @@ import pytest
 from flylab.analysis.dependence import synthetic_cut
 from flylab.analysis.scale import (
     CUT_FILES,
+    STRUCTURE_KEYS,
+    verdict_vs_structure,
     MEASURED_RUN_COSTS,
     run_cost_s,
     CUT_RECIPE,
@@ -412,6 +414,93 @@ def test_under_powered_rungs_are_named():
     rows[1]["resolution_coarser_than_alpha"] = True
     s = verdict_stability({"rows": rows})
     assert s["by_compound"]["x"]["under_powered_cuts"] == ["c1"]
+
+
+# --------------------------------------------------------------------------
+# what does the verdict track?
+# --------------------------------------------------------------------------
+def _structured(specs):
+    """rows as (class, mean_degree, in_star) triples."""
+    out = []
+    for i, (cls, deg, star) in enumerate(specs):
+        out.append(
+            {
+                "compound": "x",
+                "cut": f"c{i}",
+                "n_nodes": 1000 + i,
+                "n_edges": 1000 * (i + 1),
+                "n": 100,
+                "class": cls,
+                "mean_degree": deg,
+                "share_onto_seeds": 1.0 / deg,
+                "share_nodes_with_in_degree": min(1.0, deg / 25.0),
+                "share_edges_from_nodes_with_input": min(1.0, deg / 25.0),
+                "in_star": star,
+            }
+        )
+    return out
+
+
+def test_a_statistic_that_separates_the_verdicts_is_named():
+    rows = _structured(
+        [("composition-dominated", 1.2, True), ("composition-dominated", 1.5, True),
+         ("composition-dominated", 2.0, True), ("topology-dependent", 20.0, False),
+         ("topology-dependent", 40.0, False), ("topology-dependent", 60.0, False)]
+    )
+    v = verdict_vs_structure({"rows": rows})
+    assert "mean_degree" in v["separating_statistics"]
+    assert v["by_statistic"]["mean_degree"]["separates"] is True
+    assert 2.0 < v["by_statistic"]["mean_degree"]["threshold"] < 20.0
+    assert v["strength"] == "observational"
+    assert "separated by" in v["statement"]
+
+
+def test_size_is_kept_as_a_falsifiable_alternative():
+    """'It is just size' must be testable, so n_nodes is one of the statistics."""
+    assert "n_nodes" in STRUCTURE_KEYS and "n_edges" in STRUCTURE_KEYS
+    rows = _structured(
+        [("composition-dominated", 1.2, True), ("composition-dominated", 1.5, True),
+         ("composition-dominated", 2.0, True), ("topology-dependent", 20.0, False),
+         ("topology-dependent", 40.0, False), ("topology-dependent", 60.0, False)]
+    )
+    v = verdict_vs_structure({"rows": rows})
+    # n_nodes increases with the row index here, so it separates too, and the
+    # report must not pretend one of the two explanations has been ruled out
+    assert v["by_statistic"]["n_nodes"]["separates"] is True
+
+
+def test_a_minority_class_of_one_is_called_trivial_not_a_finding():
+    rows = _structured(
+        [("composition-dominated", 1.2, True)] + [("topology-dependent", 20.0 + i, False) for i in range(5)]
+    )
+    v = verdict_vs_structure({"rows": rows})
+    assert v["minority_class_size"] == 1
+    assert v["strength"] == "trivial (minority class <= 2)"
+    assert "cannot be told apart" in v["statement"]
+    assert "controlled cut" in v["statement"]
+
+
+def test_overlapping_ranges_do_not_separate():
+    """An in-star cut that gives BOTH verdicts means the flag is not sufficient."""
+    rows = _structured(
+        [("composition-dominated", 1.2, True), ("topology-dependent", 1.2, True),
+         ("topology-dependent", 20.0, False), ("topology-dependent", 40.0, False)]
+    )
+    v = verdict_vs_structure({"rows": rows})
+    assert "mean_degree" not in v["separating_statistics"]
+    assert v["by_statistic"]["mean_degree"]["separates"] is False
+    assert v["by_statistic"]["mean_degree"]["threshold"] is None
+    assert v["by_statistic"]["share_onto_seeds"]["separates"] is False
+    # the in-star flag is necessary but not sufficient: one in-star cut lands
+    # in each class, so the flag alone does not predict the verdict
+    assert v["in_star_by_class"]["topology-dependent"]["n_in_star"] == 1
+    assert v["in_star_by_class"]["composition-dominated"]["n_in_star"] == 1
+
+
+def test_one_class_everywhere_is_reported_as_degenerate():
+    v = verdict_vs_structure({"rows": _structured([("topology-dependent", 20.0, False)] * 3)})
+    assert v["strength"] == "degenerate (one class)"
+    assert "does not arise" in v["statement"]
 
 
 # --------------------------------------------------------------------------

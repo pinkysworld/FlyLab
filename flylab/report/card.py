@@ -437,7 +437,7 @@ def _dependence_section(payload: Any, compound: str | None, conc_M: float | None
 
 
 def _level_name(level: Any) -> str | None:
-    """The weakest graph model that still reproduces the effect, as a name.
+    """The weakest graph model not distinguishable from the real graph, as a name.
 
     The analysis layer returns either a bare string or a block describing the
     level; the card shows the name and keeps the block beside it.

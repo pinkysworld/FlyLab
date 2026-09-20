@@ -1377,7 +1377,9 @@ def connectome_information_score(
         Superseded by :func:`flylab.analysis.dependence.dependence_profile`
         and :func:`~flylab.analysis.dependence.necessary_information_level`,
         which report an empirical permutation p per mode and name the weakest
-        graph model that already reproduces the effect. This single score
+        graph model that is not distinguishable from the real one. Failing to
+        reject a null is not evidence of equivalence, so only a gap below the
+        prespecified margin licenses a stronger word. This single score
         collapses that into one number and is no longer used by the paper.
     """
     if panel is None:

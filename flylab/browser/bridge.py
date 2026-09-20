@@ -1856,7 +1856,7 @@ def _why_block(
         excluded = "global transmitter composition alone"
     elif cls == "composition-dominated":
         structure = "the global transmitter composition of the cut"
-        excluded = "the exact MaleCNS wiring, which every structure-preserving shuffle reproduces"
+        excluded = ("the exact MaleCNS wiring: no structure-preserving shuffle of this cut could be told apart from it, which is weaker than saying the shuffles reproduce the effect")
     elif cls == "network-insensitive":
         structure = "the pharmacology alone"
         excluded = "the graph, which no null model distinguishes here"

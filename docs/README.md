@@ -10,6 +10,8 @@ If you are new to the project, start with the main [README](../README.md). This 
 |---|---|
 | [README](../README.md) | public project overview, installation and first commands |
 | [Architecture](ARCHITECTURE.md) | scientific dataflow, package boundaries and provenance model |
+| [Tutorial](TUTORIAL.md) | seven runnable lessons, each with its real output and what it does and does not license |
+| [Interpretation guide](INTERPRETATION.md) | how to read every number the bench produces, and the misreading each one invites |
 | [Research positioning](NOVELTY.md) | what FlyLab claims as new, what adjacent work already exists, and claim-language guardrails |
 | [Research map](RESEARCH_MAP.md) | current analyses, generated results and open research gaps |
 | [Browser build](PAGES.md) | Pyodide bridge, static site and GitHub Pages details |

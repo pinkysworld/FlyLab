@@ -1,13 +1,13 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-20T15:09:38+00:00",
+  "generated_utc": "2026-09-20T15:48:02+00:00",
   "fast": false,
   "seed": 0,
   "jobs": 4,
   "runtime_s": 3824.39,
   "provenance": {
     "flylab_version": "0.6.0",
-    "git_sha": "e74d73857430bc1c9ed30cadc4b764fdbeffaf6c",
+    "git_sha": "f95fd88a2165e66d5203db6c6fa8c6a020c5a8e0",
     "library_sha256": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8",
     "library_version": "0.6",
     "library_schema_version": 3,
@@ -199,7 +199,7 @@
     },
     "provenance": {
       "status": "ok",
-      "runtime_s": 0.25,
+      "runtime_s": 0.26,
       "description": "versions, hashes, map ids, graph sizes",
       "figures": 0,
       "tables": 0,
@@ -207,7 +207,7 @@
     },
     "scale": {
       "status": "ok",
-      "runtime_s": 0.06,
+      "runtime_s": 0.05,
       "description": "where the dependence verdict settles with the cut (T26, T27 when the study exists)",
       "figures": 0,
       "tables": 4,
@@ -6987,8 +6987,8 @@
       "step": "provenance"
     },
     "git_sha": {
-      "value": "e74d73857430bc1c9ed30cadc4b764fdbeffaf6c",
-      "text": "e74d73857430",
+      "value": "f95fd88a2165e66d5203db6c6fa8c6a020c5a8e0",
+      "text": "f95fd88a2165",
       "unit": null,
       "note": null,
       "step": "provenance"
@@ -7298,10 +7298,10 @@
     },
     "scale_study_every_null_cuts": {
       "value": [
-        "scale_10k",
-        "scale_5k"
+        "scale_5k",
+        "scale_10k"
       ],
-      "text": "scale_10k, scale_5k",
+      "text": "scale_5k, scale_10k",
       "unit": null,
       "note": null,
       "step": "scale"
@@ -7448,15 +7448,15 @@
       "step": "scale"
     },
     "paper_words_body": {
-      "value": 6983,
-      "text": "6983",
+      "value": 6971,
+      "text": "6971",
       "unit": "words",
       "note": null,
       "step": "paper"
     },
     "paper_words": {
-      "value": 10436,
-      "text": "10\u202f436",
+      "value": 10424,
+      "text": "10\u202f424",
       "unit": null,
       "note": null,
       "step": "paper"
@@ -7469,8 +7469,8 @@
       "step": "paper"
     },
     "supplement_words": {
-      "value": 6385,
-      "text": "6385",
+      "value": 6676,
+      "text": "6676",
       "unit": "words",
       "note": null,
       "step": "paper"
@@ -7485,7 +7485,7 @@
     "_provenance": {
       "value": {
         "flylab_version": "0.6.0",
-        "git_sha": "e74d73857430bc1c9ed30cadc4b764fdbeffaf6c",
+        "git_sha": "f95fd88a2165e66d5203db6c6fa8c6a020c5a8e0",
         "library_sha256": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8",
         "library_version": "0.6",
         "library_schema_version": 3,

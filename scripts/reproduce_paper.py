@@ -4754,7 +4754,10 @@ def step_scale(ctx: Ctx) -> None:
         comp_cuts = sorted({r["cut"] for r in rows_by_size if r.get("class") == "composition-dominated"})
         ctx.put("scale_study_composition_dominated_cuts", comp_cuts, text=", ".join(comp_cuts) or "none")
         ctx.put("scale_study_n_composition_dominated", len(comp_cuts))
-        every_null = sorted({r["cut"] for r in rows_by_size if r.get("necessary_information_level") == "real_connectome"})
+        every_null = sorted(
+            {r["cut"] for r in rows_by_size if r.get("necessary_information_level") == "real_connectome"},
+            key=lambda c: next(int(x["n_nodes"]) for x in rows_by_size if x["cut"] == c),
+        )
         ctx.put("scale_study_every_null_cuts", every_null, text=", ".join(every_null) or "none")
         # Rungs whose permutation budget is so small that the smallest
         # attainable probability is within a factor of two of alpha: a
@@ -5084,6 +5087,7 @@ PAPER_KEYS: tuple[str, ...] = (
     "abl_rho_topology_paper",
     "abl_worst_level_by_conc",
     "abl_worst_level_by_conc_floor_rule",
+    "abl_worst_level_constant",
     "bal_matched_max_deviation",
     "bal_n",
     "bal_plain_ach_max",

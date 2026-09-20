@@ -219,6 +219,12 @@ flylab/analysis/voi.py translates first-order model-variance contributions into 
 
 This is value with respect to model uncertainty, not biological or clinical value.
 
+### Scale
+
+flylab/analysis/scale.py runs the *same* dependence profile across a ladder of nested cuts of increasing size, so a verdict can be compared across scale without the construction changing underneath it. It reimplements no statistic: it calls dependence_profile unchanged and adds the bookkeeping that makes the comparison honest — a permutation budget that falls with the edge count and refuses to drop below the resolution floor, a per-rung record of the n actually used, a recipe filter so that hops-limited neighbourhoods are not compared against nested ranked-BFS cuts as if the difference were scale, and a stability criterion under which one rung of agreement does not count as settled.
+
+Its result is the paper's main finding: the dependence verdict is a joint property of the prediction and the extract, and the extract's recurrence rather than its node count predicts which way it goes.
+
 ### Claim provenance
 
 The claims layer classifies dependency links behind a result so a reader can distinguish:

@@ -59,6 +59,8 @@ from flylab.analysis.selectivity import (
     selectivity_landscape,
 )
 from flylab.analysis.scale import (
+    STRUCTURE_KEYS,
+    verdict_vs_structure,
     DEFAULT_CUTS,
     DEFAULT_FRONTIER_SCALES,
     FUTURE_WORK,
@@ -132,6 +134,8 @@ __all__ = [
     # scaling study: does the dependence verdict settle, and where
     "dependence_vs_scale",
     "verdict_stability",
+    "verdict_vs_structure",
+    "STRUCTURE_KEYS",
     "scale_report",
     "available_cuts",
     "permutation_budget",
