@@ -1,115 +1,111 @@
+"""Rate assay on the committed MaleCNS named-cell neighborhood.
+
+Public API is unchanged; the network math now lives in
+:mod:`flylab.circuit.rate` so the spiking assay, ensemble layer and analysis
+package share one runtime.  ``run_subgraph_assay`` returns the historical
+readouts bit-for-bit, plus ``gains``, ``readouts["by_superclass"]`` and
+``readouts["top_changed"]``.
+"""
 from __future__ import annotations
 
-import json
-from pathlib import Path
+from typing import Any
 
 import numpy as np
 
+from flylab.circuit.rate import (
+    CANDIDATES,
+    DEFAULT_GAINS,
+    SIGN,
+    by_superclass,
+    compute_gains,
+    graph_path,
+    load_graph,
+    rate_network,
+    top_changed,
+)
 from flylab.notebook.schema import empty_notebook
-from flylab.pharm.occupancy import compare_compound
 
-SIGN = {
-    "acetylcholine": 1.0,
-    "glutamate": -0.4,
-    "gaba": -1.0,
-    "histamine": -0.5,
-    "dopamine": 0.2,
-    "serotonin": 0.2,
-    "octopamine": 0.2,
-}
-CANDIDATES = [
-    Path("data/derived/malecns_named_neighborhood.json"),
-    Path(__file__).resolve().parents[2] / "data/derived/malecns_named_neighborhood.json",
-    Path.home() / ".flylab/malecns_named_neighborhood.json",
+WARNINGS = [
+    "Hops-limited MaleCNS neighborhood, not the full 25M-edge CNS.",
+    "Signs from predicted transmitters. ACh gain and RDL gain are teaching patches.",
 ]
 
 
-def graph_path(path=None) -> Path:
-    if path:
-        p = Path(path)
-        if p.exists():
-            return p
-    for p in CANDIDATES:
-        if p.exists():
-            return p
-    raise FileNotFoundError("neighborhood JSON missing. Run extract-malecns-subgraph Action.")
+def _gains(compound, conc_M, library=None, rule_overrides=None):
+    """Backward-compatible helper: ``(g_ach, g_gaba, occupancy_block)``."""
+    gains, occ = compute_gains(compound, conc_M, library=library, rule_overrides=rule_overrides)
+    return gains["g_ach"], gains["g_gaba"], occ
 
 
-def load_graph(path=None):
-    return json.loads(graph_path(path).read_text())
+def named_readout(net, rates) -> dict[str, list[dict[str, Any]]]:
+    named: dict[str, list[dict[str, Any]]] = {}
+    for typ, ids in net.graph["seeds"].items():
+        named[typ] = [
+            {"bodyId": nid, "hz": float(rates[net.node_index[nid]]) if nid in net.node_index else None}
+            for nid in ids
+        ]
+    return named
 
 
-def _gains(compound, conc_M):
-    if not compound:
-        return 1.0, 1.0, None
-    occ = compare_compound(compound, conc_M)
-    g_ach, g_gaba = 1.0, 1.0
-    for row in occ["receptors"]:
-        th, d = row["occupancy"], row["direction"]
-        if row["receptor"] == "insect_nAChR":
-            if d == "agonist":
-                g_ach = max(0.05, 1.0 + 0.4 * th - 1.6 * th * th)
-            elif d == "antagonist":
-                g_ach = max(0.05, 1.0 - th)
-        if row["receptor"] == "insect_RDL":
-            if d == "antagonist":
-                g_gaba = max(0.05, 1.0 - th)
-            elif d == "agonist":
-                g_gaba = max(0.05, 1.0 + 0.4 * th)
-    return g_ach, g_gaba, occ
+def named_mean(named: dict[str, list[dict[str, Any]]], typ: str) -> float | None:
+    hz = [row["hz"] for row in named.get(typ, []) if row["hz"] is not None]
+    return float(np.mean(hz)) if hz else None
 
 
-def run_subgraph_assay(compound=None, conc_M=0.0, graph_path_arg=None, drive_hz=40.0, steps=80):
-    g = load_graph(graph_path_arg)
-    nodes = g["nodes"]
-    index = {n["bodyId"]: i for i, n in enumerate(nodes)}
-    n = len(nodes)
-    W = np.zeros((n, n), dtype=float)
-    for e in g["edges"]:
-        i, j = index.get(e["pre"]), index.get(e["post"])
-        if i is None or j is None:
-            continue
-        nt = nodes[i].get("consensus_nt") or "unclear"
-        W[j, i] += SIGN.get(nt, 0.0) * float(e["weight"])
-    denom = np.maximum(np.abs(W).sum(axis=1, keepdims=True), 1.0)
-    W = W / denom
-    g_ach, g_gaba, occ = _gains(compound, conc_M)
-    scale = []
-    for nd in nodes:
-        nt = nd.get("consensus_nt")
-        if nt == "acetylcholine":
-            scale.append(g_ach)
-        elif nt == "gaba":
-            scale.append(g_gaba)
-        else:
-            scale.append(1.0)
-    scale = np.array(scale)
-    r = np.zeros(n)
-    seed_ids = {i for ids in g["seeds"].values() for i in ids}
-    drive = np.array([drive_hz if nd["bodyId"] in seed_ids else 0.0 for nd in nodes])
-    for _ in range(steps):
-        r = np.clip(0.7 * r + 0.3 * (drive + (W * scale) @ r), 0.0, 300.0)
-    named = {}
-    for typ, ids in g["seeds"].items():
-        named[typ] = [{"bodyId": nid, "hz": float(r[index[nid]]) if nid in index else None} for nid in ids]
+def run_subgraph_assay(
+    compound: str | None = None,
+    conc_M: float = 0.0,
+    graph_path_arg=None,
+    drive_hz: float = 40.0,
+    steps: int = 80,
+    library: dict[str, Any] | None = None,
+    rule_overrides: dict[str, float] | None = None,
+    drive: dict[int, float] | None = None,
+) -> dict[str, Any]:
+    """Run the neighborhood rate model and return a notebook (schema 0.2/0.3).
+
+    ``library`` / ``rule_overrides`` / ``drive`` are optional hooks used by the
+    ensemble and sensitivity layers; the defaults reproduce the v0.4 numbers.
+    """
+    net = rate_network(graph_path_arg)
+    g = net.graph
+    gains, occ = compute_gains(compound, conc_M, library=library, rule_overrides=rule_overrides)
+    drive_map = dict(drive) if drive else net.seed_drive(drive_hz)
+    drive_vec = net.drive_vector(drive_map)
+
+    r = net.run(drive_vec, gains, steps=steps)
+    r_vehicle = net.run(drive_vec, DEFAULT_GAINS, steps=steps)
+
+    named = named_readout(net, r)
     nb = empty_notebook("malecns_neighborhood")
     nb["map"] = {"name": g["map"], "version": "neighborhood", "citation": g["citation"]}
     nb["compound"] = compound
     nb["concentration_M"] = conc_M
     nb["occupancy"] = occ["receptors"] if occ else []
+    nb.setdefault("gains", {})
+    nb.setdefault("uncertainty", None)
+    nb["gains"] = dict(gains)
     nb["readouts"] = {
         "n_nodes": g["n_nodes"],
         "n_edges": g["n_edges"],
         "named": named,
         "mean_hz": float(r.mean()),
         "max_hz": float(r.max()),
-        "g_ach": float(g_ach),
-        "g_gaba": float(g_gaba),
+        "g_ach": float(gains["g_ach"]),
+        "g_gaba": float(gains["g_gaba"]),
+        "mn9_hz": named_mean(named, "MN9"),
+        "dnp01_hz": named_mean(named, "DNp01"),
+        "drive_hz": float(drive_hz),
+        "steps": int(steps),
+        "by_superclass": by_superclass(net, r),
+        "top_changed": top_changed(net, r_vehicle, r, k=15),
+        "vehicle": {
+            "mean_hz": float(r_vehicle.mean()),
+            "mn9_hz": named_mean(named_readout(net, r_vehicle), "MN9"),
+            "dnp01_hz": named_mean(named_readout(net, r_vehicle), "DNp01"),
+        },
     }
-    nb["warnings"] = [
-        "Hops-limited MaleCNS neighborhood, not the full 25M-edge CNS.",
-        "Signs from predicted transmitters. ACh gain and RDL gain are teaching patches.",
-    ]
+    nb["warnings"] = list(WARNINGS)
     return nb
 
 
@@ -120,11 +116,25 @@ def dose_response_subgraph(compound: str, concs=None):
         nb = run_subgraph_assay(compound, c)
         mn9 = nb["readouts"]["named"].get("MN9", [])
         hz = [row["hz"] for row in mn9 if row["hz"] is not None]
-        points.append({
-            "conc_M": c,
-            "mean_hz": nb["readouts"]["mean_hz"],
-            "mn9_hz": float(np.mean(hz)) if hz else None,
-            "g_ach": nb["readouts"]["g_ach"],
-            "g_gaba": nb["readouts"]["g_gaba"],
-        })
+        points.append(
+            {
+                "conc_M": c,
+                "mean_hz": nb["readouts"]["mean_hz"],
+                "mn9_hz": float(np.mean(hz)) if hz else None,
+                "g_ach": nb["readouts"]["g_ach"],
+                "g_gaba": nb["readouts"]["g_gaba"],
+            }
+        )
     return points
+
+
+__all__ = [
+    "SIGN",
+    "CANDIDATES",
+    "graph_path",
+    "load_graph",
+    "run_subgraph_assay",
+    "dose_response_subgraph",
+    "named_readout",
+    "named_mean",
+]
