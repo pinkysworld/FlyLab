@@ -11,11 +11,19 @@ from flylab.pharm.occupancy import compare_compound, load_library
 _SUPPORTED_GAINS = ("g_ach",)
 
 
-def _gains(compound: str | None, conc_M: float) -> tuple[dict[str, float], dict[str, Any] | None]:
-    """Mechanism gains for one dose (single source of truth: pharm.mechanisms)."""
+def _gains(
+    compound: str | None,
+    conc_M: float,
+    library: dict[str, Any] | None = None,
+) -> tuple[dict[str, float], dict[str, Any] | None]:
+    """Mechanism gains for one dose (single source of truth: pharm.mechanisms).
+
+    ``library`` is an in-memory library override (used by the ensemble layer to
+    jitter the teaching EC50s); ``None`` reads the shipped ``library.yaml``.
+    """
     if not compound:
         return default_gains(), None
-    occ = compare_compound(compound, conc_M)
+    occ = compare_compound(compound, conc_M, library=library) if library else compare_compound(compound, conc_M)
     return gains_from_occupancy(occ["receptors"]), occ
 
 
@@ -25,8 +33,14 @@ def _ach_gain(compound: str | None, conc_M: float) -> tuple[float, dict[str, Any
     return gains["g_ach"], occ
 
 
-def run_taste_assay(compound: str | None = None, conc_M: float = 0.0, sugar_hz: float = 150.0, bitter_hz: float = 0.0) -> dict[str, Any]:
-    gains, occ = _gains(compound, conc_M)
+def run_taste_assay(
+    compound: str | None = None,
+    conc_M: float = 0.0,
+    sugar_hz: float = 150.0,
+    bitter_hz: float = 0.0,
+    library: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    gains, occ = _gains(compound, conc_M, library=library)
     g_ach = gains["g_ach"]
     sugar = run_taste_circuit(sugar_drive_hz=sugar_hz, bitter_drive_hz=0.0, g_ach=g_ach)
     both = run_taste_circuit(sugar_drive_hz=sugar_hz, bitter_drive_hz=150.0, g_ach=g_ach)

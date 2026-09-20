@@ -432,6 +432,7 @@ def null_distribution(
     ok = np.array([v for v in nulls if v is not None], dtype=float)
     n_ok = int(ok.size)
     null_mean = float(ok.mean()) if n_ok else None
+    null_median = float(np.median(ok)) if n_ok else None
     null_sd = float(ok.std(ddof=1)) if n_ok > 1 else 0.0
     real_effect = real["effect"]
 
@@ -454,6 +455,12 @@ def null_distribution(
             )
         k = int(np.sum(np.abs(ok - null_mean) >= abs(real_effect - null_mean)))
         p = float((k + 1) / (n_ok + 1))
+        if null_sd > 10.0 * max(abs(real_effect), 1e-12):
+            warnings.append(
+                "the null distribution is heavy-tailed (sd >> |real effect|): "
+                "on degraded graphs a ratio readout can blow up, so z and p "
+                "are not interpretable here."
+            )
     if n_ok < int(n):
         warnings.append(f"{int(n) - n_ok} of {int(n)} shuffles gave an undefined readout.")
 
@@ -472,6 +479,7 @@ def null_distribution(
         "real_vehicle": real["vehicle"],
         "null_effects": nulls,
         "null_mean": null_mean,
+        "null_median": null_median,
         "null_sd": null_sd,
         "z": z,
         "p_two_sided": p,
@@ -524,6 +532,7 @@ def null_panel(
                     "n_ok": res["n_ok"],
                     "real_effect": res["real_effect"],
                     "null_mean": res["null_mean"],
+                    "null_median": res["null_median"],
                     "null_sd": res["null_sd"],
                     "z": res["z"],
                     "p_two_sided": res["p_two_sided"],

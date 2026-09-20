@@ -364,27 +364,62 @@ def exposure(
 def null_panel(
     compound: str = "imidacloprid",
     conc: float = 1e-6,
-    n: int = 20,
+    n: int = typer.Option(8, "--n", help="Shuffles per mode. Each one re-runs the circuit."),
     seed: int = 0,
+    modes: str = typer.Option(
+        "", "--modes", help="Comma-separated subset of the shuffling modes (default: all)."
+    ),
     json_out: bool = JSON_OPT,
 ):
     """Null-model panel: real effect against shuffled-network nulls."""
-    out = _lazy_call("flylab.analysis.nullmodels", "null_panel", compound, conc, n, seed)
-    _dump(out) if json_out else typer.echo(json.dumps(out, indent=2, default=str))
+    kw = {"compound": compound, "conc_M": conc, "n": n, "seed": seed}
+    if modes.strip():
+        kw["modes"] = tuple(m.strip() for m in modes.split(",") if m.strip())
+    out = _lazy_call("flylab.analysis.nullmodels", "null_panel", **kw)
+    if json_out:
+        _dump(out)
+        return
+    typer.echo(f"{compound} @ {conc:.2e} M  n={out.get('n')}")
+    typer.echo(f"{'mode':28} {'real':>10} {'null mean':>10} {'null sd':>10} {'z':>8} {'p':>8}")
+    for row in out.get("rows", []):
+        typer.echo(
+            f"{str(row.get('mode')):28} {_fmt(row.get('real_effect'))} {_fmt(row.get('null_mean'))} "
+            f"{_fmt(row.get('null_sd'))} {_fmt(row.get('z'), 8, 2)} {_fmt(row.get('p_two_sided'), 8, 4)}"
+        )
+    _warnings(out)
 
 
 @app.command()
 def selectivity(conc: float = 1e-6, json_out: bool = JSON_OPT):
     """Receptor selectivity table across the library at one dose."""
-    out = _lazy_call("flylab.analysis.selectivity", "receptor_selectivity_table", conc)
-    _dump(out) if json_out else typer.echo(json.dumps(out, indent=2, default=str))
+    out = _lazy_call("flylab.analysis.selectivity", "receptor_selectivity_table", conc_M=conc)
+    if json_out:
+        _dump(out)
+        return
+    rows = out.get("rows", out) if isinstance(out, dict) else out
+    typer.echo(f"{'compound':20} {'pair':10} {'insect occ':>11} {'vert occ':>10} {'SI log10':>9}")
+    for row in rows if isinstance(rows, list) else []:
+        typer.echo(
+            f"{str(row.get('compound') or row.get('key')):20} {str(row.get('receptor_pair') or ''):10} "
+            f"{_fmt(row.get('insect_occupancy'), 11)} {_fmt(row.get('vertebrate_occupancy'))} "
+            f"{_fmt(row.get('receptor_si_log10'), 9, 2)}"
+        )
+    if isinstance(out, dict):
+        _warnings(out)
 
 
 @app.command()
 def predictions(n_rep: int = 4, seed: int = 0, json_out: bool = JSON_OPT):
     """Falsifiable predictions table from the v0.5 analysis layer."""
-    out = _lazy_call("flylab.analysis.predictions", "prediction_table", n_rep, seed)
-    _dump(out) if json_out else typer.echo(json.dumps(out, indent=2, default=str))
+    out = _lazy_call("flylab.analysis.predictions", "prediction_table", n_rep=n_rep, seed=seed)
+    if json_out:
+        _dump(out)
+        return
+    rows = out.get("rows", []) if isinstance(out, dict) else out
+    for row in rows:
+        typer.echo(f"{row.get('id', '?')}: {row.get('statement') or row.get('hypothesis') or row}")
+    if isinstance(out, dict):
+        _warnings(out)
 
 
 @app.command("reproduce-paper")

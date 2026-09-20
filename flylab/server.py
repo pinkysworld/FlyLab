@@ -117,6 +117,23 @@ def _lazy(dotted: str, name: str) -> Callable[..., Any]:
         raise HTTPException(status_code=501, detail=NOT_READY)
 
 
+def _call(fn: Callable[..., Any], /, **kw: Any) -> Any:
+    """Call a forward-compatible library function with keyword arguments only.
+
+    The analysis modules land separately, so their parameter *order* is not
+    something this server may assume. A keyword this build does not know yet is
+    a contract mismatch, not a user error, so it answers 501 rather than 500.
+    """
+    try:
+        return fn(**kw)
+    except TypeError as exc:
+        if "unexpected keyword" in str(exc) or "required positional" in str(exc):
+            raise HTTPException(
+                status_code=501, detail=f"module signature not compatible yet: {exc}"
+            )
+        raise
+
+
 def _with_genotype(fn: Callable[..., Any], genotype: str | None, /, *args: Any, **kw: Any) -> Any:
     """Call ``fn`` forwarding ``genotype=`` only when one was requested.
 
@@ -270,7 +287,7 @@ class NullRequest(BaseModel):
     assay: AssayName = "subgraph"
     compound: str = "imidacloprid"
     conc_M: float = Field(1e-6, ge=0, le=MAX_CONC_M)
-    mode: str = "shuffle_weights"
+    mode: str = "sign_permute"
     n: int = Field(20, ge=1, le=500)
     seed: int = Field(0, ge=0, le=2**31 - 1)
     graph: GraphName | None = None
@@ -279,8 +296,11 @@ class NullRequest(BaseModel):
 class NullPanelRequest(BaseModel):
     compound: str = "imidacloprid"
     conc_M: float = Field(1e-6, ge=0, le=MAX_CONC_M)
-    n: int = Field(20, ge=1, le=500)
+    n: int = Field(8, ge=1, le=500)
     seed: int = Field(0, ge=0, le=2**31 - 1)
+    #: optional narrowing, because a full panel is minutes of compute
+    modes: list[str] | None = None
+    include_taste_map: bool | None = None
 
 
 class LandscapeRequest(BaseModel):
@@ -868,13 +888,27 @@ def analysis_null(req: NullRequest):
     kw: dict[str, Any] = {}
     if req.graph:
         kw["graph"] = req.graph
-    return fn(req.assay, req.compound, req.conc_M, req.mode, req.n, req.seed, **kw)
+    return _call(
+        fn,
+        assay=req.assay,
+        compound=req.compound,
+        conc_M=req.conc_M,
+        mode=req.mode,
+        n=req.n,
+        seed=req.seed,
+        **kw,
+    )
 
 
 @app.post("/api/analysis/null-panel")
 def analysis_null_panel(req: NullPanelRequest):
     fn = _lazy("flylab.analysis.nullmodels", "null_panel")
-    return fn(req.compound, req.conc_M, req.n, req.seed)
+    kw: dict[str, Any] = {}
+    if req.modes:
+        kw["modes"] = req.modes
+    if req.include_taste_map is not None:
+        kw["include_taste_map"] = req.include_taste_map
+    return _call(fn, compound=req.compound, conc_M=req.conc_M, n=req.n, seed=req.seed, **kw)
 
 
 @app.get("/api/analysis/selectivity")
@@ -882,7 +916,7 @@ def analysis_selectivity(conc_M: float = 1e-6):
     if conc_M < 0:
         raise HTTPException(status_code=400, detail="conc_M must be >= 0")
     fn = _lazy("flylab.analysis.selectivity", "receptor_selectivity_table")
-    return fn(conc_M)
+    return _call(fn, conc_M=conc_M)
 
 
 @app.post("/api/analysis/selectivity-landscape")
@@ -893,13 +927,13 @@ def analysis_selectivity_landscape(req: LandscapeRequest):
         kw["graphs"] = req.graphs
     if req.compounds:
         kw["compounds"] = req.compounds
-    return fn(**kw)
+    return _call(fn, **kw)
 
 
 @app.post("/api/analysis/circuit-si")
 def analysis_circuit_si(req: CircuitSiRequest):
     fn = _lazy("flylab.analysis.selectivity", "circuit_selectivity_index")
-    return fn(req.compound, assay=req.assay, graph=req.graph)
+    return _call(fn, compound=req.compound, assay=req.assay, graph=req.graph)
 
 
 @app.get("/api/predictions")
@@ -907,13 +941,13 @@ def predictions(n_rep: int = 4, seed: int = 0):
     if not 1 <= n_rep <= MAX_N_REP:
         raise HTTPException(status_code=400, detail=f"n_rep must be 1..{MAX_N_REP}")
     fn = _lazy("flylab.analysis.predictions", "prediction_table")
-    return fn(n_rep, seed)
+    return _call(fn, n_rep=n_rep, seed=seed)
 
 
 @app.get("/api/genotypes")
 def genotypes():
     fn = _lazy("flylab.pharm.genotype", "list_genotypes")
-    return fn()
+    return _call(fn)
 
 
 @app.post("/api/mixture")
@@ -924,16 +958,16 @@ def mixture(req: MixtureRequest):
     kw: dict[str, Any] = {"assay": req.assay, "model": req.model}
     if req.graph:
         kw["graph"] = req.graph
-    return fn([c.model_dump() for c in req.components], **kw)
+    return _call(fn, components=[c.model_dump() for c in req.components], **kw)
 
 
 @app.get("/api/expression")
 def expression():
     fn = _lazy("flylab.pharm.expression", "expression_table")
-    return fn()
+    return _call(fn)
 
 
 @app.get("/api/validation")
 def validation():
     fn = _lazy("flylab.validation.rank", "validate_all")
-    return fn()
+    return _call(fn)

@@ -147,18 +147,18 @@ compounds:
       insect_nAChR: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
       vertebrate_nAChR_a4b2: {ec50_M: 0.01, n: 1.0, direction: none, efficacy: 0.0, source: "class-order placeholder", evidence_tier: class_placeholder}
       vertebrate_GABA_A:
-        ec50_M: 1.0e-05
+        ec50_M: 1.1e-06
         n: 1.0
         direction: antagonist
         efficacy: 1.0
-        source: "Ratra and Casida 2001, Toxicol Lett 122:215 (fipronil is far less potent at mammalian GABA-A than at insect GABA-gated chloride channels; micromolar order). Value kept unchanged from FlyLab v0.4."
+        source: "Ratra and Casida 2001, Toxicol Lett 122:215 ([3H]EBOB displacement, human recombinant GABA-A): vertebrate average IC50 for fipronil is 1103 nM = 1.1e-6 M. CORRECTED in v0.5: FlyLab v0.4 carried 1.0e-05 M while citing this same paper, so the library contradicted its own citation; the value is now the cited one. SUBUNIT CAVEAT: the human beta3 HOMOpentamer is far more sensitive, 0.5-2.4 nM (Ratra, Kamita and Casida 2001, Toxicol Appl Pharmacol 172:233), so the 'vertebrate-safe' reading of this row applies to native heteromeric receptors only, not to beta3 homomers."
         evidence_tier: literature_order
       insect_RDL:
         ec50_M: 3.0e-08
         n: 1.2
         direction: antagonist
         efficacy: 1.0
-        source: "Hosie et al. 1995, Br J Pharmacol 115:909 (fipronil block of dieldrin-sensitive Drosophila GABA receptors, tens-of-nM order). Later RDL oocyte work reports 0.3-3 uM depending on expression conditions (Lees et al. 2014, PLoS ONE 9:e97468). Library keeps the potent end, unchanged from FlyLab v0.4."
+        source: "Hosie et al. 1995, Br J Pharmacol 115:909 (fipronil block of dieldrin-sensitive Drosophila GABA receptors, tens-of-nM order). SPREAD NOTE: the literature spans ~1500-fold for this one row - 2.4-12 nM on house-fly head membranes ([3H]EBOB displacement; Cole et al. 1993, Pestic Biochem Physiol 46:47 and Ratra and Casida 2001, Toxicol Lett 122:215) versus 0.3-3 uM on the predominant in vivo splice/edit variant of Drosophila RDL in Xenopus oocytes (Lees et al. 2014, PLoS ONE 9:e97468). Library keeps the potent end (unchanged from FlyLab v0.4); it is a defensible midpoint-to-potent choice, not a measured constant."
         evidence_tier: literature_order
   clothianidin:
     name: Clothianidin

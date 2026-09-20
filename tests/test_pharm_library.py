@@ -27,8 +27,17 @@ V04_FROZEN = {
     "nicotine": {"insect_nAChR": (2.0e-07, 1.1, "agonist"),
                  "vertebrate_nAChR_a4b2": (1.0e-06, 1.2, "agonist")},
     "diazepam": {"vertebrate_GABA_A": (1.0e-08, 1.3, "positive_modulator")},
+    # v0.5 correction (2026-09-19): fipronil's vertebrate_GABA_A EC50 was
+    # 1.0e-05 M in v0.4 while the row cited Ratra & Casida 2001, Toxicol Lett
+    # 122:215, whose vertebrate average IC50 for fipronil is 1103 nM = 1.1e-6 M.
+    # The library contradicted its own citation, so the value was corrected to
+    # the cited one. The insect/vertebrate selectivity DIRECTION is unchanged
+    # (1.1e-6 / 3.0e-8 = ~37x insect-selective, still the right sign), and the
+    # gain patches are untouched because vertebrate rows never move a fly gain.
+    # See data/literature/README.md "Where the literature contradicts the
+    # current teaching EC50s", item 1.
     "fipronil": {"insect_RDL": (3.0e-08, 1.2, "antagonist"),
-                 "vertebrate_GABA_A": (1.0e-05, 1.0, "antagonist")},
+                 "vertebrate_GABA_A": (1.1e-06, 1.0, "antagonist")},
 }
 
 

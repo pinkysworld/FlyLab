@@ -63,12 +63,6 @@ def _is_placeholder(row: dict[str, Any]) -> bool:
     )
 
 
-def _log10(x: float | None) -> float | None:
-    if x is None or x <= 0:
-        return None
-    return math.log10(x)
-
-
 # --------------------------------------------------------------------------
 # receptor level
 # --------------------------------------------------------------------------

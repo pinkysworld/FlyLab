@@ -1,146 +1,553 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>FlyLab bench</title>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-  <style>
-    :root { font-family: "IBM Plex Sans", "Segoe UI", sans-serif; color: #102027; background: #f4f1ea; }
-    body { margin: 0; }
-    header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; background: #102027; color: #f4f1ea; }
-    header h1 { font-size: 18px; margin: 0 16px 0 0; letter-spacing: .04em; }
-    label { font-size: 12px; opacity: .85; }
-    select, input, button { font: inherit; padding: 6px 8px; }
-    button { background: #d9772c; color: white; border: 0; cursor: pointer; }
-    button.secondary { background: #3d5a5b; }
-    main { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; }
-    section { background: white; padding: 12px; border: 1px solid #d7d1c4; min-height: 280px; }
-    h2 { margin: 0 0 8px; font-size: 14px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    td, th { text-align: left; padding: 4px 6px; border-bottom: 1px solid #eee; }
-    #warn { grid-column: 1 / -1; background: #fff6e5; font-size: 13px; padding: 10px 12px; }
-    #json { grid-column: 1 / -1; font: 12px/1.4 ui-monospace, monospace; white-space: pre-wrap; max-height: 240px; overflow: auto; background: #102027; color: #d7e0c5; padding: 12px; }
-    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FlyLab bench</title>
+<meta name="description" content="Virtual Drosophila pharmacology bench: compound and dose to receptor occupancy, gain patches on named MaleCNS cells, circuit readouts and a notebook." />
+<link rel="stylesheet" href="/static/styles.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%F0%9F%AA%B0%3C/text%3E%3C/svg%3E" />
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
 </head>
 <body>
-  <header>
-    <h1>FLYLAB</h1>
-    <label>compound <select id="compound"></select></label>
-    <label>conc (M) <input id="conc" value="1e-6" size="10" /></label>
-    <label>sugar GRN (Hz) <input id="sugar" value="150" size="6" /></label>
-    <label>bitter GRN (Hz) <input id="bitter" value="0" size="6" /></label>
-    <button id="run">Run taste</button>
-    <button id="runcns" class="secondary">Run whole CNS</button>
-    <button id="runsub" class="secondary">Run MN9/DNp01 graph</button>
-    <button id="export" class="secondary">Export notebook</button>
-  </header>
-  <main>
-    <section>
-      <h2>Fly readouts</h2>
-      <div id="flyplot"></div>
-      <table id="flytable"></table>
+<a class="skip" href="#main">Skip to the bench</a>
+
+<header class="topbar">
+  <h1 class="brand">FLY<span>LAB</span></h1>
+  <div class="tagline">Virtual <i>Drosophila</i> pharmacology bench &middot; MaleCNS v1.0 &middot; every number is simulated</div>
+  <div class="topbar-actions">
+    <button id="btn-warnings" class="small" type="button" aria-expanded="false" aria-controls="drawer">Warnings <span id="warn-count" class="badge">0</span></button>
+    <button id="btn-theme" class="small" type="button" aria-label="Toggle light and dark theme">Theme</button>
+  </div>
+</header>
+
+<div class="shell">
+  <!-- ------------------------------------------------------ sidebar -->
+  <aside class="sidebar" aria-label="Dose and design">
+    <h2>Dose &amp; design</h2>
+
+    <div class="field">
+      <label for="f-compound">Compound</label>
+      <select id="f-compound"></select>
+      <div id="compound-badges" class="hint"></div>
+    </div>
+
+    <div class="field">
+      <label for="f-logconc">Concentration &mdash; log<sub>10</sub> M</label>
+      <input id="f-logconc" type="range" min="-11" max="-3" step="0.1" value="-6" />
+      <div class="row">
+        <input id="f-conc" type="text" inputmode="decimal" value="1e-6" aria-label="Concentration in molar" />
+        <span class="badge">M</span>
+      </div>
+      <div class="hint" id="conc-hint">1.00e-6 M</div>
+    </div>
+
+    <div class="field">
+      <label>GRN drive (Hz)</label>
+      <div class="row">
+        <input id="f-sugar" type="number" min="0" max="1000" step="10" value="150" aria-label="Sugar GRN drive in hertz" />
+        <input id="f-bitter" type="number" min="0" max="1000" step="10" value="0" aria-label="Bitter GRN drive in hertz" />
+      </div>
+      <div class="hint">sugar &middot; bitter</div>
+    </div>
+
+    <div class="field">
+      <label for="f-engine">Engine</label>
+      <select id="f-engine">
+        <option value="rate">rate network</option>
+        <option value="lif">LIF spiking</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="f-graph">Graph</label>
+      <select id="f-graph">
+        <option value="named">named (MN9 / DNp01)</option>
+        <option value="taste_motor">taste_motor (GRN &rarr; MN9)</option>
+      </select>
+      <div class="hint" id="graph-hint"></div>
+    </div>
+
+    <div class="field">
+      <label for="f-seed">RNG seed</label>
+      <input id="f-seed" type="number" min="0" step="1" value="0" />
+    </div>
+
+    <div class="field" id="genotype-field" hidden>
+      <label for="f-genotype">Genotype</label>
+      <select id="f-genotype"></select>
+    </div>
+
+    <button id="btn-run" class="primary" type="button">Run</button>
+    <div class="hint">Press <kbd>R</kbd> anywhere to run the open tab.</div>
+  </aside>
+
+  <!-- ------------------------------------------------------ main -->
+  <main id="main">
+    <nav class="tabs" role="tablist" aria-label="Bench panels">
+      <button role="tab" id="tab-scorecard" aria-controls="panel-scorecard" aria-selected="true">Scorecard</button>
+      <button role="tab" id="tab-curves" aria-controls="panel-curves" aria-selected="false">Curves</button>
+      <button role="tab" id="tab-circuit" aria-controls="panel-circuit" aria-selected="false">Circuit</button>
+      <button role="tab" id="tab-spikes" aria-controls="panel-spikes" aria-selected="false">Spikes</button>
+      <button role="tab" id="tab-taste" aria-controls="panel-taste" aria-selected="false">Taste</button>
+      <button role="tab" id="tab-wholecns" aria-controls="panel-wholecns" aria-selected="false">Whole CNS</button>
+      <button role="tab" id="tab-exposure" aria-controls="panel-exposure" aria-selected="false">Exposure</button>
+      <button role="tab" id="tab-uncertainty" aria-controls="panel-uncertainty" aria-selected="false">Uncertainty</button>
+      <button role="tab" id="tab-experiment" aria-controls="panel-experiment" aria-selected="false">Experiment</button>
+      <button role="tab" id="tab-controls" aria-controls="panel-controls" aria-selected="false">Controls</button>
+      <button role="tab" id="tab-notebook" aria-controls="panel-notebook" aria-selected="false">Notebook</button>
+    </nav>
+
+    <!-- 1. Scorecard -->
+    <section class="panel active" id="panel-scorecard" role="tabpanel" aria-labelledby="tab-scorecard">
+      <div class="panel-head">
+        <h1>Scorecard</h1>
+        <p>The same dose, two receptor panels. Occupancy is a Hill calculation on literature-order EC50s, not a measurement.</p>
+        <button class="small" data-run="scorecard" type="button">Run scorecard</button>
+      </div>
+      <div class="grid two">
+        <div class="card span-all">
+          <h3>Insect vs vertebrate occupancy at the current dose</h3>
+          <p class="sub">Paired targets only. Hatched bars are <b>class placeholders</b>: the compound has no sourced value at that receptor.</p>
+          <div id="plot-scorecard" class="plot"></div>
+          <div class="legend" id="legend-scorecard"></div>
+        </div>
+        <div class="card">
+          <h3>Selectivity pairs</h3>
+          <p class="sub">log<sub>10</sub> of the vertebrate/insect EC50 ratio; positive means the insect target is the more potent one.</p>
+          <div class="table-wrap"><table id="tbl-selectivity"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="card">
+          <h3>Every receptor in the library row</h3>
+          <p class="sub">Table view of the chart above, including unpaired targets.</p>
+          <div class="table-wrap"><table id="tbl-occupancy"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="card">
+          <h3>Circuit gains</h3>
+          <p class="sub">Vehicle is 1.0. Blue = suppressed, red = enhanced.</p>
+          <div class="meters" id="meters-gains"></div>
+        </div>
+        <div class="card">
+          <h3>Mechanism table</h3>
+          <p class="sub">Which gain each occupancy touches, and the formula. Rules active at this dose are listed first.</p>
+          <div class="table-wrap"><table id="tbl-mechanism"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
     </section>
-    <section>
-      <h2>Receptor occupancy (same dose)</h2>
-      <div id="vertplot"></div>
-      <table id="verttable"></table>
+
+    <!-- 2. Curves -->
+    <section class="panel" id="panel-curves" role="tabpanel" aria-labelledby="tab-curves">
+      <div class="panel-head">
+        <h1>Curves</h1>
+        <p>Occupancy and circuit readout across the dose ladder.</p>
+        <button class="small" data-run="curves" type="button">Run curves</button>
+      </div>
+      <div class="grid two">
+        <div class="card span-all">
+          <h3>Occupancy vs concentration</h3>
+          <p class="sub">Solid = insect target, dashed = vertebrate counterpart. The vertical rule is the current dose.</p>
+          <div id="plot-occcurve" class="plot"></div>
+        </div>
+        <div class="card span-all">
+          <div class="card-actions">
+            <label for="f-ic50-assay" class="badge">assay</label>
+            <select id="f-ic50-assay" style="width:auto">
+              <option value="subgraph">subgraph (rate)</option>
+              <option value="spiking">spiking (LIF)</option>
+              <option value="taste_map">taste_map</option>
+            </select>
+            <label for="f-ic50-readout" class="badge">readout</label>
+            <select id="f-ic50-readout" style="width:auto">
+              <option value="mean_hz">mean_hz</option>
+              <option value="mn9_hz">mn9_hz</option>
+              <option value="dnp01_hz">dnp01_hz</option>
+            </select>
+            <button class="small" id="btn-ic50" type="button">Fit IC50</button>
+          </div>
+          <h3>Circuit dose-response and model IC50</h3>
+          <p class="sub" id="ic50-caption">Model-derived, <b>not</b> an animal IC50: it is the dose at which this simulated readout sits halfway between its low- and high-dose plateau.</p>
+          <div id="plot-ic50" class="plot"></div>
+          <div class="tiles" id="tiles-ic50"></div>
+        </div>
+      </div>
     </section>
-    <div id="warn"></div>
-    <pre id="json"></pre>
+
+    <!-- 3. Circuit -->
+    <section class="panel" id="panel-circuit" role="tabpanel" aria-labelledby="tab-circuit">
+      <div class="panel-head">
+        <h1>Circuit</h1>
+        <p>The committed MaleCNS neighborhood, laid out by hop distance from the seeds.</p>
+        <button class="small" data-run="circuit" type="button">Run circuit</button>
+      </div>
+      <div class="grid two">
+        <div class="card span-all">
+          <div class="card-actions">
+            <label for="f-cy-state" class="badge">show</label>
+            <select id="f-cy-state" style="width:auto">
+              <option value="treated">treated</option>
+              <option value="vehicle">vehicle</option>
+            </select>
+            <label for="f-cy-minw" class="badge">min synapses</label>
+            <input id="f-cy-minw" type="number" min="1" max="200" step="1" value="5" style="width:80px" />
+            <label for="f-cy-maxe" class="badge">max edges</label>
+            <input id="f-cy-maxe" type="number" min="100" max="20000" step="100" value="1500" style="width:96px" />
+            <button class="small" id="btn-cy-fit" type="button">Fit view</button>
+            <span class="badge" id="cy-count">&mdash;</span>
+          </div>
+          <div id="cy" role="img" aria-label="Circuit graph of the selected MaleCNS neighborhood"></div>
+          <div class="legend" id="legend-cy"></div>
+          <div class="hint">Node colour = predicted transmitter, size = firing rate, ring = seed cell. Edge width = synapse count, edge colour = change in effective weight under the drug (blue suppressed, red enhanced).</div>
+        </div>
+        <div class="card">
+          <h3>Top changed nodes</h3>
+          <p class="sub">Largest vehicle &rarr; treated rate change. Click a row to centre that cell.</p>
+          <div class="table-wrap"><table id="tbl-topnodes"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="card" id="card-paths">
+          <h3>Sweet and bitter GRN &rarr; MN9 paths</h3>
+          <p class="sub">taste_motor graph only. Click a path to highlight it in the viewer.</p>
+          <div id="paths-body"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Spikes -->
+    <section class="panel" id="panel-spikes" role="tabpanel" aria-labelledby="tab-spikes">
+      <div class="panel-head">
+        <h1>Spikes</h1>
+        <p>Shiu-style LIF on the neighborhood graph. Vehicle and treated are separate runs at the same seed.</p>
+        <div class="row" style="gap:8px">
+          <label for="f-tms" class="badge">t (ms)</label>
+          <input id="f-tms" type="number" min="50" max="3000" step="50" value="500" style="width:90px" />
+          <button class="small" data-run="spikes" type="button">Run spiking</button>
+        </div>
+      </div>
+      <div class="grid two" id="spikes-grid">
+        <div class="card">
+          <h3>Raster &mdash; vehicle</h3>
+          <p class="sub">Named seed cells first, then the most active cells.</p>
+          <div id="plot-raster-vehicle" class="plot"></div>
+        </div>
+        <div class="card">
+          <h3>Raster &mdash; treated</h3>
+          <p class="sub">Same cells, same seed, drug gains applied.</p>
+          <div id="plot-raster-treated" class="plot"></div>
+        </div>
+        <div class="card">
+          <h3>PSTH &mdash; MN9</h3>
+          <p class="sub">10 ms bins, summed over both MN9 body IDs.</p>
+          <div id="plot-psth-mn9" class="plot"></div>
+        </div>
+        <div class="card">
+          <h3>PSTH &mdash; DNp01</h3>
+          <p class="sub">10 ms bins, summed over both DNp01 body IDs.</p>
+          <div id="plot-psth-dnp01" class="plot"></div>
+        </div>
+        <div class="card span-all">
+          <h3>Rates</h3>
+          <div class="table-wrap"><table id="tbl-spikes"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Taste -->
+    <section class="panel" id="panel-taste" role="tabpanel" aria-labelledby="tab-taste">
+      <div class="panel-head">
+        <h1>Taste</h1>
+        <p>The reduced control circuit beside the map-extracted path, at the same dose and drive.</p>
+        <button class="small" data-run="taste" type="button">Run taste</button>
+      </div>
+      <div id="taste-notices"></div>
+      <div class="grid two">
+        <div class="card">
+          <h3>reduced_taste_v0</h3>
+          <p class="sub">Hand-built directional control for the bitter veto.</p>
+          <div id="plot-taste-reduced" class="plot"></div>
+          <div class="tiles" id="tiles-taste-reduced"></div>
+        </div>
+        <div class="card">
+          <h3>MaleCNS taste_motor path</h3>
+          <p class="sub">Real labellar GRN body IDs drive the extracted graph; MN9 is read, never driven.</p>
+          <div id="plot-taste-map" class="plot"></div>
+          <div class="tiles" id="tiles-taste-map"></div>
+        </div>
+        <div class="card span-all">
+          <h3>Side by side</h3>
+          <div class="table-wrap"><table id="tbl-taste"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Whole CNS -->
+    <section class="panel" id="panel-wholecns" role="tabpanel" aria-labelledby="tab-wholecns">
+      <div class="panel-head">
+        <h1>Whole CNS</h1>
+        <p>Traced-cell census with predicted transmitters. This is a census model, not a 166k-cell simulation.</p>
+        <button class="small" data-run="wholecns" type="button">Run whole CNS</button>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <h3>Cells by transmitter</h3>
+          <p class="sub">MaleCNS v1.0 traced cells, predicted consensus transmitter.</p>
+          <div id="plot-census-nt" class="plot"></div>
+        </div>
+        <div class="card">
+          <h3>Cells by superclass</h3>
+          <p class="sub">Top 12 superclasses.</p>
+          <div id="plot-census-sc" class="plot"></div>
+        </div>
+        <div class="card">
+          <h3>Excitation / inhibition index</h3>
+          <p class="sub">Vehicle against treated. Dimensionless index, not a firing rate.</p>
+          <div id="plot-cns-index" class="plot"></div>
+          <div class="table-wrap"><table id="tbl-cns-index"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="card">
+          <h3>Gustatory cells by subclass</h3>
+          <p class="sub">Where the labellar GRN seeds come from.</p>
+          <div id="plot-gustatory" class="plot"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Exposure -->
+    <section class="panel" id="panel-exposure" role="tabpanel" aria-labelledby="tab-exposure">
+      <div class="panel-head">
+        <h1>Exposure</h1>
+        <p>One compartment, first-order in and out. Every constant is a teaching placeholder.</p>
+        <div class="row" style="gap:8px; flex-wrap:wrap">
+          <label for="f-dose" class="badge">dose (nmol)</label>
+          <input id="f-dose" type="number" min="0" step="0.1" value="1" style="width:90px" />
+          <label for="f-route" class="badge">route</label>
+          <select id="f-route" style="width:auto">
+            <option value="feeding">feeding</option>
+            <option value="topical">topical</option>
+            <option value="bath">bath</option>
+          </select>
+          <label for="f-th" class="badge">hours</label>
+          <input id="f-th" type="number" min="1" max="240" step="1" value="24" style="width:80px" />
+          <button class="small" data-run="exposure" type="button">Run exposure</button>
+        </div>
+      </div>
+      <div id="exposure-notices"></div>
+      <div class="grid two">
+        <div class="card span-all">
+          <div class="tiles" id="tiles-exposure"></div>
+        </div>
+        <div class="card">
+          <h3>Haemolymph concentration C(t)</h3>
+          <p class="sub">Bateman profile for the selected route.</p>
+          <div id="plot-ct" class="plot"></div>
+        </div>
+        <div class="card">
+          <h3>Occupancy(t)</h3>
+          <p class="sub">Instantaneous equilibrium at each time point.</p>
+          <div id="plot-occt" class="plot"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Uncertainty -->
+    <section class="panel" id="panel-uncertainty" role="tabpanel" aria-labelledby="tab-uncertainty">
+      <div class="panel-head">
+        <h1>Uncertainty</h1>
+        <p>How much the model moves when the teaching EC50s and the drive move. Not a biological error bar.</p>
+        <div class="row" style="gap:8px">
+          <label for="f-nrep" class="badge">replicates</label>
+          <input id="f-nrep" type="number" min="2" max="64" step="1" value="8" style="width:80px" />
+          <button class="small" data-run="uncertainty" type="button">Run ensemble</button>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="card span-all">
+          <h3>Ensemble credible intervals</h3>
+          <p class="sub">Point estimate with the 2.5&ndash;97.5% percentile interval over replicates.</p>
+          <div id="plot-ensemble" class="plot"></div>
+          <div class="table-wrap"><table id="tbl-ensemble"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="card span-all">
+          <h3>Sensitivity tornado</h3>
+          <p class="sub">One parameter at a time, halved and doubled, around the base run.</p>
+          <div id="plot-tornado" class="plot"></div>
+          <div class="table-wrap"><table id="tbl-tornado"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Experiment -->
+    <section class="panel" id="panel-experiment" role="tabpanel" aria-labelledby="tab-experiment">
+      <div class="panel-head">
+        <h1>Experiment</h1>
+        <p>Build a design, run it, export it. Randomise and blind it to use the bench as a teaching lab.</p>
+        <button class="small" data-run="experiment" type="button">Run design</button>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <h3>Design</h3>
+          <div class="field">
+            <label for="f-exp-compounds">Compounds (multi-select)</label>
+            <select id="f-exp-compounds" multiple size="7"></select>
+          </div>
+          <div class="field">
+            <label>Concentration ladder</label>
+            <div class="row">
+              <input id="f-exp-start" type="text" value="1e-9" aria-label="Ladder start, molar" />
+              <input id="f-exp-stop" type="text" value="1e-5" aria-label="Ladder stop, molar" />
+              <input id="f-exp-ppd" type="number" min="1" max="10" step="1" value="1" aria-label="Points per decade" style="width:70px" />
+            </div>
+            <div class="hint" id="ladder-hint">start &middot; stop &middot; points per decade</div>
+          </div>
+          <div class="row">
+            <div class="field" style="flex:1">
+              <label for="f-exp-reps">Replicates</label>
+              <input id="f-exp-reps" type="number" min="1" max="64" step="1" value="3" />
+            </div>
+            <div class="field" style="flex:1">
+              <label for="f-exp-assay">Assay</label>
+              <select id="f-exp-assay">
+                <option value="subgraph">subgraph</option>
+                <option value="spiking">spiking</option>
+                <option value="taste">taste</option>
+                <option value="taste_map">taste_map</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-exp-readouts">Readouts</label>
+            <select id="f-exp-readouts" multiple size="5">
+              <option value="mn9_hz" selected>mn9_hz</option>
+              <option value="dnp01_hz" selected>dnp01_hz</option>
+              <option value="mean_hz" selected>mean_hz</option>
+              <option value="g_ach" selected>g_ach</option>
+              <option value="g_gaba" selected>g_gaba</option>
+            </select>
+          </div>
+          <div class="field">
+            <label><input type="checkbox" id="f-exp-randomize" style="width:auto" /> Randomise run order</label>
+            <label><input type="checkbox" id="f-exp-blind" style="width:auto" /> Blind labels (A, B, C&hellip;)</label>
+            <label><input type="checkbox" id="f-exp-vehicle" style="width:auto" checked /> Include vehicle rows</label>
+          </div>
+          <div class="row">
+            <button class="small" id="btn-exp-reveal" type="button" disabled>Reveal codes</button>
+            <button class="small" id="btn-exp-csv" type="button" disabled>Download CSV</button>
+            <button class="small" id="btn-exp-json" type="button" disabled>Download JSON</button>
+          </div>
+          <div class="hint" id="exp-status">Design is saved to this browser.</div>
+        </div>
+        <div class="card">
+          <h3>Heatmap &mdash; compound &times; concentration</h3>
+          <p class="sub">Group mean of the first selected readout.</p>
+          <div id="plot-exp-heat" class="plot"></div>
+        </div>
+        <div class="card span-all">
+          <h3>Results</h3>
+          <p class="sub">Group mean &plusmn; sd over replicates.</p>
+          <div class="table-wrap"><table id="tbl-experiment"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Controls -->
+    <section class="panel" id="panel-controls" role="tabpanel" aria-labelledby="tab-controls">
+      <div class="panel-head">
+        <h1>Controls</h1>
+        <p>Is the effect bigger than a shuffled network would give, and is it selective?</p>
+        <div class="row" style="gap:8px; flex-wrap:wrap">
+          <label for="f-null-n" class="badge">shuffles</label>
+          <input id="f-null-n" type="number" min="1" max="200" step="1" value="5" style="width:80px" />
+          <label for="f-null-modes" class="badge">modes</label>
+          <select id="f-null-modes" multiple size="2" style="width:auto">
+            <option value="sign_permute">sign_permute</option>
+            <option value="weight_permute" selected>weight_permute</option>
+            <option value="rewire_degree_preserving">rewire_degree_preserving</option>
+            <option value="erdos_renyi">erdos_renyi</option>
+          </select>
+          <button class="small" data-run="controls" type="button">Run controls</button>
+        </div>
+      </div>
+      <div class="notice info">These two panels re-run the whole circuit many times over. They do <b>not</b> run automatically: pick how many shuffles you can wait for, then press Run controls. Each extra mode costs another full set of shuffles.</div>
+      <div class="grid two">
+        <div class="card span-all" id="card-null">
+          <h3>Null-model panel</h3>
+          <p class="sub">Real effect against the null distribution, per shuffling mode.</p>
+          <div id="null-body"><div class="empty">Not run yet &mdash; press <b>Run controls</b>.</div></div>
+        </div>
+        <div class="card span-all" id="card-landscape">
+          <h3>Selectivity landscape</h3>
+          <p class="sub">Receptor selectivity index against circuit selectivity index, for the current compound and a small reference set.</p>
+          <div id="landscape-body"><div class="empty">Not run yet &mdash; press <b>Run controls</b>.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11. Notebook -->
+    <section class="panel" id="panel-notebook" role="tabpanel" aria-labelledby="tab-notebook">
+      <div class="panel-head">
+        <h1>Notebook</h1>
+        <p>The JSON record of the most recent run, warnings first.</p>
+        <button class="small" id="btn-nb-export" type="button">Export JSON</button>
+      </div>
+      <div class="grid two">
+        <div class="card span-all">
+          <h3>Warnings</h3>
+          <div id="nb-warnings"><div class="empty">No run yet.</div></div>
+        </div>
+        <div class="card">
+          <h3>Provenance</h3>
+          <div class="table-wrap"><table id="tbl-provenance"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="card">
+          <h3>Import a live_lab CSV</h3>
+          <p class="sub">FlyLab never generates live-animal numbers. This slot only holds a table <b>you</b> measured.</p>
+          <div class="field">
+            <label for="f-ll-name">Assay name</label>
+            <input id="f-ll-name" type="text" value="PER" />
+          </div>
+          <div class="field">
+            <label for="f-ll-source">Source</label>
+            <input id="f-ll-source" type="text" value="bench notebook, this lab" />
+          </div>
+          <div class="field">
+            <label for="f-ll-csv">CSV text (with a header row)</label>
+            <textarea id="f-ll-csv" placeholder="fly_id,conc_M,per_score&#10;1,1e-6,0.4&#10;2,1e-6,0.6"></textarea>
+          </div>
+          <button class="small" id="btn-ll-import" type="button">Attach to notebook</button>
+        </div>
+        <div class="card">
+          <h3>Session history</h3>
+          <p class="sub">The last 50 runs from this browser. Click one to load it back.</p>
+          <div class="table-wrap"><table id="tbl-history"><thead></thead><tbody></tbody></table></div>
+          <div class="card-actions" style="margin-top:8px">
+            <button class="small" id="btn-history-clear" type="button">Clear history</button>
+          </div>
+        </div>
+        <div class="card span-all">
+          <h3>Notebook JSON</h3>
+          <pre class="json" id="nb-json">No run yet.</pre>
+        </div>
+      </div>
+    </section>
   </main>
-  <script>
-    let lastNotebook = null;
-    function occPane(nb) {
-      const occ = nb.occupancy || [];
-      Plotly.newPlot("vertplot", [{ type: "bar", x: occ.map(r => r.receptor), y: occ.map(r => r.occupancy),
-        marker: { color: occ.map(r => r.receptor.startsWith("insect") ? "#d9772c" : "#3d5a5b") } }],
-        { margin: { t: 10, l: 40, r: 10, b: 90 }, height: 260, yaxis: { title: "occupancy", range: [0,1] } }, { displayModeBar: false });
-      document.getElementById("verttable").innerHTML = occ.map(r =>
-        `<tr><th>${r.receptor}</th><td>${r.occupancy.toFixed(3)}</td><td>${r.direction}</td></tr>`).join("");
-      document.getElementById("warn").innerHTML = (nb.warnings || []).map(w => "! " + w).join("<br/>");
-      document.getElementById("json").textContent = JSON.stringify(nb, null, 2);
-    }
-    async function init() {
-      const data = await (await fetch("/api/drugs")).json();
-      const sel = document.getElementById("compound");
-      data.compounds.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); });
-      sel.value = "imidacloprid";
-      run();
-    }
-    async function run() {
-      const compound = document.getElementById("compound").value;
-      const conc_M = Number(document.getElementById("conc").value);
-      const sugar_hz = Number(document.getElementById("sugar").value);
-      const bitter_hz = Number(document.getElementById("bitter").value);
-      const nb = await (await fetch("/api/assay/taste", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ compound, conc_M, sugar_hz, bitter_hz })
-      })).json();
-      lastNotebook = nb;
-      const cells = nb.readouts.cells;
-      Plotly.newPlot("flyplot", [{ type: "bar", x: Object.keys(cells), y: Object.values(cells), marker: { color: "#1f4e5f" } }],
-        { margin: { t: 10, l: 40, r: 10, b: 80 }, height: 260, yaxis: { title: "rate" } }, { displayModeBar: false });
-      document.getElementById("flytable").innerHTML =
-        `<tr><th>MN9 sugar</th><td>${nb.readouts.mn9_sugar_hz.toFixed(2)}</td></tr>` +
-        `<tr><th>MN9 sugar+bitter</th><td>${nb.readouts.mn9_sugar_bitter_hz.toFixed(2)}</td></tr>` +
-        `<tr><th>g_ACh</th><td>${nb.readouts.g_ach.toFixed(3)}</td></tr>`;
-      occPane(nb);
-    }
-    async function runCns() {
-      const compound = document.getElementById("compound").value;
-      const conc_M = Number(document.getElementById("conc").value);
-      const nb = await (await fetch("/api/assay/cns", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ compound, conc_M })
-      })).json();
-      lastNotebook = nb;
-      const n = nb.readouts.neurotransmitter_counts || {};
-      Plotly.newPlot("flyplot", [{ type: "bar", x: Object.keys(n), y: Object.values(n), marker: { color: "#1f4e5f" } }],
-        { margin: { t: 10, l: 50, r: 10, b: 80 }, height: 260, yaxis: { title: "traced neurons" } }, { displayModeBar: false });
-      const t = nb.readouts.treated, v = nb.readouts.vehicle;
-      document.getElementById("flytable").innerHTML =
-        `<tr><th>traced</th><td>${nb.readouts.n_traced}</td></tr>` +
-        `<tr><th>E vehicle</th><td>${v.cns_excitation_index.toFixed(3)}</td></tr>` +
-        `<tr><th>E treated</th><td>${t.cns_excitation_index.toFixed(3)}</td></tr>` +
-        `<tr><th>delta E</th><td>${nb.readouts.delta_excitation.toFixed(3)}</td></tr>`;
-      occPane(nb);
-    }
-    async function runSub() {
-      const compound = document.getElementById("compound").value;
-      const conc_M = Number(document.getElementById("conc").value);
-      const nb = await (await fetch("/api/assay/subgraph", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ compound, conc_M })
-      })).json();
-      lastNotebook = nb;
-      const labels = [], vals = [];
-      Object.entries(nb.readouts.named || {}).forEach(([typ, rows]) => {
-        rows.forEach(r => { labels.push(typ + " " + r.bodyId); vals.push(r.hz); });
-      });
-      Plotly.newPlot("flyplot", [{ type: "bar", x: labels, y: vals, marker: { color: "#1f4e5f" } }],
-        { margin: { t: 10, l: 40, r: 10, b: 80 }, height: 260, yaxis: { title: "model Hz" } }, { displayModeBar: false });
-      document.getElementById("flytable").innerHTML =
-        `<tr><th>nodes</th><td>${nb.readouts.n_nodes}</td></tr>` +
-        `<tr><th>edges</th><td>${nb.readouts.n_edges}</td></tr>` +
-        `<tr><th>g_ACh</th><td>${nb.readouts.g_ach.toFixed(3)}</td></tr>` +
-        `<tr><th>g_GABA</th><td>${nb.readouts.g_gaba.toFixed(3)}</td></tr>` +
-        labels.map((l,i) => `<tr><th>${l}</th><td>${Number(vals[i]).toFixed(2)}</td></tr>`).join("");
-      occPane(nb);
-    }
-    function exportNb() {
-      if (!lastNotebook) return;
-      const blob = new Blob([JSON.stringify(lastNotebook, null, 2)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "flylab_notebook.json";
-      a.click();
-    }
-    document.getElementById("run").onclick = run;
-    document.getElementById("runcns").onclick = runCns;
-    document.getElementById("runsub").onclick = runSub;
-    document.getElementById("export").onclick = exportNb;
-    init();
-  </script>
+</div>
+
+<aside class="drawer" id="drawer" aria-label="Warnings" aria-hidden="true">
+  <button class="small drawer-close" id="btn-drawer-close" type="button">Close</button>
+  <h2>Warnings from the current notebook</h2>
+  <div id="drawer-body"><p class="empty">No run yet.</p></div>
+</aside>
+
+<div class="statusbar" role="status" aria-live="polite">
+  <span class="dot" id="status-dot" data-state="idle"></span>
+  <span id="status-text">Ready</span>
+  <span id="status-runtime" class="mono"></span>
+  <span class="spacer"></span>
+  <span class="mono" id="status-version"></span>
+  <span class="mono" id="status-hash" title="SHA-256 of pharm/library.yaml"></span>
+</div>
+
+<div class="toasts" id="toasts" aria-live="assertive"></div>
+
+<script src="/static/app.js"></script>
 </body>
 </html>
