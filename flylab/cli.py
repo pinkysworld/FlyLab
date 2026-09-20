@@ -1,79 +1,585 @@
+"""FlyLab command line.
+
+Every command is a thin wrapper over the same library functions the HTTP API
+uses, so a result obtained at the terminal and one obtained in the bench UI are
+the same numbers.  Commands that need a module another agent is still writing
+import it lazily and print a friendly message instead of a traceback.
+
+``--json`` is available on every command that prints a table, and emits exactly
+the payload the matching endpoint returns.
+"""
+
 from __future__ import annotations
+
 import json
 from pathlib import Path
+from typing import Any
+
 import typer
+
+from flylab.assays.subgraph import run_subgraph_assay
 from flylab.assays.taste import run_taste_assay
 from flylab.assays.wholens import run_wholens_assay
-from flylab.assays.subgraph import run_subgraph_assay
 from flylab.maps.malecns import download as download_malecns_files
 from flylab.pharm.occupancy import compare_compound, load_library
 
-app = typer.Typer(help="FlyLab virtual fly pharmacology bench")
+app = typer.Typer(help="FlyLab virtual fly pharmacology bench", no_args_is_help=True)
+experiment_app = typer.Typer(help="Batch experiment designs", no_args_is_help=True)
+graph_app = typer.Typer(help="Neighborhood graph inspection", no_args_is_help=True)
+app.add_typer(experiment_app, name="experiment")
+app.add_typer(graph_app, name="graph")
+
+JSON_OPT = typer.Option(False, "--json", help="Print the raw JSON payload instead of a table.")
+
+
+# --------------------------------------------------------------------------
+# helpers
+# --------------------------------------------------------------------------
+def _dump(payload: Any) -> None:
+    typer.echo(json.dumps(payload, indent=2, default=str))
+
+
+def _fmt(value: Any, width: int = 10, digits: int = 3) -> str:
+    if value is None:
+        return "-".rjust(width)
+    if isinstance(value, float):
+        return f"{value:{width}.{digits}f}"
+    return str(value).rjust(width)
+
+
+def _warnings(payload: dict[str, Any]) -> None:
+    for w in payload.get("warnings") or []:
+        typer.secho(f"  ! {w}", fg=typer.colors.YELLOW)
+
 
 def _print_table(result: dict) -> None:
     typer.echo(f"{result['compound']}  @  {result['concentration_M']:.2e} M")
     typer.echo(f"class: {result['class']}")
     typer.echo(f"{'receptor':28} {'occupancy':>10} {'EC50 (M)':>12}  direction")
     for row in result["receptors"]:
-        typer.echo(f"{row['receptor']:28} {row['occupancy']:10.3f} {row['ec50_M']:12.2e}  {row['direction']}")
+        typer.echo(
+            f"{row['receptor']:28} {row['occupancy']:10.3f} {row['ec50_M']:12.2e}  {row['direction']}"
+        )
     typer.echo(result["disclaimer"])
 
+
+def _readout_table(nb: dict[str, Any], keys: tuple[str, ...]) -> None:
+    r = nb.get("readouts", {})
+    typer.echo(f"{nb.get('assay')}  compound={nb.get('compound')}  conc={nb.get('concentration_M')}")
+    for k in keys:
+        if k in r:
+            typer.echo(f"  {k:24} {_fmt(r[k])}")
+    gains = nb.get("gains") or {}
+    if gains:
+        typer.echo("  gains " + "  ".join(f"{k}={v:.3f}" for k, v in gains.items()))
+    _warnings(nb)
+
+
+def _lazy_call(dotted: str, name: str, *args: Any, **kw: Any) -> Any:
+    """Import and call, or exit(2) with a message naming the missing module."""
+    try:
+        module = __import__(dotted, fromlist=[name])
+        fn = getattr(module, name)
+    except (ImportError, AttributeError):
+        typer.secho(
+            f"{dotted}.{name} is not available in this build yet "
+            "(it ships with the v0.5 analysis layer).",
+            fg=typer.colors.YELLOW,
+        )
+        raise typer.Exit(code=2)
+    return fn(*args, **kw)
+
+
+# --------------------------------------------------------------------------
+# library / occupancy
+# --------------------------------------------------------------------------
 @app.command()
-def occupancy(compound: str, conc: float = typer.Option(..., "--conc"), json_out: bool = False):
+def occupancy(
+    compound: str,
+    conc: float = typer.Option(..., "--conc", help="Concentration in molar."),
+    json_out: bool = JSON_OPT,
+):
+    """Insect vs vertebrate receptor occupancy for one compound at one dose."""
     result = compare_compound(compound, conc)
+    _dump(result) if json_out else _print_table(result)
+
+
+@app.command()
+def compare(compounds: list[str], conc: float = typer.Option(..., "--conc"), json_out: bool = JSON_OPT):
+    """Occupancy tables for several compounds at the same dose."""
+    results = [compare_compound(name, conc) for name in compounds]
     if json_out:
-        typer.echo(json.dumps(result, indent=2))
-    else:
+        _dump(results)
+        return
+    for result in results:
         _print_table(result)
 
-@app.command()
-def compare(compounds: list[str], conc: float = typer.Option(..., "--conc")):
-    for name in compounds:
-        _print_table(compare_compound(name, conc))
 
 @app.command("list-drugs")
-def list_drugs():
-    for key, spec in load_library()["compounds"].items():
-        typer.echo(f"{key:16} {spec['name']}")
+def list_drugs(json_out: bool = JSON_OPT):
+    """List every compound key in the library."""
+    lib = load_library()["compounds"]
+    if json_out:
+        _dump([{"key": k, "name": v["name"], "class": v.get("class")} for k, v in lib.items()])
+        return
+    for key, spec in lib.items():
+        typer.echo(f"{key:16} {spec['name']:28} {spec.get('class') or ''}")
+
 
 @app.command()
-def assay(compound: str = "imidacloprid", conc: float = 1e-6, sugar: float = 150.0, bitter: float = 0.0):
-    typer.echo(json.dumps(run_taste_assay(compound, conc, sugar, bitter), indent=2))
+def meta(json_out: bool = JSON_OPT):
+    """Bench metadata: version, maps, library hash, graphs, mechanism rules."""
+    from flylab.server import meta as meta_payload
 
+    payload = meta_payload()
+    if json_out:
+        _dump(payload)
+        return
+    typer.echo(f"FlyLab {payload['version']}  notebook schema {payload['notebook_version']}")
+    typer.echo(f"map   {payload['map']['id']}")
+    lib = payload["library"]
+    typer.echo(f"library {lib['version']}  sha256 {lib['sha256'][:16]}...  {lib['n_compounds']} compounds")
+    for name, g in payload["graphs"].items():
+        if not g.get("available"):
+            typer.secho(f"graph {name:12} MISSING ({g.get('error')})", fg=typer.colors.YELLOW)
+            continue
+        seeds = ", ".join(f"{t}={n}" for t, n in g["seeds"].items())
+        typer.echo(f"graph {name:12} {g['n_nodes']:6} nodes {g['n_edges']:7} edges  seeds: {seeds}")
+    typer.echo(f"mechanism rules: {len(payload['mechanisms'])}")
+
+
+# --------------------------------------------------------------------------
+# assays
+# --------------------------------------------------------------------------
+@app.command()
+def assay(
+    compound: str = "imidacloprid",
+    conc: float = 1e-6,
+    sugar: float = 150.0,
+    bitter: float = 0.0,
+    json_out: bool = JSON_OPT,
+):
+    """Reduced taste -> MN9 assay (reduced_taste_v0)."""
+    nb = run_taste_assay(compound, conc, sugar, bitter)
+    if json_out:
+        _dump(nb)
+    else:
+        _readout_table(
+            nb, ("g_ach", "mn9_sugar_hz", "mn9_sugar_bitter_hz", "mn9_vehicle_sugar_hz", "bitter_veto_ratio")
+        )
+
+
+@app.command("assay-cns")
+def assay_cns(compound: str = "imidacloprid", conc: float = 1e-6, json_out: bool = JSON_OPT):
+    """Whole-CNS census assay on the MaleCNS transmitter counts."""
+    nb = run_wholens_assay(compound, conc)
+    if json_out:
+        _dump(nb)
+        return
+    r = nb["readouts"]
+    typer.echo(f"traced cells: {r['n_traced']}  weights_present={r['weights_present']}")
+    typer.echo(f"{'index':28} {'vehicle':>10} {'treated':>10}")
+    for k in ("cns_excitation_index", "cns_inhibition_index", "excitation_inhibition_ratio"):
+        typer.echo(f"{k:28} {_fmt(r['vehicle'][k])} {_fmt(r['treated'][k])}")
+    _warnings(nb)
+
+
+@app.command("assay-subgraph")
+def assay_subgraph(
+    compound: str = "imidacloprid",
+    conc: float = 1e-6,
+    graph: str = typer.Option("named", "--graph", help="named | taste_motor | path to JSON"),
+    drive_hz: float = 40.0,
+    steps: int = 80,
+    json_out: bool = JSON_OPT,
+):
+    """Rate-model assay on a committed MaleCNS neighborhood."""
+    nb = run_subgraph_assay(compound, conc, drive_hz=drive_hz, steps=steps, graph=graph)
+    if json_out:
+        _dump(nb)
+    else:
+        _readout_table(nb, ("n_nodes", "n_edges", "mean_hz", "max_hz", "mn9_hz", "dnp01_hz"))
+
+
+@app.command("assay-spiking")
+def assay_spiking(
+    compound: str = "imidacloprid",
+    conc: float = 1e-6,
+    graph: str = typer.Option("named", "--graph"),
+    drive_hz: float = 40.0,
+    t_ms: float = 500.0,
+    seed: int = 0,
+    json_out: bool = JSON_OPT,
+):
+    """Shiu-style LIF spiking assay on a committed neighborhood."""
+    from flylab.assays.spiking import run_spiking_assay
+
+    nb = run_spiking_assay(compound, conc, drive_hz=drive_hz, t_ms=t_ms, seed=seed, graph=graph)
+    if json_out:
+        _dump(nb)
+        return
+    r = nb["readouts"]
+    typer.echo(f"LIF {r['t_ms']:.0f} ms, {r['n_nodes']} cells, {r['n_spikes']} spikes")
+    typer.echo(f"{'readout':24} {'vehicle':>10} {'treated':>10}")
+    for k in ("mn9_hz", "dnp01_hz", "mean_hz"):
+        typer.echo(f"{k:24} {_fmt(r['vehicle'].get(k))} {_fmt(r.get(k))}")
+    _warnings(nb)
+
+
+@app.command("assay-taste-map")
+def assay_taste_map(
+    compound: str = "imidacloprid",
+    conc: float = 1e-6,
+    sugar: float = 150.0,
+    bitter: float = 0.0,
+    engine: str = typer.Option("rate", "--engine", help="rate | lif"),
+    seed: int = 0,
+    json_out: bool = JSON_OPT,
+):
+    """Map-extracted labellar GRN -> MN9 assay on the taste_motor graph."""
+    from flylab.assays.taste_map import run_taste_map_assay
+
+    nb = run_taste_map_assay(compound, conc, sugar_hz=sugar, bitter_hz=bitter, engine=engine, seed=seed)
+    if json_out:
+        _dump(nb)
+    else:
+        _readout_table(
+            nb,
+            (
+                "engine",
+                "n_sweet_grn",
+                "n_bitter_grn",
+                "mn9_sugar_hz",
+                "mn9_sugar_bitter_hz",
+                "mn9_vehicle_sugar_hz",
+                "mn9_no_drive_hz",
+                "bitter_veto_ratio",
+            ),
+        )
+
+
+# --------------------------------------------------------------------------
+# uncertainty / analysis
+# --------------------------------------------------------------------------
+@app.command()
+def ensemble(
+    assay: str = typer.Option("subgraph", "--assay", help="subgraph | spiking | taste | taste_map"),
+    compound: str = "imidacloprid",
+    conc: float = 1e-6,
+    n_rep: int = 8,
+    ec50_sd_log10: float = 0.3,
+    seed: int = 0,
+    json_out: bool = JSON_OPT,
+):
+    """Replicate an assay and report a Monte-Carlo credible interval."""
+    from flylab.assays.ensemble import run_ensemble
+
+    nb = run_ensemble(assay, compound, conc, n_rep=n_rep, ec50_sd_log10=ec50_sd_log10, seed=seed)
+    if json_out:
+        _dump(nb)
+        return
+    u = nb["uncertainty"]
+    typer.echo(f"{assay}  {compound} @ {conc:.2e} M  n_rep={u['n_rep']}")
+    typer.echo(f"{'readout':16} {'mean':>10} {'sd':>10} {'lo':>10} {'hi':>10}")
+    for k, (lo, hi) in u["ci"].items():
+        typer.echo(f"{k:16} {_fmt(u['mean'].get(k))} {_fmt(u['sd'].get(k))} {_fmt(lo)} {_fmt(hi)}")
+    _warnings(nb)
+
+
+@app.command()
+def sensitivity(
+    assay: str = typer.Option("subgraph", "--assay"),
+    compound: str = "imidacloprid",
+    conc: float = 1e-6,
+    readout: str = "mean_hz",
+    factor: float = 2.0,
+    json_out: bool = JSON_OPT,
+):
+    """One-at-a-time tornado: which parameter moves the readout most."""
+    from flylab.assays.ensemble import sensitivity as sensitivity_fn
+
+    rows = sensitivity_fn(assay, compound, conc, factor=factor, readout=readout)
+    if json_out:
+        _dump(rows)
+        return
+    typer.echo(f"{assay}  {compound} @ {conc:.2e} M  readout={readout}  x/{factor}")
+    typer.echo(f"{'parameter':20} {'low':>10} {'base':>10} {'high':>10} {'span':>10}")
+    for row in rows:
+        typer.echo(
+            f"{str(row.get('param')):20} {_fmt(row.get('low'))} {_fmt(row.get('base'))} "
+            f"{_fmt(row.get('high'))} {_fmt(row.get('span'))}"
+        )
+
+
+@app.command()
+def ic50(
+    assay: str = typer.Option("subgraph", "--assay"),
+    compound: str = "imidacloprid",
+    readout: str = "mean_hz",
+    n_boot: int = 200,
+    n_rep: int = 4,
+    seed: int = 0,
+    json_out: bool = JSON_OPT,
+):
+    """Hill fit of the model's own dose-response, with a bootstrap CI."""
+    from flylab.assays.ensemble import circuit_ic50
+
+    out = circuit_ic50(assay, compound, readout=readout, n_boot=n_boot, n_rep=n_rep, seed=seed)
+    if json_out:
+        _dump(out)
+        return
+    fit = out.get("fit") or {}
+    typer.echo(f"{assay}  {compound}  readout={readout}")
+    if fit.get("error"):
+        typer.secho(f"  fit failed: {fit['error']}", fg=typer.colors.RED)
+    else:
+        typer.echo(f"  model IC50 {fit.get('ic50'):.3e} M   slope {_fmt(fit.get('slope'))}  r2 {_fmt(fit.get('r2'))}")
+        ci = (out.get("ci") or {}).get("ic50")
+        if ci:
+            typer.echo(f"  bootstrap CI  {ci[0]:.3e} .. {ci[1]:.3e} M  ({out['bootstrap'].get('n_ok')} ok)")
+    _warnings(out)
+
+
+@app.command()
+def exposure(
+    compound: str = "imidacloprid",
+    dose: float = typer.Option(1.0, "--dose", help="nanomoles delivered to one fly"),
+    route: str = typer.Option("feeding", "--route", help="feeding | topical | bath"),
+    t_h: float = 24.0,
+    json_out: bool = JSON_OPT,
+):
+    """One-compartment exposure: C(t), AUC, Cmax, Tmax and occupancy(t)."""
+    from flylab.pharm.exposure import exposure_profile
+
+    out = exposure_profile(compound, dose, route, t_h=t_h)
+    if json_out:
+        _dump(out)
+        return
+    typer.echo(f"{out['compound']}  {out['route']}  {out['dose_nmol']} nmol")
+    typer.echo(f"  Cmax {out['cmax']:.3e} M at Tmax {out['tmax']:.2f} h   AUC {out['auc']:.3e} M*h")
+    _warnings(out)
+
+
+@app.command("null-panel")
+def null_panel(
+    compound: str = "imidacloprid",
+    conc: float = 1e-6,
+    n: int = 20,
+    seed: int = 0,
+    json_out: bool = JSON_OPT,
+):
+    """Null-model panel: real effect against shuffled-network nulls."""
+    out = _lazy_call("flylab.analysis.nullmodels", "null_panel", compound, conc, n, seed)
+    _dump(out) if json_out else typer.echo(json.dumps(out, indent=2, default=str))
+
+
+@app.command()
+def selectivity(conc: float = 1e-6, json_out: bool = JSON_OPT):
+    """Receptor selectivity table across the library at one dose."""
+    out = _lazy_call("flylab.analysis.selectivity", "receptor_selectivity_table", conc)
+    _dump(out) if json_out else typer.echo(json.dumps(out, indent=2, default=str))
+
+
+@app.command()
+def predictions(n_rep: int = 4, seed: int = 0, json_out: bool = JSON_OPT):
+    """Falsifiable predictions table from the v0.5 analysis layer."""
+    out = _lazy_call("flylab.analysis.predictions", "prediction_table", n_rep, seed)
+    _dump(out) if json_out else typer.echo(json.dumps(out, indent=2, default=str))
+
+
+@app.command("reproduce-paper")
+def reproduce_paper():
+    """Regenerate every figure and table in the paper draft."""
+    try:
+        from scripts.reproduce_paper import main  # type: ignore[import-not-found]
+    except ImportError:
+        typer.secho(
+            "scripts/reproduce_paper.py is not in this checkout yet; it ships with "
+            "the paper build. Run it from the repository root once it exists.",
+            fg=typer.colors.YELLOW,
+        )
+        raise typer.Exit(code=2)
+    main()
+
+
+# --------------------------------------------------------------------------
+# graph
+# --------------------------------------------------------------------------
+@graph_app.command("info")
+def graph_info(
+    graph: str = typer.Option("named", "--graph", help="named | taste_motor | path to JSON"),
+    json_out: bool = JSON_OPT,
+):
+    """Nodes, edges, seeds and transmitter counts of a committed graph."""
+    from collections import Counter
+
+    from flylab.circuit.rate import load_graph, resolve_graph
+
+    path = resolve_graph(graph)
+    g = load_graph(path)
+    nts = Counter((n.get("consensus_nt") or "unclear") for n in g["nodes"])
+    payload = {
+        "graph": graph,
+        "path": str(path),
+        "map": g.get("map"),
+        "citation": g.get("citation"),
+        "n_nodes": g["n_nodes"],
+        "n_edges": g["n_edges"],
+        "hops": g.get("hops"),
+        "min_weight": g.get("min_weight"),
+        "closure_min_weight": g.get("closure_min_weight"),
+        "seeds": {t: len(ids) for t, ids in (g.get("seeds") or {}).items()},
+        "transmitters": dict(nts.most_common()),
+    }
+    if json_out:
+        _dump(payload)
+        return
+    typer.echo(f"{payload['path']}")
+    typer.echo(f"map {payload['map']}  hops={payload['hops']}  min_weight={payload['min_weight']}")
+    typer.echo(f"{payload['n_nodes']} nodes, {payload['n_edges']} edges")
+    typer.echo("seeds: " + ", ".join(f"{t}={n}" for t, n in payload["seeds"].items()))
+    typer.echo("transmitters: " + ", ".join(f"{t}={n}" for t, n in payload["transmitters"].items()))
+
+
+@graph_app.command("impact")
+def graph_impact(
+    compound: str = "imidacloprid",
+    conc: float = 1e-6,
+    graph: str = typer.Option("named", "--graph"),
+    top: int = 10,
+    json_out: bool = JSON_OPT,
+):
+    """Per-node and per-edge effect of one dose on a graph."""
+    from flylab.analysis.impact import summarize_impact
+
+    out = summarize_impact(compound, conc, graph=graph, top_nodes=top, top_edges=top, top_paths=top)
+    if json_out:
+        _dump(out)
+        return
+    typer.echo(f"{out['graph']}  {compound} @ {conc:.2e} M")
+    typer.echo("  gains " + "  ".join(f"{k}={v:.3f}" for k, v in out["gains"].items()))
+    typer.echo(f"{'bodyId':>12} {'type':16} {'nt':16} {'vehicle':>9} {'treated':>9} {'delta':>9}")
+    for row in out["top_nodes"][:top]:
+        typer.echo(
+            f"{row.get('bodyId'):>12} {str(row.get('type'))[:16]:16} {str(row.get('nt'))[:16]:16} "
+            f"{_fmt(row.get('rate_vehicle'), 9)} {_fmt(row.get('rate_treated'), 9)} {_fmt(row.get('delta_hz'), 9)}"
+        )
+    _warnings(out)
+
+
+# --------------------------------------------------------------------------
+# experiments
+# --------------------------------------------------------------------------
+EXAMPLE_DESIGN = """\
+# FlyLab experiment design (feed to: flylab experiment run DESIGN.yaml)
+assay: subgraph            # subgraph | spiking | taste | taste_map
+compounds:
+  - imidacloprid
+  - nicotine
+  - fipronil
+concs_M: [1.0e-9, 1.0e-8, 1.0e-7, 1.0e-6, 1.0e-5]
+replicates: 3
+seed: 0
+readouts: [mn9_hz, dnp01_hz, mean_hz, g_ach, g_gaba]
+jitter_log10: 0.3          # 0 disables the library Monte-Carlo
+include_vehicle: true
+graph: named               # named | taste_motor
+"""
+
+
+@experiment_app.command("example")
+def experiment_example():
+    """Print a starter design YAML you can redirect into a file."""
+    typer.echo(EXAMPLE_DESIGN, nl=False)
+
+
+@experiment_app.command("run")
+def experiment_run(
+    design: Path = typer.Argument(..., help="Design YAML or JSON file."),
+    out: Path | None = typer.Option(None, "--out", help="Write the results CSV here."),
+    json_out_path: Path | None = typer.Option(None, "--json", help="Write the full JSON result here."),
+):
+    """Run a batch design and print (or write) the results table."""
+    from flylab.assays.experiment import design_from_yaml, run_experiment
+
+    spec = design_from_yaml(design)
+    result = run_experiment(spec)
+    if out:
+        Path(out).write_text(result["csv"])
+        typer.echo(f"csv  -> {out}  ({result['n_rows']} drug rows)")
+    if json_out_path:
+        Path(json_out_path).write_text(json.dumps(result, indent=2, default=str))
+        typer.echo(f"json -> {json_out_path}")
+    if not out and not json_out_path:
+        typer.echo(result["csv"], nl=False)
+    typer.echo(
+        f"# {result['n_rows']} rows + {len(result['vehicle_rows'])} vehicle rows, "
+        f"{len(result['summary'])} groups",
+        err=True,
+    )
+    for w in result.get("warnings") or []:
+        typer.secho(f"# ! {w}", fg=typer.colors.YELLOW, err=True)
+
+
+# --------------------------------------------------------------------------
+# data / serving
+# --------------------------------------------------------------------------
 @app.command("download-malecns")
 def download_malecns(full: bool = typer.Option(False, "--full")):
+    """Download the MaleCNS atlas (and with --full, the 1.1 GB weight matrix)."""
     typer.echo(str(download_malecns_files(kind="full" if full else "atlas")))
+
 
 @app.command("extract-subgraph")
 def extract_subgraph(
     hops: int = 1,
     min_weight: int = 5,
     types: str = typer.Option("MN9,DNp01", help="Comma-separated MaleCNS type names"),
+    closure_min_weight: int | None = typer.Option(
+        None,
+        "--closure-min-weight",
+        help="Weight floor for the induced edges between neighborhood members "
+        "(defaults to --min-weight). Raise it to keep the dense taste_motor JSON small.",
+    ),
+    out: Path = typer.Option(
+        Path("data/derived/malecns_named_neighborhood.json"),
+        "--out",
+        help="Destination JSON path.",
+    ),
 ):
+    """Cut a named-cell neighborhood out of the MaleCNS weight matrix."""
     from flylab.maps.extract import extract_neighborhood
+
     type_list = tuple(t.strip() for t in types.split(",") if t.strip())
     payload = extract_neighborhood(
         types=type_list,
         hops=hops,
         min_weight=min_weight,
-        out=Path("data/derived/malecns_named_neighborhood.json"),
+        closure_min_weight=closure_min_weight,
+        out=Path(out),
     )
     typer.echo(f"seeds={payload['seeds']}")
     typer.echo(f"nodes={payload['n_nodes']} edges={payload['n_edges']} -> {payload['path']}")
 
-@app.command("assay-cns")
-def assay_cns(compound: str = "imidacloprid", conc: float = 1e-6):
-    typer.echo(json.dumps(run_wholens_assay(compound, conc), indent=2, default=str))
-
-@app.command("assay-subgraph")
-def assay_subgraph(compound: str = "imidacloprid", conc: float = 1e-6):
-    typer.echo(json.dumps(run_subgraph_assay(compound, conc), indent=2))
 
 @app.command()
-def serve(host: str = "127.0.0.1", port: int = 8765):
+def serve(
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    open_browser: bool = typer.Option(False, "--open", help="Open the bench in a browser."),
+):
+    """Serve the bench UI and HTTP API."""
     import uvicorn
-    typer.echo(f"FlyLab bench -> http://{host}:{port}")
+
+    url = f"http://{host}:{port}"
+    typer.echo(f"FlyLab bench -> {url}")
+    if open_browser:
+        import threading
+        import webbrowser
+
+        threading.Timer(1.2, lambda: webbrowser.open(url)).start()
     uvicorn.run("flylab.server:app", host=host, port=port, reload=False)
+
 
 if __name__ == "__main__":
     app()
