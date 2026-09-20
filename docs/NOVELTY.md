@@ -73,7 +73,7 @@ over:
 
 > "The degree-preserving graph reproduces the effect."
 
-Only the equivalent-within-tolerance verdict licenses the word "reproduces". Imidacloprid's sign, weight and degree modes at a thousand permutations are indeterminate, not equivalent, and must not be written up as though the shuffle had given the same effect.
+Only the equivalent-within-tolerance verdict licenses the word "reproduces", and even then it means "within the prespecified margin", never "the shuffle gave the same effect". Check the verdict against a run rather than assuming: for imidacloprid at the headline dose and n = 1000, the weight, degree-preserving and weight-matched transmitter modes fall inside the margin and report **equivalent_within_tolerance**, while the plain transmitter permutation reports **indeterminate** (gap 2.65 Hz against a margin of 0.33 Hz) and the Erdos-Renyi control is **distinguishable**.
 
 ### The verdict depends on the extract, recurrence predicts it, and that is now the result
 
@@ -91,7 +91,7 @@ The instrument itself is not in doubt here: `ladder_recovery` and `ladder_power`
 
 ### Imidacloprid
 
-At the current headline concentration and readout, the imidacloprid real-graph effect is not distinguishable from several structure-preserving null ensembles at n = 1000, while it differs strongly from the Erdős-Rényi control. Those non-rejections carry the **indeterminate** verdict, not equivalence.
+At the current headline concentration and readout, the imidacloprid real-graph effect is not distinguishable from several structure-preserving null ensembles at n = 1000, while it differs strongly from the Erdős-Rényi control. Those non-rejections carry either **equivalent_within_tolerance** or **indeterminate** depending on how far the effect sits from the null median, so quote the verdict the run returned rather than assuming the weaker one. Both are weaker than equality, and neither is evidence about the network the extract was cut from: this verdict is measured on a 1126-cell in-star and reverses on extracts with recurrence.
 
 The current interpretation is that detailed wiring is not supported as necessary for this particular model output, which is weaker than saying it is unnecessary.
 
