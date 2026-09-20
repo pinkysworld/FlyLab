@@ -359,6 +359,7 @@ kbd {
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
 
 .plot { width: 100%; min-height: 60px; }
+.plot .svg-container { position: relative !important; }
 
 /* stat tiles */
 .tiles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }

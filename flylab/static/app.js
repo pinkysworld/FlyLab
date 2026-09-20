@@ -12,8 +12,35 @@
   const $ = (sel, root) => (root || document).querySelector(sel);
   const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
 
-  const HAS_PLOTLY = typeof window.Plotly !== "undefined";
-  const HAS_CYTOSCAPE = typeof window.cytoscape !== "undefined";
+  /* One CDN having a bad minute should not cost the bench a whole panel, so
+     each library has a second source that boot() reaches for. These stay
+     functions, never captured constants: the fallback lands after this file
+     has already been parsed. */
+  const hasPlotly = () => typeof window.Plotly !== "undefined";
+  const hasCytoscape = () => typeof window.cytoscape !== "undefined";
+
+  const FALLBACKS = {
+    Plotly: "https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js",
+    cytoscape: "https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js",
+  };
+
+  function loadScript(url) {
+    return new Promise((resolve) => {
+      const tag = document.createElement("script");
+      tag.src = url;
+      tag.async = false;
+      tag.onload = () => resolve(true);
+      tag.onerror = () => resolve(false);
+      document.head.appendChild(tag);
+    });
+  }
+
+  async function ensureLibraries() {
+    const jobs = [];
+    if (!hasPlotly()) jobs.push(loadScript(FALLBACKS.Plotly));
+    if (!hasCytoscape()) jobs.push(loadScript(FALLBACKS.cytoscape));
+    if (jobs.length) await Promise.all(jobs);
+  }
 
   function esc(v) {
     return String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, (c) =>
@@ -152,7 +179,17 @@
       bargap: 0.3,
       bargroupgap: 0.12,
       showlegend: false,
-      legend: { orientation: "h", y: -0.26, x: 0, font: { color: c.text2, size: 11 } },
+      /* Legends sit ABOVE the plot area: a horizontal legend below the x-axis
+         wraps at phone width and spills out of its card. */
+      legend: {
+        orientation: "h",
+        x: 0,
+        xanchor: "left",
+        y: 1.0,
+        yanchor: "bottom",
+        font: { color: c.text2, size: 11 },
+        bgcolor: "rgba(0,0,0,0)",
+      },
       hoverlabel: { bgcolor: c.surface, bordercolor: c.base, font: { color: c.text1, size: 11.5 } },
       xaxis: axis(),
       yaxis: axis(),
@@ -160,24 +197,38 @@
     const out = Object.assign({}, base, over || {});
     out.xaxis = Object.assign({}, base.xaxis, (over && over.xaxis) || {});
     out.yaxis = Object.assign({}, base.yaxis, (over && over.yaxis) || {});
+    out.legend = Object.assign({}, base.legend, (over && over.legend) || {});
     out.margin = Object.assign({}, base.margin, (over && over.margin) || {});
+    if (out.showlegend) {
+      // room for the legend (two wrapped lines at phone width) plus any title
+      out.margin.t = Math.max(out.margin.t || 0, 48);
+      out.height = (out.height || 280) + 24;
+    }
     return out;
   }
   function draw(id, traces, over) {
     const node = document.getElementById(id);
     if (!node) return;
-    if (!HAS_PLOTLY) {
+    if (!hasPlotly()) {
       node.innerHTML = '<div class="empty">Plotly could not be loaded from the CDN; the table view below carries the same values.</div>';
       return;
     }
+    /* The container owns the box: Plotly autosizes into an element whose
+       height we set here. Passing layout.height instead lets the SVG grow past
+       a narrow container and spill into the card below it. */
+    const lay = layout(over);
+    const height = Math.round(lay.height || 280);
+    delete lay.height;
+    lay.autosize = true;
+    node.style.height = height + "px";
     try {
-      window.Plotly.react(node, traces, layout(over), PLOT_CFG);
+      window.Plotly.react(node, traces, lay, PLOT_CFG);
     } catch (err) {
       node.innerHTML = '<div class="empty">Chart could not be drawn.</div>';
     }
   }
   function resizePanel(panel) {
-    if (!HAS_PLOTLY || !panel) return;
+    if (!hasPlotly() || !panel) return;
     $$(".plot", panel).forEach((node) => {
       if (node.data) {
         try {
@@ -281,6 +332,7 @@
     notebook: null,
     cache: {},
     loaded: {},
+    dirty: {},
     experiment: null,
     runOrder: null,
     blindKey: null,
@@ -739,10 +791,12 @@
       annotations: [
         {
           x: logc,
-          y: 1.02,
+          y: 0.99,
+          yref: "paper",
           text: "current dose",
           showarrow: false,
-          yanchor: "bottom",
+          yanchor: "top",
+          xanchor: "left",
           font: { color: c.muted, size: 10.5 },
         },
       ],
@@ -781,11 +835,12 @@
       shapes.push({ type: "line", x0: lx, x1: lx, yref: "paper", y0: 0, y1: 1, line: { color: c.muted, width: 2 } });
       annotations.push({
         x: lx,
-        y: 1,
+        y: 0.99,
         yref: "paper",
         text: "model IC50",
         showarrow: false,
-        yanchor: "bottom",
+        yanchor: "top",
+        xanchor: "left",
         font: { color: c.muted, size: 10.5 },
       });
     }
@@ -918,7 +973,7 @@
 
     const positions = packLayers(viewer.nodes);
     const cyHost = document.getElementById("cy");
-    if (!HAS_CYTOSCAPE) {
+    if (!hasCytoscape()) {
       cyHost.innerHTML =
         '<div class="empty">cytoscape.js could not be loaded from the CDN. The tables below carry the same information.</div>';
     } else {
@@ -1876,11 +1931,12 @@
         annotations: [
           {
             x: out.real_effect,
-            y: 1,
+            y: 0.99,
             yref: "paper",
             text: `real effect (z = ${num(out.z, 2)})`,
             showarrow: false,
-            yanchor: "bottom",
+            yanchor: "top",
+            xanchor: "left",
             font: { color: c.divHigh, size: 10.5 },
           },
         ],
@@ -2161,10 +2217,12 @@
     if (state.loaded[name] && TABS[name]) {
       try {
         TABS[name].render();
+        delete state.dirty[name];
       } catch (err) {
         /* a stale cache should never break tab switching */
       }
       resizePanel(panel);
+      scheduleResize();
     } else if (TABS[name] && MANUAL_TABS.indexOf(name) < 0) {
       runTab(name);
     } else {
@@ -2172,21 +2230,32 @@
     }
   }
 
+  /* Only the visible panel is ever drawn: Plotly cannot measure a display:none
+     container, and a chart laid out at zero width does not recover on its own.
+     Hidden panels are marked dirty and redrawn when they are next shown. */
   function rerenderAll() {
     Object.keys(state.loaded).forEach((name) => {
-      if (!state.loaded[name] || !TABS[name]) return;
-      try {
-        TABS[name].render();
-      } catch (err) {
-        /* theme change must never throw */
-      }
+      if (state.loaded[name] && name !== state.activeTab) state.dirty[name] = true;
     });
-    resizePanel(document.getElementById("panel-" + state.activeTab));
+    if (state.loaded[state.activeTab] && TABS[state.activeTab]) {
+      try {
+        TABS[state.activeTab].render();
+      } catch (err) {
+        /* a theme change must never throw */
+      }
+    }
+    scheduleResize();
+  }
+
+  function scheduleResize() {
+    const panel = document.getElementById("panel-" + state.activeTab);
+    requestAnimationFrame(() => resizePanel(panel));
   }
 
   function invalidate() {
     state.cache = {};
     state.loaded = {};
+    state.dirty = {};
   }
 
   // ==================================================================
@@ -2333,7 +2402,22 @@
       runTab(state.activeTab);
     });
 
-    window.addEventListener("resize", () => resizePanel(document.getElementById("panel-" + state.activeTab)));
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      // re-draw rather than only resize: a chart laid out at another width
+      // keeps that width's tick density and legend wrapping otherwise
+      resizeTimer = setTimeout(() => {
+        if (state.loaded[state.activeTab] && TABS[state.activeTab]) {
+          try {
+            TABS[state.activeTab].render();
+          } catch (err) {
+            /* a resize must never throw */
+          }
+        }
+        scheduleResize();
+      }, 180);
+    });
   }
 
   // ==================================================================
@@ -2347,8 +2431,9 @@
     renderHistory();
     updateLadderHint();
 
-    if (!HAS_PLOTLY) toast("Plotly did not load from the CDN; charts fall back to tables", "info");
-    if (!HAS_CYTOSCAPE) toast("cytoscape.js did not load from the CDN; the circuit view falls back to tables", "info");
+    await ensureLibraries();
+    if (!hasPlotly()) toast("Plotly did not load from either CDN; charts fall back to tables", "info");
+    if (!hasCytoscape()) toast("cytoscape.js did not load from either CDN; the circuit view falls back to tables", "info");
 
     try {
       await loadMeta();
