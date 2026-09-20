@@ -1,10 +1,10 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-20T12:09:06+00:00",
+  "generated_utc": "2026-09-20T12:44:36+00:00",
   "fast": false,
   "seed": 0,
   "jobs": 4,
-  "runtime_s": 5221.39,
+  "runtime_s": 5221.4,
   "provenance": {
     "flylab_version": "0.6.0",
     "git_sha": "08aa857850dff720562b2c127819f126a46d53c2",
@@ -207,7 +207,7 @@
     },
     "paper": {
       "status": "ok",
-      "runtime_s": 0.01,
+      "runtime_s": 0.02,
       "description": "render the draft and supplement from their templates",
       "figures": 0,
       "tables": 0,
