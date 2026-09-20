@@ -6,6 +6,8 @@ Its purpose is not to market the project. It exists to keep the paper, README, w
 
 ## The narrow contribution
 
+**Frame the work as a computing contribution.** The problem FlyLab addresses is general: a simulation built on a measured network and parameterised from published literature cannot say which of its inputs its predictions depend on. The four instruments — typed evidence propagation, input-dependence testing, the ablation ladder with its matched reference, and specification-family robustness with variance attribution — are the contribution, and none is specific to flies. The fly pharmacology is the domain the method is demonstrated on, and it supplies the hard case rather than the claim.
+
 FlyLab should not be presented as "connectomics plus pharmacology is new."
 
 Executable Drosophila circuits already exist. Connectome-based LIF models already exist. Receptor-informed pharmacological perturbation of whole-brain network models already exists.
@@ -73,14 +75,15 @@ over:
 
 Only the equivalent-within-tolerance verdict licenses the word "reproduces". Imidacloprid's sign, weight and degree modes at a thousand permutations are indeterminate, not equivalent, and must not be written up as though the shuffle had given the same effect.
 
-### The verdict is substrate-dependent, and that is now the result
+### The verdict depends on the extract, recurrence predicts it, and that is now the result
 
-The single most important thing to know before writing any dependence sentence: **the same analysis, with the same instrument and no parameter changed, gives opposite answers on the repository's two committed cuts.** On the sparse 1-hop `named` cut — an in-star, most of whose edges terminate on four seed cells and most of whose nodes receive no input at all — most cells come back composition-dominated. Repeated on the denser `taste_motor` cut, none of them does: every cell whose effect clears the relative floor is topology-dependent.
+The single most important thing to know before writing any dependence sentence: **the same analysis, with the same instrument and no parameter changed, gives opposite answers on different extracts of one connectome.** On the sparse 1-hop `named` cut — an in-star, most of whose edges terminate on four seed cells and most of whose nodes receive no input — most cells come back composition-dominated. On the denser `taste_motor` cut, none does.
 
-A degree-preserving rewire of an in-star is close to the identity, so a negative topology verdict on such a cut is weak evidence rather than a finding. Two consequences:
+The scaling study (`flylab.analysis.scale.dependence_vs_scale`, T27) then says what the inversion tracks, and the answer is **not** size. Across seven extracts the composition-dominated verdict survives on exactly one — the in-star — while `scale_1k` has *fewer* nodes than `named` (1000 against 1126) and a mean degree of 22.9 against 1.21, and is already topology-dependent. At the 5k and 10k rungs the prediction is distinguishable from every null on the ladder. A degree-preserving rewire of an in-star is close to the identity, so a negative topology verdict there is weak evidence rather than a finding. Three consequences:
 
-1. **Never state a dependence class without the cut it was measured on**, and prefer to quote `flylab.analysis.dependence.cut_census` (mean degree, share of edges onto seeds, share of nodes with any input, recurrence budget) beside it.
-2. **"Most predictions do not need the connectome" is withdrawn**, along with "the topology-dependent set is exactly the chloride-channel blockers". What replaces them is a methodological claim: the dependence verdict is a joint property of the prediction and the substrate, and a validated instrument that reverses between two cuts of one connectome is the more transferable result.
+1. **Never state a dependence class without the extract it was measured on**, and quote `flylab.analysis.dependence.cut_census` (mean degree, share of edges onto seeds, share of nodes with any input, recurrence budget) beside it.
+2. **"Most predictions do not need the connectome" is withdrawn**, along with "the topology-dependent set is exactly the chloride-channel blockers". What replaces them is a methodological claim: the dependence verdict is a joint property of the prediction and the extract, **recurrence rather than size predicts which way it goes**, and that is the transferable result.
+3. **Do not quote the top of the ladder as strong evidence.** The 25k and 50k rungs run at n = 20, where the smallest attainable probability is 0.048 against α = 0.05; they confirm a verdict settled at better-powered rungs rather than establishing it.
 
 The instrument itself is not in doubt here: `ladder_recovery` and `ladder_power` plant a recurrent loop of known strength in a synthetic graph of matched size, density and composition, recover it, and give an empirical false-positive rate on the unplanted control. The reversal is therefore about the graphs, not about power.
 

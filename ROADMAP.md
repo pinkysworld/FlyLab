@@ -30,17 +30,18 @@ Full research plan: `docs/RESEARCH_MAP.md`. Numbers: `papers/results.json` (rege
 | **6f Subunit-resolved nicotinic keys** | α6 (spinosad) and β1 (imidacloprid) split out; the rest stay on a documented aggregate | **done in v0.6** |
 | 6g IJRC research article | Intro / Methods / Results / **Discussion** / Conclusion, inside the word target | **done in v0.6** — drafted, not submitted |
 | **6h Second-round referee revision** | weight-matched transmitter null, three-way equivalence verdicts, FDR with confirmatory/exploratory labelling, a relative effect floor, a direction-aware ablation baseline with a matched reference distribution, the engine's row normalisation documented and swept, the transmitter sign table published, ground-truth validation of the dependence ladder, and the landscape repeated on the denser cut | **done in v0.6.1** — and it **reversed** the central RQ2 claim |
+| 6i Scale ladder | the same profile across nested extracts of 1k-50k cells, with the permutation budget scaled to the edge count | **done in v0.6.1** — the verdict settles as topology-dependent; `scale_study.json`, T27 |
 | 7 Expression coverage | adult motor-neuron receptor expression, or a declared permanent bound | **open** — coverage 0.205, MN9 unresolved |
 | 8 Live fly | one PER or climbing table in `live_lab` | **blocked — protocol only** |
 | 9 Archival | Zenodo deposit; only then may "prospective" become "pre-registered" | **open** |
 
 ## What v0.6.1 changed about the plan
 
-The dependence verdict turned out to be **substrate-dependent**: the same landscape, with the same instrument and no parameter changed, classifies most cells composition-dominated on the sparse 1-hop `named` cut and none of them on the denser `taste_motor` cut. The generalisation "most predictions do not need the connectome" is withdrawn. Two consequences for the roadmap: (a) a third cut, neither an in-star nor hops-limited, is now a research gate rather than a nicety, and (b) no dependence result may be quoted without the structural statistics of the graph it was measured on (`flylab.analysis.dependence.cut_census`, T19).
+The dependence verdict turned out to be **substrate-dependent**, and the scaling study then said what it tracks. Across seven extracts the composition-dominated verdict survives on exactly one — the in-star `named` cut — while `scale_1k`, which has *fewer* nodes (1000 vs 1126) and twenty times the mean degree, is already topology-dependent. **Recurrence, not size, predicts the inversion.** The generalisation "most predictions do not need the connectome" is withdrawn. Consequences for the roadmap: (a) no dependence result may be quoted without the structural statistics of the extract it was measured on (`flylab.analysis.dependence.cut_census`, T19, T27), (b) the permutation budget must fall with scale, so the top rungs (n = 20, resolution 0.048) confirm rather than establish a verdict, and (c) the paper is now framed as a computing contribution with the fly pharmacology as its demonstration domain.
 
 ## v0.7, in order
 
-0. **A third cut (new).** The two committed cuts disagree, and two points are not a trend. Until a third substrate exists, every dependence claim is a claim about one graph.
+0. **A better-powered top of the ladder.** The scale ladder settles the verdict, but its top rungs run at n = 20 (resolution 0.048), where a rejection is the smallest the test can express. More permutations at 25k-50k, or a cheaper null, would turn confirmation into evidence.
 1. **Expression coverage (gate 7).** Either source per-cell-type receptor expression for adult leg/labellar motor neurons or declare the 0.205 coverage a permanent bound. A data problem, not a modelling one.
 2. **The one allowed fit.** The uncertainty budget now names it without ambiguity: the engagement→gain transformation (S1 0.410, VOI 1.29 of 3.149 Hz²), not a potency value, which the model cannot see at a saturating dose.
 3. **The free win.** `weight_threshold` carries S1 0.294 and needs **no experiment**: re-run the dependence and selectivity analyses against synapse-confidence strata of data already held.

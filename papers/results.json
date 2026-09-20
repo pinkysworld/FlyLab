@@ -1,13 +1,13 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-20T13:54:55+00:00",
+  "generated_utc": "2026-09-20T15:06:32+00:00",
   "fast": false,
   "seed": 0,
   "jobs": 4,
-  "runtime_s": 3828.64,
+  "runtime_s": 3824.39,
   "provenance": {
     "flylab_version": "0.6.0",
-    "git_sha": "f8de601f10531b9c804f3c4e502efb0b43293fb7",
+    "git_sha": "e74d73857430bc1c9ed30cadc4b764fdbeffaf6c",
     "library_sha256": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8",
     "library_version": "0.6",
     "library_schema_version": 3,
@@ -37,14 +37,6 @@
     "fast": false
   },
   "steps": {
-    "provenance": {
-      "status": "ok",
-      "runtime_s": 0.82,
-      "description": "versions, hashes, map ids, graph sizes",
-      "figures": 0,
-      "tables": 0,
-      "values": 11
-    },
     "census": {
       "status": "ok",
       "runtime_s": 0.0,
@@ -197,14 +189,6 @@
       "tables": 2,
       "values": 15
     },
-    "scale": {
-      "status": "ok",
-      "runtime_s": 3.7,
-      "description": "where the dependence verdict settles with the cut (T26, T27 when the study exists)",
-      "figures": 0,
-      "tables": 2,
-      "values": 26
-    },
     "architecture": {
       "status": "ok",
       "runtime_s": 0.42,
@@ -212,6 +196,22 @@
       "figures": 2,
       "tables": 0,
       "values": 0
+    },
+    "provenance": {
+      "status": "ok",
+      "runtime_s": 0.25,
+      "description": "versions, hashes, map ids, graph sizes",
+      "figures": 0,
+      "tables": 0,
+      "values": 11
+    },
+    "scale": {
+      "status": "ok",
+      "runtime_s": 0.06,
+      "description": "where the dependence verdict settles with the cut (T26, T27 when the study exists)",
+      "figures": 0,
+      "tables": 4,
+      "values": 38
     },
     "paper": {
       "status": "ok",
@@ -223,76 +223,6 @@
     }
   },
   "values": {
-    "flylab_version": {
-      "value": "0.6.0",
-      "text": "0.6.0",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "git_sha": {
-      "value": "f8de601f10531b9c804f3c4e502efb0b43293fb7",
-      "text": "f8de601f1053",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "library_sha256": {
-      "value": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8",
-      "text": "594b8d32c5e6",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "map_id": {
-      "value": "male-cns:v1.0",
-      "text": "male-cns:v1.0",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_nodes": {
-      "value": 1126,
-      "text": "1126",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_edges": {
-      "value": 1360,
-      "text": "1360",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_nodes": {
-      "value": 1841,
-      "text": "1841",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_edges": {
-      "value": 19066,
-      "text": "19\u202f066",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_min_weight": {
-      "value": 5,
-      "text": "5",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_closure_min_weight": {
-      "value": 10,
-      "text": "10",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
     "census_traced": {
       "value": 165122,
       "text": "165\u202f122",
@@ -7049,6 +6979,76 @@
       "note": null,
       "step": "claims"
     },
+    "flylab_version": {
+      "value": "0.6.0",
+      "text": "0.6.0",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "git_sha": {
+      "value": "e74d73857430bc1c9ed30cadc4b764fdbeffaf6c",
+      "text": "e74d73857430",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "library_sha256": {
+      "value": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8",
+      "text": "594b8d32c5e6",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "map_id": {
+      "value": "male-cns:v1.0",
+      "text": "male-cns:v1.0",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_nodes": {
+      "value": 1126,
+      "text": "1126",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_edges": {
+      "value": 1360,
+      "text": "1360",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_nodes": {
+      "value": 1841,
+      "text": "1841",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_edges": {
+      "value": 19066,
+      "text": "19\u202f066",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_min_weight": {
+      "value": 5,
+      "text": "5",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_closure_min_weight": {
+      "value": 10,
+      "text": "10",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
     "scale_ladder_sizes": {
       "value": [
         1000,
@@ -7180,93 +7180,297 @@
       "note": null,
       "step": "scale"
     },
-    "scale_study_status": {
-      "value": "not yet run",
-      "text": "not yet run",
+    "scale_study_source": {
+      "value": "papers/scale_study.json",
+      "text": "papers/scale_study.json",
       "unit": null,
       "note": null,
       "step": "scale"
     },
-    "scale_study_source": {
-      "value": null,
-      "text": "none",
+    "scale_study_status": {
+      "value": "reported",
+      "text": "reported",
       "unit": null,
       "note": null,
       "step": "scale"
     },
     "scale_study_cuts": {
-      "value": null,
-      "text": "n/a",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_compounds": {
-      "value": null,
-      "text": "n/a",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_sequences": {
-      "value": null,
-      "text": "n/a",
+      "value": [
+        "scale_1k",
+        "named",
+        "taste_motor",
+        "scale_5k",
+        "scale_10k",
+        "scale_25k",
+        "scale_50k"
+      ],
+      "text": "scale_1k, named, taste_motor, scale_5k, scale_10k, scale_25k, scale_50k",
       "unit": null,
       "note": null,
       "step": "scale"
     },
     "scale_study_n_cuts": {
-      "value": 0,
-      "text": "0",
+      "value": 7,
+      "text": "7",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_compounds": {
+      "value": [
+        "imidacloprid",
+        "fipronil"
+      ],
+      "text": "imidacloprid, fipronil",
       "unit": null,
       "note": null,
       "step": "scale"
     },
     "scale_study_settled": {
-      "value": null,
-      "text": "not measured",
+      "value": true,
+      "text": "yes",
       "unit": null,
       "note": null,
       "step": "scale"
     },
     "scale_study_settled_clean_ladder": {
-      "value": null,
-      "text": "not measured",
+      "value": true,
+      "text": "yes",
       "unit": null,
       "note": null,
       "step": "scale"
     },
     "scale_study_statement": {
-      "value": null,
-      "text": "Where the verdict settles with the size of the cut has not been measured at this commit: the scale ladder's rungs on disk are scale_1k, scale_5k, scale_10k, scale_25k, scale_50k and the study over the full ladder had not been run.",
+      "value": [
+        "imidacloprid: the verdict is 'topology-dependent' on the largest 5 of 7 cuts tested, first reached at 'taste_motor'.",
+        "fipronil: the verdict is 'topology-dependent' on the largest 7 of 7 cuts tested, first reached at 'scale_1k'."
+      ],
+      "text": "imidacloprid: the verdict is 'topology-dependent' on the largest 5 of 7 cuts tested, first reached at 'taste_motor'. fipronil: the verdict is 'topology-dependent' on the largest 7 of 7 cuts tested, first reached at 'scale_1k'.",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_sequences": {
+      "value": [
+        "imidacloprid: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent)",
+        "fipronil: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent)"
+      ],
+      "text": "imidacloprid: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent); fipronil: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent)",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_n_range": {
+      "value": [
+        20,
+        1000
+      ],
+      "text": "20-1000",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_resolution_range": {
+      "value": [
+        0.000999000999000999,
+        0.047619047619047616
+      ],
+      "text": "0.0010-0.0476",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_composition_dominated_cuts": {
+      "value": [
+        "named"
+      ],
+      "text": "named",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_n_composition_dominated": {
+      "value": 1,
+      "text": "1",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_every_null_cuts": {
+      "value": [
+        "scale_10k",
+        "scale_5k"
+      ],
+      "text": "scale_10k, scale_5k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_coarse_cuts": {
+      "value": [
+        "scale_10k",
+        "scale_25k",
+        "scale_50k"
+      ],
+      "text": "scale_10k, scale_25k, scale_50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_coarse_note": {
+      "value": {
+        "cuts": [
+          "scale_10k",
+          "scale_25k",
+          "scale_50k"
+        ],
+        "alpha": 0.05
+      },
+      "text": "at scale_10k, scale_25k, scale_50k the permutation budget falls to n = 20, where the smallest attainable probability is 0.048 against alpha = 0.05: a rejection there is the smallest the test can express",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_imidacloprid_sequence": {
+      "value": [
+        {
+          "cut": "scale_1k",
+          "n_nodes": 1000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "named",
+          "n_nodes": 1126,
+          "class": "composition-dominated"
+        },
+        {
+          "cut": "taste_motor",
+          "n_nodes": 1841,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_5k",
+          "n_nodes": 5000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_10k",
+          "n_nodes": 10000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_25k",
+          "n_nodes": 25000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_50k",
+          "n_nodes": 50000,
+          "class": "topology-dependent"
+        }
+      ],
+      "text": "scale_1k (1000 nodes, mean degree 22.9): topology-dependent; named (1126 nodes, mean degree 1.2): composition-dominated; taste_motor (1841 nodes, mean degree 10.4): topology-dependent; scale_5k (5000 nodes, mean degree 56.0): topology-dependent; scale_10k (10000 nodes, mean degree 62.2): topology-dependent; scale_25k (25000 nodes, mean degree 54.6): topology-dependent; scale_50k (50000 nodes, mean degree 44.3): topology-dependent",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_imidacloprid_relative_range": {
+      "value": [
+        0.5198156654684973,
+        0.9308633342364611
+      ],
+      "text": "0.52-0.93",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_fipronil_sequence": {
+      "value": [
+        {
+          "cut": "scale_1k",
+          "n_nodes": 1000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "named",
+          "n_nodes": 1126,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "taste_motor",
+          "n_nodes": 1841,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_5k",
+          "n_nodes": 5000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_10k",
+          "n_nodes": 10000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_25k",
+          "n_nodes": 25000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_50k",
+          "n_nodes": 50000,
+          "class": "topology-dependent"
+        }
+      ],
+      "text": "scale_1k (1000 nodes, mean degree 22.9): topology-dependent; named (1126 nodes, mean degree 1.2): topology-dependent; taste_motor (1841 nodes, mean degree 10.4): topology-dependent; scale_5k (5000 nodes, mean degree 56.0): topology-dependent; scale_10k (10000 nodes, mean degree 62.2): topology-dependent; scale_25k (25000 nodes, mean degree 54.6): topology-dependent; scale_50k (50000 nodes, mean degree 44.3): topology-dependent",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_fipronil_relative_range": {
+      "value": [
+        0.1356619639942983,
+        0.5749207286979054
+      ],
+      "text": "0.14-0.57",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_density_not_size": {
+      "value": {
+        "in_star": "named",
+        "dense": "scale_1k"
+      },
+      "text": "the inversion does not track the number of cells: `scale_1k` has 1000 nodes against `named`'s 1126 and a mean degree of 22.9 against 1.21, and it is already topology-dependent",
       "unit": null,
       "note": null,
       "step": "scale"
     },
     "paper_words_body": {
-      "value": 7005,
-      "text": "7005",
+      "value": 6983,
+      "text": "6983",
       "unit": "words",
       "note": null,
       "step": "paper"
     },
     "paper_words": {
-      "value": 10438,
-      "text": "10\u202f438",
+      "value": 10436,
+      "text": "10\u202f436",
       "unit": null,
       "note": null,
       "step": "paper"
     },
     "paper_words_in_target": {
-      "value": false,
-      "text": "no",
+      "value": true,
+      "text": "yes",
       "unit": null,
       "note": null,
       "step": "paper"
     },
     "supplement_words": {
-      "value": 5739,
-      "text": "5739",
+      "value": 6382,
+      "text": "6382",
       "unit": "words",
       "note": null,
       "step": "paper"
@@ -7281,7 +7485,7 @@
     "_provenance": {
       "value": {
         "flylab_version": "0.6.0",
-        "git_sha": "f8de601f10531b9c804f3c4e502efb0b43293fb7",
+        "git_sha": "e74d73857430bc1c9ed30cadc4b764fdbeffaf6c",
         "library_sha256": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8",
         "library_version": "0.6",
         "library_schema_version": 3,
@@ -7312,7 +7516,7 @@
       },
       "text": "",
       "unit": null,
-      "note": "provenance block, not a paper scalar",
+      "note": "carried over from the previous run in this outdir",
       "step": "provenance"
     }
   },
@@ -7874,6 +8078,20 @@
       "bytes": 1285,
       "rows": 9,
       "step": "scale"
+    },
+    {
+      "name": "T27_scale_study.csv",
+      "path": "tables/T27_scale_study.csv",
+      "bytes": 4239,
+      "rows": 14,
+      "step": "scale"
+    },
+    {
+      "name": "T27_scale_study.md",
+      "path": "tables/T27_scale_study.md",
+      "bytes": 2783,
+      "rows": 14,
+      "step": "scale"
     }
   ],
   "notes": [
@@ -7901,8 +8119,7 @@
     "[stability] the amplify/buffer split is NOT stable across the 3x3 threshold grid: nav_ache fails at circuit_frac=0.50,vert_limit=0.10. The paper quotes the range over the grid, never the point estimate.",
     "[uncertainty] the estimator's noise floor is 0.046, set by the most negative first-order estimate (gain_coef), not by the declared null factor lif_seed at -0.007. Only gain_transform, weight_threshold have a first-order confidence interval that excludes zero; every other factor is unresolved at this sample size, and a negative point estimate is estimator error rather than a negative contribution.",
     "[claims] the provenance chain behind a circuit readout has 9 links and exactly 1 of them (malecns_edges) is a measurement of the system being simulated; the rest are literature reuse, asserted modelling choices and computation.",
-    "[scale] the scaling study has not been run at this commit (rungs on disk: scale_1k, scale_5k, scale_10k, scale_25k, scale_50k; missing: none); the manuscript reports the open question, not a verdict.",
-    "[paper] body word count 7005 is outside the 5000-7000 target"
+    "[scale] scale study: 7 cuts (scale_1k, named, taste_motor, scale_5k, scale_10k, scale_25k, scale_50k); verdicts settled on the clean ladder: yes. imidacloprid: the verdict is 'topology-dependent' on the largest 5 of 7 cuts tested, first reached at 'taste_motor'. fipronil: the verdict is 'topology-dependent' on the largest 7 of 7 cuts tested, first reached at 'scale_1k'."
   ],
   "partial": false,
   "honesty": [
