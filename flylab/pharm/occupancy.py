@@ -16,10 +16,14 @@ survives:
 Consequences, and the whole point of this module:
 
 * The quantity is called **engagement**, not occupancy, unless the row's
-  ``param_type`` is a genuine binding constant (``Kd``/``Ki``), in which case
-  ``engagement_model`` is ``binding_occupancy`` and the word is earned.  The
-  legal transformations live in :mod:`flylab.pharm.evidence`, which *refuses*
-  the illegal ones instead of performing them quietly.
+  ``param_type`` is a genuine binding constant (``Kd``/``Ki``) *and* its
+  ``relation`` is ``exact_compound_exact_receptor_exact_species``, in which
+  case ``engagement_model`` is ``binding_occupancy`` and the word is earned.  A
+  Kd from another species or a related preparation gives
+  ``binding_derived_engagement`` instead -- the same Hill number, labelled as
+  an engagement proxy and carrying a ``provenance_warning`` that names the gap.
+  The legal transformations live in :mod:`flylab.pharm.evidence`, which
+  *refuses* the illegal ones instead of performing them quietly.
 * A row with no sourced value reports ``engagement: None`` -- N/A, not
   modelled -- and is excluded from every numeric aggregation (selectivity
   ratios, curves, Monte-Carlo intervals, gain patches).  ``1e-4`` is never
@@ -55,6 +59,7 @@ from flylab.pharm.evidence import (
     describe,
     engagement_note,
     model_for,
+    provenance_warning,
 )
 
 LIBRARY_PATH = Path(__file__).with_name("library.yaml")
@@ -65,8 +70,12 @@ SCHEMA_VERSION = 3
 ENGAGEMENT_IS_NOT_OCCUPANCY = (
     "engagement is a normalised Hill response computed from the sourced potency "
     "parameter named in param_type; it is physical receptor occupancy only when "
-    "engagement_model is 'binding_occupancy' (a measured Kd/Ki) and is otherwise "
-    "a functional engagement, while rows with no sourced value report None "
+    "engagement_model is 'binding_occupancy', which needs a measured Kd/Ki AND "
+    "relation 'exact_compound_exact_receptor_exact_species'. A Kd/Ki from "
+    "another species or a related preparation gives "
+    "'binding_derived_engagement' (an engagement proxy carrying a provenance "
+    "warning, not an occupancy of the modelled receptor), a functional potency "
+    "gives 'functional_engagement', and rows with no sourced value report None "
     "(not modelled) rather than a small number."
 )
 
@@ -124,11 +133,16 @@ def engagement(
 ) -> float | None:
     """Hill engagement ``C^n / (value^n + C^n)`` for a **typed** parameter.
 
-    ``param_type`` says what the sourced number is.  For ``Kd``/``Ki`` the
-    result is fractional receptor occupancy; for ``EC50``/``IC50``/``Kb`` it is
-    a normalised functional response and must not be called occupancy (the
-    peer review: "A Hill response derived from EC50 describes normalized
-    functional response, not physical receptor occupancy").
+    ``param_type`` and ``relation`` together say what the resulting number may
+    be *called* -- the algebra is the same either way, and this function does
+    not decide the label: :func:`~flylab.pharm.evidence.model_for` does.  A
+    ``Kd``/``Ki`` measured on this receptor in this species gives fractional
+    receptor occupancy; the same constant from another species or a related
+    preparation gives a ``binding_derived_engagement`` proxy; an
+    ``EC50``/``IC50``/``Kb`` gives a normalised functional response and must
+    not be called occupancy (the peer review: "A Hill response derived from
+    EC50 describes normalized functional response, not physical receptor
+    occupancy").
 
     Returns ``None`` when the row has no value.  Raises
     :class:`~flylab.pharm.evidence.EvidenceTypeError` when the parameter type
@@ -174,7 +188,15 @@ def hill_occupancy(conc_M: float, ec50_M: float, n: float = 1.0) -> float:
 
 
 def binding_occupancy(conc_M: float, kd_M: float, n: float = 1.0) -> float:
-    """Fractional occupancy from a genuine binding constant (``Kd``/``Ki``)."""
+    """Fractional occupancy from a genuine binding constant (``Kd``/``Ki``).
+
+    Occupancy *of the receptor the constant was measured on*.  Calling the
+    result an occupancy of the modelled Drosophila target is only justified
+    when the row's relation is ``exact_compound_exact_receptor_exact_species``;
+    for a cross-species or related-receptor constant the library reports
+    ``binding_derived_engagement`` instead (see
+    :func:`~flylab.pharm.evidence.model_for`).
+    """
     if kd_M is None:
         raise ValueError("binding_occupancy needs a Kd/Ki value")
     value = engagement(conc_M, kd_M, n, param_type=ParameterType.Kd)
@@ -303,7 +325,7 @@ def _row(receptor: str, spec: dict[str, Any], conc_M: float) -> dict[str, Any]:
     if model is EngagementModel.not_modelled:
         value_engagement: float | None = None
     else:
-        check_transformation(param_type, model)
+        check_transformation(param_type, model, relation)
         value_engagement = engagement(conc_M, value, n, param_type=param_type, relation=relation)
     row = {
         "receptor": receptor,
@@ -324,6 +346,11 @@ def _row(receptor: str, spec: dict[str, Any], conc_M: float) -> dict[str, Any]:
         "occupancy": value_engagement,
         "ec50_M": value,
     }
+    warning = provenance_warning(model, relation, spec.get("species"))
+    if warning:
+        # binding_derived_engagement: the reader is told about the species /
+        # preparation gap in the row itself, not only in the source string.
+        row["provenance_warning"] = warning
     if model is EngagementModel.not_modelled:
         row["not_modelled_reason"] = (
             "placeholder: no sourced value for this compound at this receptor "

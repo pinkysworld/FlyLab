@@ -18,6 +18,7 @@ from typing import Any
 
 import numpy as np
 
+from flylab.pharm.evidence import model_for
 from flylab.pharm.occupancy import engagement, load_library, spec_value_M
 
 __all__ = ["sample_library", "occupancy_ci"]
@@ -124,8 +125,10 @@ def occupancy_ci(
             "p2_5": float(lo),
             "p97_5": float(hi),
             "param_type": param_type,
-            "engagement_model": "binding_occupancy" if str(param_type) in ("Kd", "Ki")
-            else "functional_engagement",
+            # v0.6.1: the model follows from param_type AND relation together
+            # (a cross-species Kd is a binding-derived engagement, never an
+            # occupancy), so ask the type system instead of guessing here.
+            "engagement_model": model_for(param_type, spec.get("relation")).value,
             "evidence_tier": spec.get("evidence_tier", "class_placeholder"),
             "perturbed": bool(_is_estimate(spec) and sd_log10 > 0),
         }

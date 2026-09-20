@@ -2,7 +2,7 @@
 does a pharmacological prediction actually need?
 
 The null-model panel in :mod:`flylab.analysis.nullmodels` asks one question per
-degradation ("does the real graph beat this shuffle?").  This module turns that
+degradation ("is the real graph distinguishable from this shuffle?").  This module turns that
 into the general method the paper leads with.  For one
 ``compound x concentration x circuit x readout`` it runs the real graph against
 progressively degraded versions of itself and reports the **connectome-
@@ -16,8 +16,8 @@ standardised distance from a usually non-normal null, not a probability.
 
 The information ladder
 ----------------------
-Each null keeps a different amount of the real connectome, so refusing to
-reproduce the drug effect on a given null tells you that *that* level of
+Each null keeps a different amount of the real connectome, so a drug effect
+that is distinguishable from a given null tells you that *that* level of
 information is necessary:
 
 ======  ============================  ================================================
@@ -37,34 +37,88 @@ The ladder is ordered by how much of the real cut each model retains; ranks 2
 and 3 are not strictly nested (one keeps transmitter identity and loses the
 weight-topology pairing, the other the reverse), and that is stated wherever
 the level is reported.  :func:`necessary_information_level` returns the
-**weakest** model in this ladder that already reproduces the effect, which is
-the paper's actual claim.
+**weakest** model in this ladder that is **not distinguishable from** the real
+graph, together with whether that model is *equivalent within tolerance* or
+merely *indeterminate*.  It deliberately does not say "reproduces": failing to
+reject a null is not evidence that the null is right.
+
+Three-way verdict per mode (the only thing a permutation test can support)
+--------------------------------------------------------------------------
+For each mode the module reports one of three verdicts, never two:
+
+``distinguishable``
+    the empirical two-sided permutation probability is at or below ``alpha``.
+    The real graph and this graph model give different drug effects.
+``equivalent_within_tolerance``
+    the test did not reject **and** the absolute gap between the real effect
+    and the null ensemble's median is smaller than a prespecified margin
+    ``delta``.  Only this verdict licenses the phrase "this graph model
+    reproduces the effect".
+``indeterminate``
+    the test did not reject and the gap is not smaller than ``delta``: the
+    data are consistent with a difference this study cannot resolve.  This is
+    the honest home of imidacloprid's sign / weight / degree modes
+    (p = 0.275 / 0.586 / 0.472 at n = 1000), which earlier versions of this
+    module reported as "reproduces the effect".
+
+``delta`` is prespecified, not fitted.  Its default is
+``DEFAULT_DELTA_FRAC`` (5 %) of the **vehicle readout** of the real graph --
+the untreated baseline the drug contrast is measured against, which is the one
+scale in the cell that is independent of the drug, of the null and of the
+sample size.  Five per cent of baseline is one tenth of the 50 % relative
+change :mod:`flylab.analysis.selectivity` treats as "the circuit responded", so
+the margin is an order of magnitude below the smallest change this pipeline
+anywhere calls a circuit effect.  The absolute value actually used is recorded
+in every result (``delta``, ``delta_frac``, ``delta_scale``); pass ``delta=``
+to override it with an absolute value in readout units.  Where the vehicle
+readout is undefined or zero no margin exists, equivalence cannot be claimed,
+and every non-rejected mode is ``indeterminate``.
+
+Multiplicity
+------------
+A single prespecified profile (:func:`dependence_profile` for imidacloprid or
+fipronil at ``PAPER_N``) is a **confirmatory** test and needs no correction.
+The 84-cell landscape is not: it runs 21 compounds x 4 concentrations x 4
+modes, and turning the resulting count into a claim without correction inflates
+it.  :func:`dependence_landscape` therefore applies Benjamini-Hochberg FDR
+across the structural tests of the run (:data:`STRUCTURAL_MODES` x cells),
+reports ``p_adjusted`` / ``q_value`` / ``fdr_alpha`` per cell, classifies on
+the adjusted values and keeps the raw ones beside them, and reports **both**
+counts so that the change in the headline number is visible.  A landscape is
+labelled ``exploratory`` unless its permutation resolution ``1/(n+1)`` is fine
+enough for the adjusted threshold ``fdr_alpha / m`` to be reachable by a single
+test; when the resolution cannot support any rejection at all, the result says
+so instead of silently reporting zero topology-dependent cells.
 
 Classification rule (a label, not a hypothesis test)
 ----------------------------------------------------
-For a cell with real effect ``e`` and per-mode empirical p-values, with
-``alpha`` (default 0.05) and an ``effect_floor`` below which the drug simply
-does nothing on this readout:
+For a cell with real effect ``e`` and per-mode verdicts, with ``alpha``
+(default 0.05) and an ``effect_floor`` below which the drug simply does nothing
+on this readout:
 
 * ``undefined`` - the readout does not exist on the real graph (e.g. MN9 is
   silenced, so a ratio has no denominator).  No dependence statement is made.
 * ``no-effect`` - ``|e| <= effect_floor``.
 * ``topology-dependent`` - at least one *structural* null
-  (``weight_permute`` or ``rewire_degree_preserving``) is beaten: the
-  prediction needs the wiring pattern, not just the graph's size or census.
-* ``mixed`` - no structural null is beaten but ``sign_permute`` is: the
-  prediction needs to know *which* cells carry which transmitter, but not the
-  wiring pattern itself.
+  (``weight_permute`` or ``rewire_degree_preserving``) is distinguishable from
+  the real graph: the prediction needs the wiring pattern, not just the
+  graph's size or census.
+* ``mixed`` - no structural null is distinguishable but ``sign_permute`` is:
+  the prediction needs to know *which* cells carry which transmitter, but not
+  the wiring pattern itself.
 * ``composition-dominated`` - neither, whether or not ``erdos_renyi`` is
-  beaten: every structure-preserving degradation reproduces the effect, so it
-  is carried by the graph's transmitter composition (and the pharmacology),
-  not by its topology.  ``er_beaten = False`` in addition means even a random
-  graph of the same size reproduces it: the prediction is network-insensitive.
+  distinguishable: no structure-preserving degradation could be told apart
+  from the real graph on this readout.  Whether that is *equivalence* or
+  merely *no resolution* is carried by the per-mode verdicts and summarised in
+  ``equivalence``; the class name is not evidence of either.
+  ``er_distinguishable = False`` in addition means even a random graph of the
+  same size could not be told apart: the prediction is network-insensitive on
+  this readout.
 
-This is a **classification**, not a hypothesis test: no multiplicity
-correction is applied across the four modes, the threshold is a reporting
-convention, and a cell can only be as trustworthy as its permutation
-resolution ``1/(n+1)`` allows.  Cells whose p had not stabilised are flagged.
+The *class* is a label built on top of the verdicts, and within one landscape
+it is computed from the FDR-adjusted probabilities.  A cell can only ever be
+as trustworthy as its permutation resolution ``1/(n+1)`` allows; cells whose p
+had not stabilised are flagged.
 
 Everything here is ``model_derived``: it describes FlyLab's simulation of one
 hops-limited MaleCNS cut under a teaching EC50 library, never a measured drug
@@ -101,12 +155,18 @@ __all__ = [
     "INFORMATION_LADDER",
     "STRUCTURAL_MODES",
     "CLASSES",
+    "VERDICTS",
     "DEFAULT_CONCS",
     "DEFAULT_EFFECT_FLOOR",
+    "DEFAULT_DELTA_FRAC",
+    "CONFIRMATORY_COMPOUNDS",
     "FAST_N",
     "DEFAULT_N",
     "PAPER_N",
     "Z_KEYS",
+    "benjamini_hochberg",
+    "equivalence_margin",
+    "mode_verdict",
     "dependence_profile",
     "dependence_landscape",
     "necessary_information_level",
@@ -163,6 +223,15 @@ CLASSES: tuple[str, ...] = (
     "undefined",
 )
 
+#: the three verdicts a permutation test plus a prespecified margin can
+#: support for one mode.  "not significant" is NOT one of them, and neither is
+#: anything that means "the shuffle reproduces the effect" on its own.
+VERDICTS: tuple[str, ...] = (
+    "distinguishable",
+    "equivalent_within_tolerance",
+    "indeterminate",
+)
+
 #: D is reported in this order, as the advisor wrote it
 Z_KEYS: dict[str, str] = {
     "sign_permute": "z_sign",
@@ -176,6 +245,20 @@ DEFAULT_CONCS: tuple[float, ...] = (1e-8, 1e-7, 1e-6, 1e-5)
 
 #: |effect| at or below this counts as "the drug does nothing on this readout"
 DEFAULT_EFFECT_FLOOR = 1e-6
+
+#: Prespecified equivalence margin, as a fraction of the **vehicle readout**
+#: of the real graph (see the module docstring for the justification): a gap
+#: between the real drug effect and the null ensemble's median smaller than
+#: 5 % of untreated baseline activity is the largest gap this module is
+#: willing to call "the same effect".  It is one tenth of the 50 % relative
+#: change :mod:`flylab.analysis.selectivity` treats as a circuit response.
+DEFAULT_DELTA_FRAC = 0.05
+
+#: The compounds whose profiles the paper prespecifies as confirmatory tests.
+#: A profile is ``confirmatory`` only for one of these, at ``n >= PAPER_N``;
+#: everything else (in particular the landscape) is exploratory and is
+#: multiplicity-corrected instead.
+CONFIRMATORY_COMPOUNDS: tuple[str, ...] = ("imidacloprid", "fipronil")
 
 #: ``--fast``-style n ladder, so one landscape function serves three callers.
 #: ``FAST_N`` sits just above the smallest n at which anything can be
@@ -191,16 +274,216 @@ DEFAULT_N = 100
 PAPER_N = 1000
 
 CDA_WARNINGS = [
-    "The dependence class is a documented label, not a hypothesis test: no "
-    "multiplicity correction is applied across the four null modes and the "
-    "threshold is a reporting convention.",
-    "'Not beaten' is not proof of no dependence - it is bounded by the "
-    "permutation resolution 1/(n+1) and by the power of n shuffles.",
+    "The dependence class is a documented label built on the per-mode "
+    "verdicts; within one cell no correction is applied across the four null "
+    "modes, and the alpha threshold is a reporting convention.",
+    "'Not distinguishable' is NOT 'equivalent': only a mode whose gap from "
+    "the null median is below the prespecified margin delta is reported as "
+    "equivalent_within_tolerance. Everything else that fails to reject is "
+    "indeterminate and is bounded by the permutation resolution 1/(n+1).",
 ]
 
 
 def _mode_key(mode: str) -> str:
     return Z_KEYS.get(mode, f"z_{mode}")
+
+
+# --------------------------------------------------------------------------
+# multiplicity: Benjamini-Hochberg over the structural tests of one run
+# --------------------------------------------------------------------------
+def benjamini_hochberg(
+    pvalues: Sequence[float | None],
+    alpha: float = DEFAULT_ALPHA,
+    resolution: float | None = None,
+) -> dict[str, Any]:
+    """Benjamini-Hochberg step-up adjusted probabilities (q-values).
+
+    ``adjusted[i]`` is the smallest FDR level at which test ``i`` would be
+    rejected, enforced monotone from the largest p downwards, and capped at 1.
+    ``None`` entries pass through as ``None`` and are excluded from ``m``.
+
+    The extra diagnostics exist because an *empirical permutation* p cannot go
+    below its resolution ``1/(n+1)``, so a coarse run can make rejection
+    arithmetically impossible however strong the effect is:
+
+    ``min_rejections``
+        the smallest number of tests that must sit at the resolution floor
+        before BH can reject anything at all, ``ceil(m * resolution / alpha)``.
+    ``can_reject``
+        False when that number exceeds ``m``: at this resolution the procedure
+        cannot reject any test, and a count of zero would be an artefact of the
+        permutation budget rather than a result.
+    ``resolution_supports_single_rejection``
+        True when ``resolution <= alpha / m``, i.e. one isolated test could be
+        rejected on its own.  This is the condition a *confirmatory* landscape
+        has to meet.
+    """
+    import math
+
+    a = float(alpha)
+    idx = [i for i, p in enumerate(pvalues) if p is not None]
+    m = len(idx)
+    adjusted: list[float | None] = [None] * len(pvalues)
+    if m:
+        order = sorted(idx, key=lambda i: float(pvalues[i]))  # type: ignore[arg-type]
+        running = 1.0
+        for rank in range(m, 0, -1):
+            i = order[rank - 1]
+            q = min(running, float(pvalues[i]) * m / rank)  # type: ignore[arg-type]
+            running = q
+            adjusted[i] = float(min(1.0, q))
+    rejected = [(q is not None and q <= a) for q in adjusted]
+    res = None if resolution is None else float(resolution)
+    min_rej = None
+    if res is not None and m:
+        min_rej = int(math.ceil(m * res / a)) if a > 0 else None
+    return {
+        "adjusted": adjusted,
+        "rejected": rejected,
+        "m": m,
+        "alpha": a,
+        "n_rejected": int(sum(rejected)),
+        "resolution": res,
+        "min_rejections": min_rej,
+        "can_reject": (True if min_rej is None else bool(min_rej <= m)),
+        "resolution_supports_single_rejection": (
+            None if res is None or not m else bool(res <= a / m)
+        ),
+        "method": "benjamini-hochberg (step-up, independent or positively dependent tests)",
+    }
+
+
+# --------------------------------------------------------------------------
+# the three-way verdict: distinguishable / equivalent / indeterminate
+# --------------------------------------------------------------------------
+def equivalence_margin(
+    vehicle: float | None,
+    delta_frac: float = DEFAULT_DELTA_FRAC,
+    delta: float | None = None,
+) -> dict[str, Any]:
+    """The prespecified equivalence margin for one cell, and its provenance.
+
+    The margin is ``delta_frac * |vehicle readout|`` of the *real* graph unless
+    an absolute ``delta`` is passed.  The vehicle readout is the untreated
+    baseline the drug contrast is measured against: it is in the units of the
+    readout, it does not depend on the drug, on the null ensemble or on the
+    number of shuffles, and it is the same scale for every mode of a cell, so
+    an equivalence claim made against it is comparable across the ladder.
+
+    Returns ``delta=None`` when no margin can be formed (no vehicle value, or a
+    silenced baseline).  A cell with no margin can never report
+    ``equivalent_within_tolerance``; its non-rejected modes are
+    ``indeterminate``, which is the correct answer rather than a missing one.
+    """
+    if delta is not None:
+        return {
+            "delta": abs(float(delta)),
+            "delta_frac": None,
+            "delta_scale": "absolute (caller-supplied, in readout units)",
+            "vehicle": (None if vehicle is None else float(vehicle)),
+            "prespecified": True,
+        }
+    v = None if vehicle is None else abs(float(vehicle))
+    if v is None or v <= 0.0:
+        return {
+            "delta": None,
+            "delta_frac": float(delta_frac),
+            "delta_scale": "|vehicle readout| (unavailable: baseline is undefined or zero)",
+            "vehicle": (None if vehicle is None else float(vehicle)),
+            "prespecified": True,
+        }
+    return {
+        "delta": float(delta_frac) * v,
+        "delta_frac": float(delta_frac),
+        "delta_scale": f"{float(delta_frac):.3g} x |vehicle readout| = {float(delta_frac) * v:.6g}",
+        "vehicle": float(vehicle),
+        "prespecified": True,
+    }
+
+
+def mode_verdict(
+    real_effect: float | None,
+    null_median: float | None,
+    p: float | None,
+    alpha: float = DEFAULT_ALPHA,
+    delta: float | None = None,
+) -> dict[str, Any]:
+    """One mode's three-way verdict - the only claim this design supports.
+
+    ``distinguishable`` when the permutation test rejects; otherwise
+    ``equivalent_within_tolerance`` when ``|real - median(null)| < delta``;
+    otherwise ``indeterminate``.  A rejected test that *also* sits inside the
+    margin is still reported as ``distinguishable`` (the test is the decision
+    rule), but ``within_tolerance`` stays True so that "statistically
+    distinguishable, practically small" is visible rather than hidden.
+    """
+    gap = (
+        None
+        if (real_effect is None or null_median is None)
+        else abs(float(real_effect) - float(null_median))
+    )
+    within = None if (gap is None or delta is None) else bool(gap < float(delta))
+    distinguishable = bool(p is not None and float(p) <= float(alpha))
+    if distinguishable:
+        verdict = "distinguishable"
+        why = (
+            f"the empirical two-sided permutation p = {float(p):.4g} is at or below "
+            f"alpha = {float(alpha):.3g}: the real graph and this graph model give "
+            "different drug effects."
+        )
+    elif within:
+        verdict = "equivalent_within_tolerance"
+        why = (
+            f"the test did not reject (p = {'n/a' if p is None else format(float(p), '.4g')}) "
+            f"and the gap between the real effect and the null median, {gap:.4g}, is "
+            f"below the prespecified margin delta = {float(delta):.4g}: this graph "
+            "model gives the same effect to within the margin."
+        )
+    else:
+        verdict = "indeterminate"
+        if gap is None or delta is None:
+            why = (
+                f"the test did not reject (p = {'n/a' if p is None else format(float(p), '.4g')}) "
+                "and no equivalence margin could be formed, so nothing stronger than "
+                "'not distinguishable' is supported."
+            )
+        else:
+            why = (
+                f"the test did not reject (p = {float(p):.4g}) but the gap between the "
+                f"real effect and the null median, {gap:.4g}, is not below the "
+                f"prespecified margin delta = {float(delta):.4g}: failure to reject is "
+                "not evidence of equivalence."
+            )
+    return {
+        "verdict": verdict,
+        "verdict_reason": why,
+        "distinguishable": distinguishable,
+        "within_tolerance": within,
+        "abs_gap_from_null_median": gap,
+        "delta": (None if delta is None else float(delta)),
+        "p_used": (None if p is None else float(p)),
+        "alpha": float(alpha),
+    }
+
+
+def _decision_p(row: dict[str, Any]) -> float | None:
+    """The probability a verdict is taken on: FDR-adjusted where one exists."""
+    q = row.get("p_adjusted")
+    return q if q is not None else row.get("p_two_sided")
+
+
+def _attach_verdict(
+    row: dict[str, Any], alpha: float, delta: float | None
+) -> dict[str, Any]:
+    """Write the three-way verdict of one mode row back into that row."""
+    v = mode_verdict(
+        row.get("real_effect"), row.get("null_median"), _decision_p(row), alpha, delta
+    )
+    row.update(v)
+    row["p_basis"] = "fdr_adjusted" if row.get("p_adjusted") is not None else "raw"
+    # kept for the CLI / bridge, but it now means exactly "distinguishable"
+    row["beats_null"] = v["distinguishable"]
+    return row
 
 
 # --------------------------------------------------------------------------
@@ -211,20 +494,51 @@ def classify(
     per_mode: dict[str, dict[str, Any]],
     alpha: float = DEFAULT_ALPHA,
     effect_floor: float = DEFAULT_EFFECT_FLOOR,
+    delta: float | None = None,
 ) -> dict[str, Any]:
-    """Label one cell from its real effect and its per-mode permutation p's.
+    """Label one cell from its real effect and its per-mode verdicts.
 
-    ``per_mode`` maps a mode name onto a row with ``p_two_sided``.  See the
-    module docstring for the rule; it is applied verbatim here so the paper can
-    cite this function.
+    ``per_mode`` maps a mode name onto a row carrying ``p_two_sided`` (and,
+    inside a landscape, the FDR-adjusted ``p_adjusted``, which is what the
+    decision is then taken on).  Rows that already carry a ``verdict`` from
+    :func:`mode_verdict` are used as they stand; bare ``{"p_two_sided": ...}``
+    rows are given a verdict here, with ``delta`` (which may be ``None``) as
+    the equivalence margin.
+
+    The rule is the one in the module docstring, applied verbatim so the paper
+    can cite this function.  Note what it deliberately does not do: a class of
+    ``composition-dominated`` is a statement that no structure-preserving
+    degradation could be *told apart* from the real graph, never a statement
+    that those degradations reproduce the effect.  Which of them are
+    equivalent within tolerance and which are merely indeterminate is in
+    ``mode_verdicts`` and summarised in ``equivalence``.
     """
-    beaten = {
-        m: (row.get("p_two_sided") is not None and float(row["p_two_sided"]) <= float(alpha))
-        for m, row in per_mode.items()
-    }
-    structural = [m for m in STRUCTURAL_MODES if beaten.get(m)]
-    sign_beaten = bool(beaten.get("sign_permute"))
-    er_beaten = bool(beaten.get("erdos_renyi"))
+    verdicts: dict[str, str] = {}
+    reasons: dict[str, str] = {}
+    within: dict[str, bool | None] = {}
+    for m, row in per_mode.items():
+        if row.get("verdict") in VERDICTS:
+            verdicts[m] = str(row["verdict"])
+            reasons[m] = str(row.get("verdict_reason") or "")
+            within[m] = row.get("within_tolerance")
+        else:
+            v = mode_verdict(
+                row.get("real_effect", real_effect),
+                row.get("null_median"),
+                _decision_p(row),
+                alpha,
+                delta,
+            )
+            verdicts[m] = v["verdict"]
+            reasons[m] = v["verdict_reason"]
+            within[m] = v["within_tolerance"]
+
+    distinguishable = {m: (v == "distinguishable") for m, v in verdicts.items()}
+    structural = [m for m in STRUCTURAL_MODES if distinguishable.get(m)]
+    sign_distinguishable = bool(distinguishable.get("sign_permute"))
+    er_distinguishable = bool(distinguishable.get("erdos_renyi"))
+    equivalent = sorted(m for m, v in verdicts.items() if v == "equivalent_within_tolerance")
+    indeterminate = sorted(m for m, v in verdicts.items() if v == "indeterminate")
 
     if real_effect is None:
         label = "undefined"
@@ -242,30 +556,42 @@ def classify(
     elif structural:
         label = "topology-dependent"
         why = (
-            "the effect is not reproduced by "
-            + " or ".join(structural)
+            "the effect is distinguishable from "
+            + " and ".join(structural)
             + ", so it needs the wiring pattern and not only the graph's size, "
             "degree sequence and transmitter census."
         )
-    elif sign_beaten:
+    elif sign_distinguishable:
         label = "mixed"
         why = (
-            "no structure-preserving null is beaten but sign_permute is: the "
-            "prediction needs to know which cells carry which transmitter, not "
-            "the wiring pattern itself."
+            "no structure-preserving null is distinguishable from the real "
+            "graph but sign_permute is: the prediction needs to know which "
+            "cells carry which transmitter, not the wiring pattern itself."
         )
     else:
         label = "composition-dominated"
+        detail = []
+        if equivalent:
+            detail.append(
+                "equivalent within the prespecified margin for "
+                + ", ".join(equivalent)
+            )
+        if indeterminate:
+            detail.append(
+                "merely indeterminate (not distinguishable, not shown equivalent) for "
+                + ", ".join(indeterminate)
+            )
         why = (
-            "every structure-preserving degradation reproduces the effect, so "
-            "it is carried by the graph's transmitter composition and the "
-            "pharmacology"
+            "no structure-preserving degradation could be distinguished from "
+            "the real graph on this readout, so nothing here requires its "
+            "topology"
+            + ("; " + "; ".join(detail) if detail else "")
             + (
-                ", although a same-size random graph does not reproduce it "
-                "(erdos_renyi is beaten)."
-                if er_beaten
-                else "; even a same-size random graph reproduces it, so the "
-                "prediction is network-insensitive on this readout."
+                ". A same-size random graph IS distinguishable (erdos_renyi), "
+                "so the prediction is not wholly network-insensitive."
+                if er_distinguishable
+                else ". Even a same-size random graph is not distinguishable, "
+                "so the prediction is network-insensitive on this readout."
             )
         )
     return {
@@ -273,11 +599,23 @@ def classify(
         "reason": why,
         "alpha": float(alpha),
         "effect_floor": float(effect_floor),
-        "beaten": beaten,
-        "structural_beaten": structural,
-        "er_beaten": er_beaten,
+        "delta": (None if delta is None else float(delta)),
+        "mode_verdicts": verdicts,
+        "mode_verdict_reasons": reasons,
+        "within_tolerance": within,
+        "distinguishable": distinguishable,
+        "structural_distinguishable": structural,
+        "equivalent_modes": equivalent,
+        "indeterminate_modes": indeterminate,
+        "n_indeterminate": len(indeterminate),
+        "er_distinguishable": er_distinguishable,
+        "equivalence": (
+            "equivalence shown within tolerance for " + ", ".join(equivalent)
+            if equivalent
+            else "no mode was shown equivalent within tolerance"
+        ),
         "network_insensitive": bool(
-            label in ("composition-dominated", "no-effect") and not er_beaten
+            label in ("composition-dominated", "no-effect") and not er_distinguishable
         ),
     }
 
@@ -285,25 +623,40 @@ def classify(
 def necessary_information_level(
     profile: dict[str, Any] | Iterable[dict[str, Any]],
     alpha: float | None = None,
+    delta: float | None = None,
 ) -> dict[str, Any]:
-    """The weakest graph model that already reproduces the effect.
+    """The weakest graph model that is **not distinguishable** from the real graph.
 
     ``profile`` is a :func:`dependence_profile` result (or just its ``modes``
-    rows).  A mode that is **not** beaten (``p > alpha``) is a graph model good
-    enough to reproduce the drug effect; the answer is the weakest such model on
-    :data:`INFORMATION_LADDER`.  When every null is beaten the answer is
-    ``real_connectome``: nothing less than the MaleCNS cut reproduces it.
+    rows).  Walking :data:`INFORMATION_LADDER` from the weakest model upwards,
+    the answer is the first model the permutation test could not distinguish
+    from the MaleCNS cut.  It is reported together with ``verdict``:
+
+    * ``equivalent_within_tolerance`` - the gap between the real effect and
+      that model's null median is below the prespecified margin ``delta``, so
+      "this level of information suffices" is supported;
+    * ``indeterminate`` - the test simply did not reject.  That is a statement
+      about this study's resolution, not about the graph model, and the
+      returned ``description`` says so.
+
+    This function used to report "the weakest graph model that already
+    reproduces the effect".  It no longer does, and no string it returns says
+    "reproduces": failing to reject a null is not evidence of equivalence.
+    When every null is distinguishable the answer is ``real_connectome``:
+    nothing less than the MaleCNS cut is indistinguishable from it.
     """
     if isinstance(profile, dict):
         rows = list(profile.get("modes") or [])
         a = float(alpha if alpha is not None else profile.get("alpha", DEFAULT_ALPHA))
         real_effect = profile.get("real_effect")
         cls = (profile.get("classification") or {}).get("class")
+        d = delta if delta is not None else profile.get("delta")
     else:
         rows = list(profile)
         a = float(alpha if alpha is not None else DEFAULT_ALPHA)
         real_effect = rows[0].get("real_effect") if rows else None
         cls = None
+        d = delta
     by_mode = {r["mode"]: r for r in rows}
     warnings: list[str] = []
     floor = float(
@@ -311,6 +664,15 @@ def necessary_information_level(
         if isinstance(profile, dict)
         else DEFAULT_EFFECT_FLOOR
     )
+
+    def verdict_of(row: dict[str, Any]) -> dict[str, Any]:
+        if row.get("verdict") in VERDICTS:
+            return row
+        return {**row, **mode_verdict(
+            row.get("real_effect", real_effect), row.get("null_median"),
+            _decision_p(row), a, d,
+        )}
+
     if real_effect is not None and abs(float(real_effect)) <= floor:
         return {
             "level": "none_required",
@@ -319,6 +681,9 @@ def necessary_information_level(
             "keeps": "nothing: the compound does not move this readout",
             "destroys": "n/a",
             "p_two_sided": None,
+            "verdict": None,
+            "equivalent_within_tolerance": None,
+            "delta": (None if d is None else float(d)),
             "description": (
                 "there is no effect to reproduce at this concentration, so no "
                 "level of network information is necessary."
@@ -331,7 +696,10 @@ def necessary_information_level(
             "level": None,
             "mode": None,
             "rank": None,
-            "description": "no effect to reproduce: the readout is undefined on the real graph.",
+            "verdict": None,
+            "equivalent_within_tolerance": None,
+            "delta": (None if d is None else float(d)),
+            "description": "no effect to compare: the readout is undefined on the real graph.",
             "class": cls,
             "warnings": warnings,
         }
@@ -340,59 +708,88 @@ def necessary_information_level(
         row = by_mode.get(mode)
         if row is None:
             continue
-        p = row.get("p_two_sided")
-        if p is None or float(p) > a:
-            info = MODE_INFORMATION[mode]
-            # ranks 1-3 are not strictly nested, so a RICHER model can fail
-            # where this one succeeds. Say so instead of hiding it.
-            richer_beaten = [
-                m
-                for m in INFORMATION_LADDER[INFORMATION_LADDER.index(mode) + 1 : -1]
-                if (by_mode.get(m) or {}).get("p_two_sided") is not None
-                and float(by_mode[m]["p_two_sided"]) <= a
-            ]
-            if richer_beaten:
-                warnings.append(
-                    f"the ladder is not monotone here: {mode} reproduces the "
-                    "effect while the richer model(s) "
-                    + ", ".join(richer_beaten)
-                    + " do not, because they destroy different things (weights "
-                    "vs transmitter identity). Read the level as 'the cheapest "
-                    "graph model that reproduces it', not as 'everything above "
-                    "it also does'."
+        v = verdict_of(row)
+        if v["verdict"] == "distinguishable":
+            continue
+        info = MODE_INFORMATION[mode]
+        # ranks 1-3 are not strictly nested, so a RICHER model can be
+        # distinguishable where this one is not. Say so instead of hiding it.
+        richer_distinguishable = [
+            m
+            for m in INFORMATION_LADDER[INFORMATION_LADDER.index(mode) + 1 : -1]
+            if m in by_mode and verdict_of(by_mode[m])["verdict"] == "distinguishable"
+        ]
+        if richer_distinguishable:
+            warnings.append(
+                f"the ladder is not monotone here: {mode} cannot be "
+                "distinguished from the real graph while the richer model(s) "
+                + ", ".join(richer_distinguishable)
+                + " can, because they destroy different things (weights vs "
+                "transmitter identity). Read the level as 'the cheapest graph "
+                "model this test cannot tell apart from the real one', not as "
+                "'everything above it is indistinguishable too'."
+            )
+        if row.get("stabilised") is False:
+            warnings.append(
+                f"{mode}: the permutation p had not stabilised at n="
+                f"{row.get('n')}, so this level is provisional."
+            )
+        if v.get("p_used") is None:
+            warnings.append(
+                f"{mode}: no permutation p could be formed, so this level rests "
+                "on no test at all."
+            )
+        equivalent = v["verdict"] == "equivalent_within_tolerance"
+        if equivalent:
+            description = (
+                f"a graph model that keeps only {info['keeps']} is equivalent to "
+                "the real cut on this readout within the prespecified margin "
+                f"delta = {float(v['delta']):.4g} (gap "
+                f"{float(v['abs_gap_from_null_median']):.4g}), so nothing more "
+                "detailed is necessary for this prediction."
+            )
+        else:
+            description = (
+                f"a graph model that keeps only {info['keeps']} could not be "
+                "distinguished from the real cut on this readout, but the gap "
+                + (
+                    f"({float(v['abs_gap_from_null_median']):.4g}) is not below the "
+                    f"prespecified margin delta = {float(v['delta']):.4g}"
+                    if v.get("abs_gap_from_null_median") is not None and v.get("delta") is not None
+                    else "could not be compared against a prespecified margin"
                 )
-            if row.get("stabilised") is False:
-                warnings.append(
-                    f"{mode}: the permutation p had not stabilised at n="
-                    f"{row.get('n')}, so this level is provisional."
-                )
-            if p is None:
-                warnings.append(
-                    f"{mode}: no permutation p could be formed, so 'reproduces "
-                    "the effect' here means 'not distinguishable', not 'equal'."
-                )
-            return {
-                "level": info["level"],
-                "mode": mode,
-                "rank": info["rank"],
-                "keeps": info["keeps"],
-                "destroys": info["destroys"],
-                "p_two_sided": p,
-                "non_monotone": bool(richer_beaten),
-                "richer_models_beaten": richer_beaten,
-                "description": (
-                    f"a graph model that keeps only {info['keeps']} already "
-                    "reproduces this effect, so nothing more detailed is "
-                    "necessary for this prediction."
-                ),
-                "ladder_note": (
-                    "ranks 2 and 3 are not strictly nested: weight_permute keeps "
-                    "transmitter identity and loses the weight-topology pairing, "
-                    "sign_permute the reverse."
-                ),
-                "class": cls,
-                "warnings": warnings,
-            }
+                + ", so this is the weakest level this study can rule out needing, "
+                "not a demonstration that the level suffices."
+            )
+            warnings.append(
+                f"{mode} is INDETERMINATE, not equivalent: the necessary "
+                "information level is bounded by what n shuffles could resolve. "
+                "Do not report it as 'this graph model reproduces the effect'."
+            )
+        return {
+            "level": info["level"],
+            "mode": mode,
+            "rank": info["rank"],
+            "keeps": info["keeps"],
+            "destroys": info["destroys"],
+            "p_two_sided": row.get("p_two_sided"),
+            "p_used": v.get("p_used"),
+            "p_basis": row.get("p_basis", "raw"),
+            "verdict": v["verdict"],
+            "equivalent_within_tolerance": bool(equivalent),
+            "abs_gap_from_null_median": v.get("abs_gap_from_null_median"),
+            "delta": v.get("delta"),
+            "non_monotone": bool(richer_distinguishable),
+            "richer_models_distinguishable": richer_distinguishable,
+            "description": description,
+            "ladder_note": (
+                "ranks 2 and 3 are not strictly nested: weight_permute keeps "
+                "transmitter identity and loses the weight-topology pairing, "
+                "sign_permute the reverse."
+            ),
+            "class": cls,
+            "warnings": warnings,
+        }
     missing = [m for m in INFORMATION_LADDER[:-1] if m not in by_mode]
     if missing:
         warnings.append(
@@ -405,9 +802,12 @@ def necessary_information_level(
         "keeps": "the MaleCNS cut itself",
         "destroys": "nothing",
         "p_two_sided": None,
+        "verdict": "distinguishable",
+        "equivalent_within_tolerance": False,
+        "delta": (None if d is None else float(d)),
         "description": (
-            "every degradation of the graph changed the effect, so this "
-            "prediction needs the real MaleCNS wiring."
+            "every degradation of the graph was distinguishable from the real "
+            "one, so this prediction needs the real MaleCNS wiring."
         ),
         "class": cls,
         "warnings": warnings,
@@ -428,6 +828,9 @@ def dependence_profile(
     seed: int = 0,
     alpha: float = DEFAULT_ALPHA,
     effect_floor: float = DEFAULT_EFFECT_FLOOR,
+    delta_frac: float = DEFAULT_DELTA_FRAC,
+    delta: float | None = None,
+    confirmatory: bool | None = None,
     tol: float = DEFAULT_TOL,
     checkpoints: Sequence[float] = DEFAULT_CHECKPOINTS,
     n_jobs: int = 1,
@@ -438,7 +841,21 @@ def dependence_profile(
     Runs the real graph against every mode in ``modes`` and returns the profile
     ``D = (z_sign, z_weight, z_degree, z_ER)``, the empirical two-sided
     permutation probability for each mode with its resolution ``1/(n+1)`` and
-    stabilisation flag, the classification and the necessary information level.
+    stabilisation flag, the **three-way verdict** per mode
+    (:data:`VERDICTS`), the classification and the necessary information
+    level.
+
+    ``delta_frac`` (or an absolute ``delta``) sets the equivalence margin used
+    to separate ``equivalent_within_tolerance`` from ``indeterminate``; see
+    :func:`equivalence_margin` and the module docstring.  The absolute value
+    used is always recorded in ``delta``.
+
+    ``confirmatory`` marks a prespecified test.  Left at ``None`` it is
+    inferred: True for one of :data:`CONFIRMATORY_COMPOUNDS` at
+    ``n >= PAPER_N``, False otherwise.  A confirmatory profile is a single
+    planned comparison and carries no multiplicity correction; an exploratory
+    one says so in its warnings, and the corrected form of the exploratory
+    question is :func:`dependence_landscape`.
 
     Runtime is ``len(modes) * n`` shuffles; on the 1126-node ``named`` cut that
     is about 4.6 s per 100 shuffles across all four modes (the degree-
@@ -453,6 +870,7 @@ def dependence_profile(
     rows: list[dict[str, Any]] = []
     warnings = list(BASE_WARNINGS) + list(CDA_WARNINGS)
     real_effect: float | None = None
+    real_vehicle: float | None = None
 
     for mode in modes:
         res = null_distribution(
@@ -471,11 +889,16 @@ def dependence_profile(
             **kw,
         )
         real_effect = res["real_effect"]
+        real_vehicle = res.get("real_vehicle")
         rows.append(_row_from_null(res))
         for w in res["warnings"]:
             if w not in warnings:
                 warnings.append(w)
 
+    if confirmatory is None:
+        confirmatory = bool(
+            str(compound) in CONFIRMATORY_COMPOUNDS and int(n) >= PAPER_N
+        )
     return _assemble_profile(
         compound=compound,
         conc_M=conc_M,
@@ -486,10 +909,14 @@ def dependence_profile(
         seed=seed,
         alpha=alpha,
         effect_floor=effect_floor,
+        delta_frac=delta_frac,
+        delta=delta,
+        real_vehicle=real_vehicle,
         real_effect=real_effect,
         rows=rows,
         warnings=warnings,
         runtime_s=time.perf_counter() - t0,
+        confirmatory=bool(confirmatory),
     )
 
 

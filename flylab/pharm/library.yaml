@@ -23,11 +23,11 @@
 schema_version: 3
 library_version: '0.6'
 notes:
-  schema_v3: 'Schema v3 answers two peer-review objections. (1) ''EC50 is a functional potency parameter, not a receptor binding constant. A Hill response derived from EC50 describes normalized functional response, not physical receptor occupancy.'' Every row therefore records param_type (Kd | Ki | EC50 | IC50 | Kb | relative_potency | class_order | unknown) and relation, and flylab/pharm/evidence.py decides from those two facts alone whether the row may drive binding_occupancy, functional_engagement or nothing at all. (2) ''Missing receptor values are represented by ec50_M = 0.01 even when direction: none, so the model reports things like diazepam/RDL = 10^-4. Missing evidence should not become a small quantitative response.'' Placeholder rows therefore carry value_M: null and param_type: unknown, report engagement N/A, and are excluded from every numeric aggregation.'
+  schema_v3: 'Schema v3 answers two peer-review objections. (1) ''EC50 is a functional potency parameter, not a receptor binding constant. A Hill response derived from EC50 describes normalized functional response, not physical receptor occupancy.'' Every row therefore records param_type (Kd | Ki | EC50 | IC50 | Kb | relative_potency | class_order | unknown) and relation, and flylab/pharm/evidence.py decides from those two facts alone whether the row may drive binding_occupancy, binding_derived_engagement, functional_engagement or nothing at all. v0.6.1 closes a hole a reviewer found in that rule: param_type alone used to be enough for binding_occupancy, so a Kd measured in an aphid produced a model the paper described as physical receptor occupancy of a Drosophila receptor. binding_occupancy now requires BOTH a Kd/Ki AND relation exact_compound_exact_receptor_exact_species; a cross-species or related-receptor Kd/Ki falls back to binding_derived_engagement, which computes the same Hill expression but is labelled an engagement proxy and carries a provenance warning naming the species/preparation gap. (2) ''Missing receptor values are represented by ec50_M = 0.01 even when direction: none, so the model reports things like diazepam/RDL = 10^-4. Missing evidence should not become a small quantitative response.'' Placeholder rows therefore carry value_M: null and param_type: unknown, report engagement N/A, and are excluded from every numeric aggregation.'
   value_M: value_M is the sourced parameter in molar, whose KIND is given by param_type. It replaces the v2 field ec50_M, which was a lie for the IC50 and Kd rows. load_library() still mirrors value_M onto a deprecated ec50_M key for old callers; that alias may hold an IC50 or a Kd and must not be read as an EC50.
   param_types:
-    Kd: equilibrium dissociation constant from a binding assay; the only kind of value (with Ki) from which FlyLab will report physical fractional occupancy.
-    Ki: inhibition constant from a competition binding assay.
+    Kd: equilibrium dissociation constant from a binding assay; the only kind of value (with Ki) from which FlyLab will report physical fractional occupancy - and only when relation is exact_compound_exact_receptor_exact_species. A Kd from another species or a related preparation drives binding_derived_engagement instead.
+    Ki: inhibition constant from a competition binding assay; same rule as Kd.
     EC50: half-maximal effective concentration of a FUNCTIONAL response. The Hill curve built from it is a normalised functional engagement, not an occupancy.
     IC50: half-maximal inhibitory concentration (functional block or radioligand displacement); assay-condition dependent.
     Kb: antagonist dissociation constant from a Schild/Gaddum analysis.
@@ -35,10 +35,10 @@ notes:
     class_order: a statement about a chemical class, not a measurement here; not modellable.
     unknown: no usable number exists; the row is a placeholder and reports N/A.
   relations:
-    exact_compound_exact_receptor_exact_species: this compound, this receptor, Drosophila.
-    exact_compound_exact_receptor_other_species: this compound and receptor, other species.
-    exact_compound_related_receptor: hybrid, chimeric, native-mixed or orthologous preparation that is not exactly this key.
-    class_extrapolation: order-of-magnitude class statement or a contrast derived from a different receptor; a binding constant carrying this relation is demoted to functional engagement.
+    exact_compound_exact_receptor_exact_species: this compound, this receptor, Drosophila. The ONLY relation under which a Kd/Ki may drive binding_occupancy.
+    exact_compound_exact_receptor_other_species: this compound and receptor, other species. A Kd/Ki carrying this relation is demoted to binding_derived_engagement and carries a provenance warning naming the species gap.
+    exact_compound_related_receptor: hybrid, chimeric, native-mixed or orthologous preparation that is not exactly this key. A Kd/Ki carrying this relation is demoted to binding_derived_engagement, with a warning naming the preparation.
+    class_extrapolation: order-of-magnitude class statement or a contrast derived from a different receptor; a binding constant carrying this relation is demoted all the way to functional engagement.
     unsupported: no source supports any value at this receptor (placeholder rows).
   species: species names the preparation the number came from. Rows without it are Drosophila melanogaster; placeholder rows have none.
   evidence_tiers:
@@ -47,7 +47,7 @@ notes:
     measured_fit: Reserved. Only for values fitted to data imported by the user. Nothing in the shipped library uses this tier.
   hill_n: Hill coefficients are teaching defaults in the 1.0-1.5 range unless the source reports steeper cooperativity.
   efficacy: Optional relative efficacy (0..1), used as the tau-like term of the operational model in flylab.pharm.binding. Absent means 'assume full'.
-  nicotinic_subunits: 'insect_nAChR is a documented AGGREGATE key and still drives the g_ach gain rules. insect_nAChR_alpha6 and insect_nAChR_beta1 carry the subunit-resolved rows: spinosad''s value sits on alpha6 (Perry 2015) and imidacloprid''s binding Kd sits on beta1 (Bass 2011, R81T). Neonicotinoid electrophysiology is nearly all done on hybrid Dalpha/chicken-beta2 or native mixed preparations, which is why those rows stay on the aggregate key and say so in relation/source. No number was invented for the split.'
+  nicotinic_subunits: 'insect_nAChR is a documented AGGREGATE key and still drives the g_ach gain rules. insect_nAChR_alpha6 and insect_nAChR_beta1 carry the subunit-resolved rows: spinosad''s value sits on alpha6 (Perry 2015) and imidacloprid''s aphid binding Kd sits on beta1 (Bass 2011, R81T; cross-species, so it reports binding_derived_engagement). A third nicotinic key, insect_nAChR_native_dmel, is preparation-resolved rather than subunit-resolved and holds the one Drosophila-measured binding constant in the library (Tomizawa 1996). Neonicotinoid electrophysiology is nearly all done on hybrid Dalpha/chicken-beta2 or native mixed preparations, which is why those rows stay on the aggregate key and say so in relation/source. No number was invented for the split.'
   v04_continuity: imidacloprid, nitenpyram, nicotine, diazepam and fipronil keep the exact value_M / n / direction shipped in v0.4 and v0.5; schema v3 only adds the type of each value, its relation and its species. Tests depend on those numbers.
 receptors:
   insect_nAChR:
@@ -69,6 +69,11 @@ receptors:
     transmitter: acetylcholine
     family: pLGIC-cation
     note: 'Insect nAChR beta1 subunit (Drosophila Dbeta1 / aphid Mpbeta1): the subunit whose R81T substitution abolishes high-affinity neonicotinoid binding. Subunit-resolved key added in schema v3; a compound appears here only when its source measured a beta1-containing receptor.'
+  insect_nAChR_native_dmel:
+    organism: insect
+    transmitter: acetylcholine
+    family: pLGIC-cation
+    note: 'PREPARATION-RESOLVED KEY (added in v0.6.1): the native nicotinic receptor population of Drosophila melanogaster head membranes - the preparation in which the high-affinity [3H]imidacloprid site was measured directly in the modelled organism. It is NOT a subunit: the preparation resolves no Dalpha/Dbeta subunit (the companion photoaffinity study labels a single 66 kDa ligand-binding polypeptide and does not assign it to a named subunit), so nothing here licenses a subunit claim. It carries no gain rule - flylab/pharm/mechanisms.py patches the aggregate insect_nAChR key, and this key exists so that a Drosophila-measured binding constant is not silently attached to a receptor it did not measure. Note the circularity a reader should weigh: the key is defined by the preparation, which is what makes its relation exact_compound_exact_receptor_exact_species.'
   insect_RDL:
     organism: insect
     transmitter: gaba
@@ -184,6 +189,16 @@ compounds:
         relation: unsupported
         source: 'class-order placeholder: no neonicotinoid action at RDL assumed'
         evidence_tier: class_placeholder
+      insect_nAChR_native_dmel:
+        param_type: Kd
+        value_M: 2.0e-09
+        n: 1.0
+        direction: agonist
+        efficacy: 1.0
+        relation: exact_compound_exact_receptor_exact_species
+        species: Drosophila melanogaster (native head membranes; nAChR population not resolved to subunits)
+        source: 'Tomizawa, Latli and Casida 1996, J Neurochem 67(4):1669-1676, doi:10.1046/j.1471-4159.1996.67041669.x, PMID 8858952 ("Head membranes of Drosophila melanogaster and Musca domestica have a single high-affinity binding site for [3H]IMI with KD values of 1-2 nM and Bmax values of 560-850 fmol/mg of protein"). This is a radioligand saturation Kd measured on the MODELLED organism, which is why it is the library''s only binding_occupancy row. Two honest limits are recorded rather than smoothed over: (a) the publication states the 1-2 nM range for Drosophila and Musca jointly and does not resolve the Drosophila-only value, so FlyLab takes the conservative (weakest-affinity) end, 2.0e-9 M, and the tier stays literature_order; (b) the preparation is native head membranes and resolves NO subunit - the companion photoaffinity study (Tomizawa and Casida 1997, Neurosci Lett 237:61, PMID 9453215, doi:10.1016/s0304-3940(97)00811-2) labels a single 66 kDa ligand-binding polypeptide of the Drosophila nAChR without assigning it to a named Dalpha/Dbeta subunit - so the row sits on the preparation-resolved key insect_nAChR_native_dmel and makes no subunit claim. It does not replace the Dederer hybrid-receptor EC50 on the aggregate insect_nAChR key, which is a functional potency and stays where it was.'
+        evidence_tier: literature_order
       insect_nAChR_beta1:
         param_type: Kd
         value_M: 8.3e-11
@@ -192,7 +207,7 @@ compounds:
         efficacy: 1.0
         relation: exact_compound_exact_receptor_other_species
         species: Myzus persicae (native beta1-containing nAChR, susceptible clone 4106A)
-        source: 'Bass et al. 2011, BMC Neuroscience 12:51, doi:10.1186/1471-2202-12-51 ([3H]-imidacloprid saturation binding on whole-body membranes: the susceptible 4106A clone has two sites, Kd 0.083 +/- 0.0085 nM (Bmax 100 fmol/mg) and Kd 1.7 +/- 0.65 nM (Bmax 298 fmol/mg); the R81T mutation in the nAChR beta1 subunit abolishes the high-affinity site, leaving a single Kd 4.14 +/- 0.39 nM site in the resistant FRC clone). FlyLab uses the high-affinity Kd = 8.3e-11 M. This is a genuine equilibrium dissociation constant from a radioligand binding assay, so this is the only nicotinic row in the library entitled to report binding_occupancy; it is cross-species (aphid, not Drosophila).'
+        source: 'Bass et al. 2011, BMC Neuroscience 12:51, doi:10.1186/1471-2202-12-51 ([3H]-imidacloprid saturation binding on whole-body membranes: the susceptible 4106A clone has two sites, Kd 0.083 +/- 0.0085 nM (Bmax 100 fmol/mg) and Kd 1.7 +/- 0.65 nM (Bmax 298 fmol/mg); the R81T mutation in the nAChR beta1 subunit abolishes the high-affinity site, leaving a single Kd 4.14 +/- 0.39 nM site in the resistant FRC clone). FlyLab uses the high-affinity Kd = 8.3e-11 M. This is a genuine equilibrium dissociation constant from a radioligand binding assay, but it was measured in an APHID, not in Drosophila. Under the v0.6.1 rule a binding constant licenses physical binding_occupancy only with relation exact_compound_exact_receptor_exact_species, so this row drives binding_derived_engagement: the same Hill number, reported as an engagement proxy derived from a binding constant measured in another species, and carrying a provenance warning that names the gap. The transfer of an aphid beta1 affinity to the Drosophila Dbeta1 receptor is an assumption, not a measurement.'
         evidence_tier: literature_order
   nitenpyram:
     name: Nitenpyram
