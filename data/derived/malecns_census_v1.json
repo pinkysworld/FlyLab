@@ -1,0 +1,1343 @@
+{
+ "map": "male-cns:v1.0",
+ "citation": "MaleCNS v1.0, HHMI Janelia FlyEM / Cambridge / MRC LMB / Google Research. CC-BY 4.0.",
+ "source": "committed_census_fallback",
+ "built_from": {
+  "annotations": "body-annotations-male-cns-v1.0-minconf-0.5.feather",
+  "neurotransmitters": "body-neurotransmitters-male-cns-v1.0.feather"
+ },
+ "n_traced": 165122,
+ "n_annotated_rows": 211577,
+ "status_counts": {
+  "Traced": 165122,
+  "Orphan": 15925,
+  "Glia": 11864,
+  "Unimportant": 10751,
+  "unknown": 5472,
+  "Assign": 1832,
+  "Anchor": 611
+ },
+ "neurotransmitter_counts": {
+  "acetylcholine": 103718,
+  "glutamate": 29296,
+  "gaba": 22055,
+  "histamine": 5910,
+  "unclear": 3602,
+  "dopamine": 392,
+  "octopamine": 101,
+  "serotonin": 48
+ },
+ "superclass_counts": {
+  "ol_intrinsic": 89390,
+  "cb_intrinsic": 32160,
+  "vnc_intrinsic": 13151,
+  "visual_projection": 9201,
+  "vnc_sensory": 6365,
+  "cb_sensory": 4868,
+  "ol_sensory": 4114,
+  "ascending_neuron": 1846,
+  "descending_neuron": 1314,
+  "vnc_motor": 708,
+  "visual_centrifugal": 563,
+  "sensory_ascending": 537,
+  "unknown": 516,
+  "cb_motor": 107,
+  "vnc_efferent": 94,
+  "cb_endocrine": 72,
+  "ENS": 47,
+  "vnc_endocrine": 22,
+  "sensory_descending": 12,
+  "vnc_sensory_tbc": 9,
+  "efferent_ascending": 8,
+  "cb_sensory_tbc": 5,
+  "efferent_descending": 4,
+  "cb_efferent": 4,
+  "visual_projection_tbc": 2,
+  "sensory_ascending_tbc": 2,
+  "vnc_tbc": 1
+ },
+ "class_counts": {
+  "unknown": 140598,
+  "visual": 4107,
+  "Kenyon_Cell": 4064,
+  "CX": 2950,
+  "olfactory": 2639,
+  "mechanosensory_tactile": 2558,
+  "mechanosensory": 1733,
+  "unknown_sensory": 1707,
+  "mechanosensory_proprioceptive": 1454,
+  "gustatory": 1428,
+  "ALPN": 686,
+  "ALLN": 420,
+  "DAN": 340,
+  "ol_bilateral": 116,
+  "MBON": 97,
+  "hygrosensory": 66,
+  "chemosensory": 58,
+  "SEZPN": 27,
+  "thermosensory": 25,
+  "ALIN": 24,
+  "ALON": 14,
+  "mechanosensory_tbc": 11
+ },
+ "nt_by_superclass": {
+  "ENS": {
+   "unclear": 47
+  },
+  "ascending_neuron": {
+   "acetylcholine": 1271,
+   "gaba": 407,
+   "glutamate": 127,
+   "unclear": 37,
+   "histamine": 4
+  },
+  "cb_efferent": {
+   "unclear": 4
+  },
+  "cb_endocrine": {
+   "unclear": 71,
+   "acetylcholine": 1
+  },
+  "cb_intrinsic": {
+   "acetylcholine": 19255,
+   "glutamate": 6705,
+   "gaba": 4961,
+   "unclear": 796,
+   "dopamine": 384,
+   "octopamine": 35,
+   "serotonin": 22,
+   "histamine": 2
+  },
+  "cb_motor": {
+   "unclear": 80,
+   "acetylcholine": 23,
+   "glutamate": 4
+  },
+  "cb_sensory": {
+   "acetylcholine": 4680,
+   "unclear": 188
+  },
+  "cb_sensory_tbc": {
+   "unclear": 4,
+   "gaba": 1
+  },
+  "descending_neuron": {
+   "acetylcholine": 931,
+   "gaba": 241,
+   "glutamate": 104,
+   "unclear": 36,
+   "serotonin": 2
+  },
+  "efferent_ascending": {
+   "unclear": 5,
+   "glutamate": 2,
+   "octopamine": 1
+  },
+  "efferent_descending": {
+   "serotonin": 4
+  },
+  "ol_intrinsic": {
+   "acetylcholine": 57716,
+   "glutamate": 19037,
+   "gaba": 10784,
+   "histamine": 1782,
+   "unclear": 71
+  },
+  "ol_sensory": {
+   "histamine": 4114
+  },
+  "sensory_ascending": {
+   "acetylcholine": 502,
+   "unclear": 21,
+   "glutamate": 13,
+   "serotonin": 1
+  },
+  "sensory_ascending_tbc": {
+   "acetylcholine": 1,
+   "unclear": 1
+  },
+  "sensory_descending": {
+   "acetylcholine": 8,
+   "unclear": 4
+  },
+  "unknown": {
+   "unclear": 479,
+   "acetylcholine": 26,
+   "histamine": 6,
+   "gaba": 4,
+   "glutamate": 1
+  },
+  "visual_centrifugal": {
+   "gaba": 303,
+   "acetylcholine": 97,
+   "glutamate": 87,
+   "unclear": 50,
+   "octopamine": 16,
+   "dopamine": 8,
+   "serotonin": 2
+  },
+  "visual_projection": {
+   "acetylcholine": 7889,
+   "glutamate": 794,
+   "unclear": 482,
+   "gaba": 36
+  },
+  "visual_projection_tbc": {
+   "acetylcholine": 1,
+   "glutamate": 1
+  },
+  "vnc_efferent": {
+   "octopamine": 49,
+   "unclear": 45
+  },
+  "vnc_endocrine": {
+   "unclear": 22
+  },
+  "vnc_intrinsic": {
+   "acetylcholine": 5543,
+   "gaba": 5315,
+   "glutamate": 2103,
+   "unclear": 188,
+   "histamine": 2
+  },
+  "vnc_motor": {
+   "unclear": 390,
+   "glutamate": 302,
+   "acetylcholine": 14,
+   "gaba": 2
+  },
+  "vnc_sensory": {
+   "acetylcholine": 5756,
+   "unclear": 575,
+   "serotonin": 17,
+   "glutamate": 16,
+   "gaba": 1
+  },
+  "vnc_sensory_tbc": {
+   "unclear": 6,
+   "acetylcholine": 3
+  },
+  "vnc_tbc": {
+   "acetylcholine": 1
+  }
+ },
+ "gustatory": {
+  "n_traced": 1428,
+  "subclass_counts": {
+   "leg bristle": 768,
+   "wing bristle": 385,
+   "labellar bristle": 163,
+   "taste peg": 60,
+   "pharyngeal sensillum": 48,
+   "unknown": 4
+  },
+  "type_counts": {
+   "LgLG3": 162,
+   "LgLG1a": 136,
+   "LgLG1b": 134,
+   "LgLG2": 129,
+   "WG2": 97,
+   "WG4": 96,
+   "WG3": 96,
+   "WG1": 96,
+   "claw_tpGRN": 50,
+   "LgLG4": 42,
+   "LB3d": 26,
+   "LgAG1": 25,
+   "LB3c": 23,
+   "LgLG7": 21,
+   "LB1e": 19,
+   "LB3a": 17,
+   "LB1c": 16,
+   "LgLG6": 16,
+   "LgLG8": 14,
+   "LgLG5": 13,
+   "untyped": 12,
+   "LB3b": 11,
+   "LgAG2": 11,
+   "LB1a": 11,
+   "dorsal_tpGRN": 10,
+   "LgAG8": 9,
+   "LB4b": 8,
+   "LgAG4": 8,
+   "SNch05": 8,
+   "LgAG3": 7,
+   "SNxxxx": 7,
+   "LB2c": 6,
+   "LB1b": 6,
+   "LB1d": 5,
+   "LgAG7": 5,
+   "LB2d": 5,
+   "PhG4": 4,
+   "LgAG6": 4,
+   "PhG7": 4,
+   "PhG9": 4,
+   "LgAG5": 4,
+   "LB2a": 4,
+   "PhG1c": 4,
+   "PhG2": 4,
+   "PhG8": 4,
+   "LB4a": 4,
+   "LgAG9": 3,
+   "LB2b": 3,
+   "PhG1b": 2,
+   "PhG1a": 2,
+   "PhG10": 2,
+   "PhG11": 2,
+   "PhG15": 2,
+   "PhG14": 2,
+   "PhG12": 2,
+   "PhG3": 2,
+   "PhG16": 2,
+   "PhG6": 2,
+   "PhG13": 2,
+   "PhG5": 2,
+   "LB3": 1
+  }
+ },
+ "named_cells": {
+  "MN9": [
+   {
+    "bodyId": 10331,
+    "superclass": "cb_motor",
+    "consensus_nt": "acetylcholine",
+    "somaSide": "L"
+   },
+   {
+    "bodyId": 16949,
+    "superclass": "cb_motor",
+    "consensus_nt": "acetylcholine",
+    "somaSide": "R"
+   }
+  ],
+  "DNp01": [
+   {
+    "bodyId": 10001,
+    "superclass": "descending_neuron",
+    "consensus_nt": "acetylcholine",
+    "somaSide": "R"
+   },
+   {
+    "bodyId": 10010,
+    "superclass": "descending_neuron",
+    "consensus_nt": "acetylcholine",
+    "somaSide": "L"
+   }
+  ],
+  "LB1a": [
+   {
+    "bodyId": 115666,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 144334,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 154544,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 163395,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 168492,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 173462,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 375038,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 556797,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 557937,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 140334446,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 144295263,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ],
+  "LB1b": [
+   {
+    "bodyId": 511882,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   },
+   {
+    "bodyId": 514546,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   },
+   {
+    "bodyId": 514547,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   },
+   {
+    "bodyId": 522752,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   },
+   {
+    "bodyId": 522762,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   },
+   {
+    "bodyId": 912379,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   }
+  ],
+  "LB1c": [
+   {
+    "bodyId": 81741,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 107241,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 125111,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 208885,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 256844,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 517255,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 518112,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 522746,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 522753,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 522754,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 522761,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 522841,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 533618,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 304136793,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 324178811,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 772366874,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ],
+  "LB1d": [
+   {
+    "bodyId": 54104,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 139178,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 549024,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 602736959,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 911389008,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ],
+  "LB1e": [
+   {
+    "bodyId": 44816,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 111660,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 137497,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 154359,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 175572,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 200001,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 209688,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 232730,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 534361,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 908747,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 919429,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 214700177,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 418840426,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 491986845,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 551057545,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 633272971,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 792429427,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 912111327,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 947005552,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ],
+  "LB2a": [
+   {
+    "bodyId": 77868,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 512913,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 120770012,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 919015263,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ],
+  "LB2b": [
+   {
+    "bodyId": 114239,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   },
+   {
+    "bodyId": 421193662,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   },
+   {
+    "bodyId": 723961295,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   }
+  ],
+  "LB2c": [
+   {
+    "bodyId": 136276,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 223836,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 253648,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 517916,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 456631823,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 821826349,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ],
+  "LB2d": [
+   {
+    "bodyId": 918869,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   },
+   {
+    "bodyId": 285495498,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   },
+   {
+    "bodyId": 338530985,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   },
+   {
+    "bodyId": 824721257,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   },
+   {
+    "bodyId": 850920533,
+    "superclass": "cb_sensory",
+    "consensus_nt": "unclear",
+    "somaSide": null
+   }
+  ],
+  "LB3a": [
+   {
+    "bodyId": 136183,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 140619,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 141663,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 160435,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 166190,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 167663,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 178913,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 183061,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 187776,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 199308,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 203234,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 374701,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 518542,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 388541892,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 456838775,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 553738738,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 786482749,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ],
+  "LB3b": [
+   {
+    "bodyId": 71254,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 159772,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 163597,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 183084,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 187492,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 209155,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 272263,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 557646,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 174444965,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 213650853,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 766547228,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ],
+  "LB3c": [
+   {
+    "bodyId": 72059,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 78240,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 85806,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 92440,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 101087,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 120303,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 140015,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 142827,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 180314,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 190769,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 202888,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 215556,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 261450,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 262567,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 512551,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 516217,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 531237,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 933317,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 942168,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 957530,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 158893964,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 349137284,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 475202322,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ],
+  "LB3d": [
+   {
+    "bodyId": 33339,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 93290,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 125405,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 129171,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 130693,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 140851,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 158537,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 178321,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 199196,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 201075,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 204726,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 210344,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 236475,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 261048,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 312102,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 317616,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 512552,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 516216,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 516218,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 550065,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 916953,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 147619274,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 245892505,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 422510463,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 581710868,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 885642755,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ],
+  "LB4a": [
+   {
+    "bodyId": 515650,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 908743,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 917499,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 388968038,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ],
+  "LB4b": [
+   {
+    "bodyId": 72047,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 122806,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 128129,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 152400,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 538117,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 923024,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 816904261,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   },
+   {
+    "bodyId": 884238775,
+    "superclass": "cb_sensory",
+    "consensus_nt": "acetylcholine",
+    "somaSide": null
+   }
+  ]
+ },
+ "weights_present": false
+}

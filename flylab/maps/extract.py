@@ -46,7 +46,36 @@ def _touching_edges(weights_path: Path, ids: set[int], min_weight: int):
     return rows
 
 
-def extract_neighborhood(dest=None, types=DEFAULT_TYPES, hops=1, min_weight=5, out=None):
+TASTE_MOTOR_TYPES = DEFAULT_TYPES + GUSTATORY_TYPES
+
+
+def _induced_edges(weights_path: Path, ids: set[int], min_weight: int):
+    """Edges with BOTH ends inside ``ids`` (induced subgraph), via Arrow compute."""
+    import pyarrow.compute as pc
+
+    keep = pa.array(sorted(ids), type=pa.int64())
+    reader = pa.ipc.open_file(pa.memory_map(str(weights_path), "r"))
+    rows = []
+    for i in range(reader.num_record_batches):
+        b = reader.get_batch(i)
+        pre = b.column("body_pre").cast(pa.int64())
+        post = b.column("body_post").cast(pa.int64())
+        mask = pc.and_(pc.is_in(pre, keep), pc.is_in(post, keep))
+        mask = pc.and_(mask, pc.greater_equal(b.column("weight"), min_weight))
+        f = b.filter(mask)
+        for a, c, wt in zip(f.column("body_pre").to_pylist(), f.column("body_post").to_pylist(), f.column("weight").to_pylist()):
+            rows.append((int(a), int(c), int(wt)))
+    return rows
+
+
+def extract_neighborhood(dest=None, types=DEFAULT_TYPES, hops=1, min_weight=5, out=None, closure_min_weight=None):
+    """Cut the ``hops``-hop neighborhood of the seed ``types``.
+
+    ``closure_min_weight``: if set, add every edge of at least that weight whose two
+    ends are both already in the node set (induced closure). No new nodes are added,
+    but multi-synapse paths between seed groups (e.g. GRN -> relay -> MN9) become
+    visible. Off by default so the original MN9/DNp01 product is unchanged.
+    """
     dest = dest or default_dir()
     weights_path = dest / FILES["weights"]
     if not weights_path.exists():
@@ -75,6 +104,8 @@ def extract_neighborhood(dest=None, types=DEFAULT_TYPES, hops=1, min_weight=5, o
             partner.add(a)
             partner.add(c)
         frontier = nxt
+    if closure_min_weight is not None:
+        all_edges.extend(_induced_edges(weights_path, partner, int(closure_min_weight)))
     seen = set()
     edges = []
     for a, c, wt in all_edges:
@@ -102,6 +133,7 @@ def extract_neighborhood(dest=None, types=DEFAULT_TYPES, hops=1, min_weight=5, o
         "types": list(types),
         "hops": hops,
         "min_weight": min_weight,
+        "closure_min_weight": closure_min_weight,
         "n_nodes": len(nodes),
         "n_edges": len(edges),
         "seeds": seeds,

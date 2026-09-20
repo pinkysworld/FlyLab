@@ -9,6 +9,9 @@ on:
       min_weight:
         description: "Drop edges weaker than this synapse count"
         default: "5"
+      closure_min_weight:
+        description: "Taste-motor graph: keep partner-partner edges at or above this weight"
+        default: "10"
   schedule:
     - cron: "17 4 * * 1"
 
@@ -39,34 +42,44 @@ jobs:
           curl -L --fail --retry 5 -O "$B/body-neurotransmitters-male-cns-v1.0.feather"
           curl -L --fail --retry 5 -O "$B/connectome-weights-male-cns-v1.0-minconf-0.5.feather"
           ls -lh
-      - name: Extract MN9 / DNp01 neighborhood
+      - name: Extract MN9 / DNp01 neighborhood and taste-motor graph
         env:
           HOPS: ${{ github.event.inputs.hops || '1' }}
           MINW: ${{ github.event.inputs.min_weight || '5' }}
+          CLOSW: ${{ github.event.inputs.closure_min_weight || '10' }}
         run: |
           export FLYLAB_MALECNS="$HOME/.flylab/malecns_v1"
           export PYTHONPATH="$GITHUB_WORKSPACE"
           python - <<'PY'
           from pathlib import Path
           import os
-          from flylab.maps.extract import extract_neighborhood
+          from flylab.maps.extract import TASTE_MOTOR_TYPES, extract_neighborhood
           payload = extract_neighborhood(
               hops=int(os.environ.get("HOPS", "1")),
               min_weight=int(os.environ.get("MINW", "5")),
               out=Path("data/derived/malecns_named_neighborhood.json"),
           )
-          print("nodes", payload["n_nodes"], "edges", payload["n_edges"], "seeds", payload["seeds"])
+          print("named: nodes", payload["n_nodes"], "edges", payload["n_edges"], "seeds", payload["seeds"])
+          payload = extract_neighborhood(
+              types=TASTE_MOTOR_TYPES,
+              hops=int(os.environ.get("HOPS", "1")),
+              min_weight=int(os.environ.get("MINW", "5")),
+              closure_min_weight=int(os.environ.get("CLOSW", "10")),
+              out=Path("data/derived/malecns_taste_motor_neighborhood.json"),
+          )
+          print("taste_motor: nodes", payload["n_nodes"], "edges", payload["n_edges"],
+                "seeds", {k: len(v) for k, v in payload["seeds"].items()})
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: malecns-named-neighborhood
-          path: data/derived/malecns_named_neighborhood.json
-      - name: Commit subgraph if changed
+          name: malecns-neighborhoods
+          path: data/derived/malecns_*_neighborhood.json
+      - name: Commit subgraphs if changed
         run: |
           git config user.name "flylab-ci"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/derived/malecns_named_neighborhood.json
+          git add data/derived/malecns_named_neighborhood.json data/derived/malecns_taste_motor_neighborhood.json
           if git diff --cached --quiet; then echo "no change"; exit 0; fi
-          git commit -m "chore: refresh MaleCNS named-cell neighborhood from CI"
+          git commit -m "chore: refresh MaleCNS neighborhoods from CI"
           git pull --rebase origin main
           git push
