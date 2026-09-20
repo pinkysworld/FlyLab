@@ -1,6 +1,6 @@
-**T11_permutation_sweep.** Permutation-count sweep. The same draws are re-read as prefixes, so every row is a valid smaller permutation sample and no extra circuit runs were needed. It separates the count a *verdict* needs from the count a quotable *p* needs.
+**T11_permutation_sweep.** Permutation-count sweep. The same draws are re-read as prefixes, so every row is a valid smaller permutation sample and no extra circuit runs were needed. It separates the count a *verdict* needs from the count a quotable *p* needs. `significant_at_0.05` is a rejection of the null at that prefix, not a statement that the shuffled graph reproduces the effect.
 
-| compound | assay | mode | n | p_two_sided | beats_null_at_0.05 |
+| compound | assay | mode | n | p_two_sided | significant_at_0.05 |
 |---|---|---|---|---|---|
 | imidacloprid | subgraph | sign_permute | 25 | 0.192 | False |
 | imidacloprid | subgraph | sign_permute | 50 | 0.255 | False |

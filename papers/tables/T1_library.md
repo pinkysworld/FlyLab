@@ -63,6 +63,7 @@
 | imidacloprid | neonicotinoid | vertebrate_nAChR_a4b2 | EC50 | 1.00e-05 | agonist | literature_order |
 | imidacloprid | neonicotinoid | vertebrate_GABA_A | unknown | -- | none | class_placeholder |
 | imidacloprid | neonicotinoid | insect_RDL | unknown | -- | none | class_placeholder |
+| imidacloprid | neonicotinoid | insect_nAChR_native_dmel | Kd | 2.00e-09 | agonist | literature_order |
 | imidacloprid | neonicotinoid | insect_nAChR_beta1 | Kd | 8.30e-11 | agonist | literature_order |
 | ivermectin | avermectin | insect_GluCl | EC50 | 2.00e-08 | agonist | literature_order |
 | ivermectin | avermectin | insect_RDL | EC50 | 1.00e-06 | positive_modulator | literature_order |

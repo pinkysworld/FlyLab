@@ -2281,7 +2281,11 @@
   function chip(kind, provKey, label) {
     const k = CHIPS.indexOf(kind) >= 0 ? kind : "NOT MODELLED";
     const text = esc(label || k.toLowerCase());
-    if (!provKey) return `<span class="chip static" data-k="${esc(k)}">${text}</span>`;
+    if (!provKey)
+      return (
+        `<button type="button" class="chip static" data-k="${esc(k)}" data-explain="${esc(k)}" ` +
+        `title="${esc(CHIP_NOTE[k])} — click for what this label means">${text}</button>`
+      );
     return (
       `<button type="button" class="chip" data-k="${esc(k)}" data-prov="${esc(provKey)}" ` +
       `title="${esc(CHIP_NOTE[k])} — click for provenance">${text}</button>`
@@ -2793,11 +2797,40 @@
         esc(m.information_kept || ""),
         (m.at_resolution_floor ? "≤ " : "") + num(m.p_two_sided, 4),
         num(m.p_resolution, 4),
-        m.beats_null
-          ? '<span class="badge tier-literature_order">real effect stands out</span>'
-          : '<span class="badge">shuffle reproduces it</span>',
+        depVerdictBadge(m),
       ]),
       { empty: "No null modes ran." }
+    );
+  }
+
+  /* The three verdicts of flylab/analysis/dependence.py mode_verdict(), never
+     two. A failure to reject is "not distinguishable"; only a gap from the
+     null median below the prespecified margin is equivalence. The older label
+     here said "shuffle reproduces it" for every non-rejection, which is the
+     one sentence NOVELTY.md forbids. If the payload carries the per-mode
+     verdict we print it; if it carries only beats_null we print the weaker of
+     the two answers it can support, which is the correct one. */
+  const DEP_VERDICT_LABEL = {
+    distinguishable: ["real effect stands out", "tier-literature_order",
+      "the permutation test rejects: the real graph and this graph model give different drug effects"],
+    equivalent_within_tolerance: ["same within margin", "tier-measured_fit",
+      "the test did not reject AND the gap from the null median is below the prespecified margin"],
+    indeterminate: ["not distinguishable", "",
+      "a failure to reject, and the gap from the null median is not below the prespecified margin: consistent with a difference this run cannot resolve"],
+  };
+  function depVerdictBadge(m) {
+    const v =
+      m.verdict ||
+      (m.beats_null ? "distinguishable" : m.equivalent_within_tolerance ? "equivalent_within_tolerance" : null);
+    if (v && DEP_VERDICT_LABEL[v]) {
+      const [text, cls, why] = DEP_VERDICT_LABEL[v];
+      return `<span class="badge ${cls}" title="${esc(why)}">${esc(text)}</span>`;
+    }
+    // beats_null alone: "not distinguishable" is everything it licenses
+    return (
+      '<span class="badge" title="a failure to reject. Whether it also reaches equivalence within the ' +
+      'prespecified margin is stated in the verdict line above; a non-rejection on its own is not ' +
+      'evidence that the shuffle gives the same effect.">not distinguishable</span>'
     );
   }
 
@@ -3798,8 +3831,21 @@
     const provClose = $("#btn-prov-close");
     if (provClose) provClose.addEventListener("click", closeProvenance);
     document.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape") closeProvenance();
+      if (ev.key === "Escape") {
+        closeProvenance();
+        tourEnd();
+      }
+      if (!tour.open) return;
+      if (ev.key === "ArrowRight") tourGo(tour.i + 1);
+      if (ev.key === "ArrowLeft") tourGo(tour.i - 1);
     });
+
+    ["#btn-tour", "#btn-tour-inline"].forEach((sel) => {
+      const btn = $(sel);
+      if (btn) btn.addEventListener("click", () => (tour.open ? tourEnd() : tourStart(true)));
+    });
+    window.addEventListener("scroll", tourSchedulePlace, { passive: true });
+    window.addEventListener("resize", tourSchedulePlace);
 
     $("#btn-ic50").addEventListener("click", () =>
       runIc50().catch((err) => toast("IC50: " + err.message, "error"))
@@ -3813,6 +3859,19 @@
       const chipEl = ev.target.closest && ev.target.closest(".chip[data-prov]");
       if (chipEl) {
         openProvenance(chipEl.getAttribute("data-prov"));
+        return;
+      }
+      const chipWhat = ev.target.closest && ev.target.closest(".chip[data-explain]");
+      if (chipWhat) {
+        explainChip(chipWhat.getAttribute("data-explain"));
+        return;
+      }
+      const tourBtn = ev.target.closest && ev.target.closest("[data-tour]");
+      if (tourBtn) {
+        const act = tourBtn.getAttribute("data-tour");
+        if (act === "next") tourGo(tour.i + 1);
+        else if (act === "prev") tourGo(tour.i - 1);
+        else tourEnd();
         return;
       }
       const an = ev.target.closest && ev.target.closest("[data-analysis]");
@@ -3937,6 +3996,265 @@
   }
 
   // ==================================================================
+  // guided tour
+  // ==================================================================
+  /* A ring around a real panel and a card that explains it. Two rules shape
+     the whole thing:
+
+       * it never blocks the bench. There is no backdrop and the ring carries
+         pointer-events:none, so every control stays clickable while the tour
+         is open. A tour that has to be dismissed before the tool can be used
+         is a dialog, not a tour.
+       * every step states one interpretation caveat, because the failure mode
+         this bench has is not "I cannot find the button", it is "I read the
+         number as something it is not".
+
+     No library, no build step, no network: the same file serves the FastAPI
+     bench and the Pyodide build. Dismissal is remembered per viewer in
+     localStorage (see store(), which survives blocked storage). */
+  const TOUR_VERSION = 1;
+  const TOUR_GUIDE_URL =
+    "https://github.com/pinkysworld/FlyLab/blob/main/docs/INTERPRETATION.md";
+
+  const TOUR_STEPS = [
+    {
+      sel: "#dash-overview",
+      title: "Compound, dose, and what is missing",
+      what: "The header names the compound, the dose everything below is computed at, and how many receptor rows carry a sourced value.",
+      caveat:
+        "The rows counted as “not modelled” have no number at all and are excluded from every figure on this page — they are not zeros.",
+    },
+    {
+      sel: "#dash-tiles",
+      title: "The four headline tiles",
+      what: "Insect engagement, vertebrate engagement, the potency ratio between them, and the evidence tier the whole row rests on.",
+      caveat:
+        "Engagement is not occupancy: a tile can read 1.000 from a binding constant measured in another species. Click a chip for the parameter type and the evidence distance.",
+    },
+    {
+      sel: ".dose-rail",
+      title: "Move the dose",
+      what: "Every card recomputes at the concentration you release the slider on; the ladder buttons jump to round decades.",
+      caveat:
+        "Above saturation the curve flattens because the receptor is full, not because the model is confident. At 1 µM a two-fold error in imidacloprid's potency moves the circuit by 0.000 Hz.",
+    },
+    {
+      sel: "#plot-dash-circuit",
+      title: "Circuit consequence",
+      what: "Vehicle against treated firing rates for named cells on the committed MaleCNS cut.",
+      caveat:
+        "A relative change in a simulated rate. There is no dose, no exposure and no living fly anywhere behind these numbers.",
+    },
+    {
+      sel: "#dash-dep-verdict",
+      title: "Is the effect wiring-dependent?",
+      what: "Permutation nulls destroy one kind of network structure at a time, and the verdict names the weakest one the test cannot tell apart from the real cut.",
+      caveat:
+        "A large permutation probability licenses only “not distinguishable at n shuffles”. And the verdict belongs to the cut it was run on: imidacloprid is composition-dominated on `named` and topology-dependent on `taste_motor`.",
+    },
+    {
+      sel: "#card-trust",
+      title: "What can I trust?",
+      what: "Each layer of the chain reported separately: sourced values, asserted rules, measured wiring, predicted transmitters, and the validation that does not exist.",
+      caveat:
+        "There is deliberately no blended confidence score. The layers fail independently, and one number would hide which of them is weak.",
+    },
+    {
+      sel: "#card-compare",
+      title: "Compare compounds",
+      what: "Receptor selectivity beside circuit selectivity for a set of compounds at the same dose.",
+      caveat:
+        "The two indices rank compounds differently, and neither is a safety margin — a ratio on a teaching library says nothing about a vertebrate.",
+    },
+  ];
+
+  const tour = { open: false, i: 0, ring: null, card: null, raf: null, restore: null };
+
+  function tourEls() {
+    if (!tour.ring) {
+      tour.ring = document.createElement("div");
+      tour.ring.className = "tour-ring";
+      tour.ring.setAttribute("aria-hidden", "true");
+      document.body.appendChild(tour.ring);
+    }
+    if (!tour.card) {
+      tour.card = document.createElement("div");
+      tour.card.className = "tour-card";
+      tour.card.id = "tour-card";
+      tour.card.setAttribute("role", "dialog");
+      // aria-modal stays false on purpose: the page behind is still live
+      tour.card.setAttribute("aria-modal", "false");
+      tour.card.setAttribute("aria-labelledby", "tour-title");
+      document.body.appendChild(tour.card);
+    }
+    return tour;
+  }
+
+  function tourTarget(i) {
+    const step = TOUR_STEPS[i];
+    if (!step) return null;
+    const el = $(step.sel);
+    if (!el) return null;
+    // a card that has not been run yet is still worth pointing at; an element
+    // with no box at all (display:none) is not
+    const box = el.getBoundingClientRect();
+    if (!box.width && !box.height) return null;
+    return el.closest(".card") || el;
+  }
+
+  function tourPlace() {
+    if (!tour.open) return;
+    const el = tourTarget(tour.i);
+    const ring = tour.ring;
+    const card = tour.card;
+    if (!ring || !card) return;
+    const sx = window.scrollX || window.pageXOffset || 0;
+    const sy = window.scrollY || window.pageYOffset || 0;
+    if (!el) {
+      // the panel is not on screen (another tab, or a build without it):
+      // centre the card and hide the ring rather than dropping the step
+      ring.style.display = "none";
+      card.style.top = sy + Math.max(16, window.innerHeight / 2 - 120) + "px";
+      card.style.left = sx + Math.max(12, (window.innerWidth - card.offsetWidth) / 2) + "px";
+      return;
+    }
+    const b = el.getBoundingClientRect();
+    ring.style.display = "block";
+    ring.style.top = b.top + sy - 4 + "px";
+    ring.style.left = b.left + sx - 4 + "px";
+    ring.style.width = b.width + 8 + "px";
+    ring.style.height = b.height + 8 + "px";
+
+    const cw = card.offsetWidth || 360;
+    const ch = card.offsetHeight || 180;
+    // below the target when there is room, otherwise above it, and never off
+    // the left or right edge of the viewport
+    let top = b.bottom + sy + 12;
+    if (b.bottom + ch + 24 > window.innerHeight && b.top - ch - 12 > 0) {
+      top = b.top + sy - ch - 12;
+    }
+    let left = b.left + sx;
+    const maxLeft = sx + window.innerWidth - cw - 14;
+    if (left > maxLeft) left = maxLeft;
+    if (left < sx + 12) left = sx + 12;
+    card.style.top = Math.max(sy + 8, top) + "px";
+    card.style.left = left + "px";
+  }
+
+  function tourSchedulePlace() {
+    if (tour.raf) cancelAnimationFrame(tour.raf);
+    tour.raf = requestAnimationFrame(() => {
+      tour.raf = null;
+      tourPlace();
+    });
+  }
+
+  function tourRender() {
+    const step = TOUR_STEPS[tour.i];
+    if (!step) return;
+    const dots = TOUR_STEPS.map(
+      (_, k) => `<i data-now="${k === tour.i ? "true" : "false"}"></i>`
+    ).join("");
+    const last = tour.i === TOUR_STEPS.length - 1;
+    tour.card.innerHTML =
+      `<p class="tour-step">Step ${tour.i + 1} of ${TOUR_STEPS.length}</p>` +
+      `<h3 id="tour-title">${esc(step.title)}</h3>` +
+      `<p>${esc(step.what)}</p>` +
+      `<p class="tour-caveat">${esc(step.caveat)}</p>` +
+      `<div class="tour-actions">` +
+      `<div class="tour-dots" aria-hidden="true">${dots}</div>` +
+      `<span class="spacer"></span>` +
+      (tour.i > 0 ? `<button type="button" class="small" data-tour="prev">Back</button>` : "") +
+      `<button type="button" class="small" data-tour="end">Dismiss</button>` +
+      `<button type="button" class="primary small" data-tour="${last ? "end" : "next"}">` +
+      (last ? "Done" : "Next") +
+      `</button>` +
+      `</div>` +
+      `<p style="margin:8px 0 0"><a class="howto" href="${TOUR_GUIDE_URL}" target="_blank" rel="noreferrer noopener">How to read this &rarr;</a></p>`;
+    const el = tourTarget(tour.i);
+    if (el && el.scrollIntoView) {
+      try {
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
+      } catch (err) {
+        el.scrollIntoView();
+      }
+    }
+    tourSchedulePlace();
+    // one reflow later the smooth scroll has landed
+    setTimeout(tourSchedulePlace, 420);
+  }
+
+  function tourGo(i) {
+    if (i < 0 || i >= TOUR_STEPS.length) return tourEnd();
+    tour.i = i;
+    tourRender();
+  }
+
+  function tourStart(force) {
+    if (!force && store("tourSeen") === TOUR_VERSION) return;
+    if (state.activeTab !== "dashboard") activate("dashboard");
+    tourEls();
+    tour.open = true;
+    tour.i = 0;
+    tour.restore = document.activeElement;
+    tour.card.hidden = false;
+    tour.ring.hidden = false;
+    const btn = $("#btn-tour");
+    if (btn) btn.setAttribute("aria-expanded", "true");
+    tourRender();
+    // focus the card so keyboard users land on the controls, but only after
+    // the scroll has settled; the page keeps working either way
+    setTimeout(() => {
+      const first = tour.card && tour.card.querySelector("button");
+      if (tour.open && first) first.focus({ preventScroll: true });
+    }, 440);
+  }
+
+  function tourEnd() {
+    if (!tour.open) return;
+    tour.open = false;
+    store("tourSeen", TOUR_VERSION);
+    if (tour.ring) tour.ring.hidden = true;
+    if (tour.card) tour.card.hidden = true;
+    const btn = $("#btn-tour");
+    if (btn) btn.setAttribute("aria-expanded", "false");
+    const back = tour.restore;
+    tour.restore = null;
+    if (back && back.focus) {
+      try {
+        back.focus({ preventScroll: true });
+      } catch (err) {
+        /* the element may be gone after a re-render */
+      }
+    }
+  }
+
+  /* A classification chip with no provenance record still has something to
+     say: what the label itself means. It opens the same drawer, so there is
+     one place a reader looks for "where did this come from". */
+  function explainChip(kind) {
+    const k = CHIPS.indexOf(kind) >= 0 ? kind : "NOT MODELLED";
+    const drawer = $("#provenance");
+    const body = $("#prov-body");
+    const title = $("#prov-title");
+    if (!drawer || !body) return;
+    if (title) title.textContent = "What this label means";
+    body.innerHTML =
+      `<div class="prov-head"><span class="name">${esc(k)}</span>${chip(k, null, k.toLowerCase())}</div>` +
+      `<p>${esc(CHIP_NOTE[k])}</p>` +
+      `<dt>the whole vocabulary</dt><dd><ul>` +
+      CHIPS.map(
+        (c) =>
+          `<li><b>${esc(c)}</b> — ${esc(CHIP_NOTE[c])}</li>`
+      ).join("") +
+      `</ul></dd>` +
+      `<p>Chips carrying a provenance record open the source instead. ` +
+      `<a href="${TOUR_GUIDE_URL}" target="_blank" rel="noreferrer noopener">How to read this &rarr;</a></p>`;
+    drawer.dataset.open = "true";
+    drawer.setAttribute("aria-hidden", "false");
+  }
+
+  // ==================================================================
   // static build
   // ==================================================================
   /* flylab.circuit.lif.BROWSER_T_MS: the browser keeps the 0.1 ms integration
@@ -4020,6 +4338,16 @@
     estimateCompare().catch(() => {});
     status("ok", "ready");
     activate("dashboard");
+    /* first visit only: the tour remembers its own dismissal, and it never
+       blocks the bench, so a returning viewer never sees it again unless the
+       "Guided tour" button asks for it. */
+    setTimeout(() => {
+      try {
+        tourStart(false);
+      } catch (err) {
+        /* a tour must never be the reason the bench fails to load */
+      }
+    }, 900);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

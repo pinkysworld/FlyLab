@@ -1299,6 +1299,32 @@ def step_veto(ctx: Ctx) -> None:
     )
 
 
+def _plural(n: int, singular: str, plural: str | None = None) -> str:
+    """``"1 model inference"`` / ``"4 model inferences"``.
+
+    The templates substitute a rendered string for each ``{{key}}``, so a count
+    whose noun has to agree with it is recorded as the whole phrase rather than
+    as a bare number with an ``s`` hard-coded in the prose.
+    """
+    return f"{n} {singular if n == 1 else (plural or singular + 's')}"
+
+
+def _binomial_two_sided(k: int, n: int, p: float = 0.5) -> float | None:
+    """Exact two-sided binomial tail for ``k`` successes in ``n`` trials.
+
+    Used for the literature-concordance count, where a mean over comparisons
+    half of which order only two compounds says nothing: counting concordant
+    against discordant orderings and giving the tail does.
+    """
+    import math
+
+    if n <= 0:
+        return None
+    probs = [math.comb(n, i) * p**i * (1.0 - p) ** (n - i) for i in range(n + 1)]
+    target = probs[k] * (1.0 + 1e-9)
+    return float(min(1.0, sum(q for q in probs if q <= target)))
+
+
 def _f(x: Any) -> float | None:
     try:
         return None if x is None else float(x)
@@ -1971,7 +1997,7 @@ def step_dependence(ctx: Ctx) -> None:
     pw = ladder_power(
         strengths=(0.0, 0.25, 0.5, 1.0),
         ns=(20,) if ctx.fast else (50, 200, 1000),
-        replicates=2 if ctx.fast else 8,
+        replicates=2 if ctx.fast else 6,
         seed=ctx.seed,
     )
     ctx.put("val_recovery_n", int(rec["n"]))
@@ -1998,22 +2024,24 @@ def step_dependence(ctx: Ctx) -> None:
             f"val_power_s{str(g['loop_strength']).replace('.', 'p')}_n{g['n']}",
             _f(g["detection_rate"]),
         )
-    full = sorted(
-        {
-            g["loop_strength"]
-            for g in pw["grid"]
-            if not g["is_control"] and g["detection_rate"] == 1.0
-        }
-    )
-    blind = sorted(
-        {
-            g["loop_strength"]
-            for g in pw["grid"]
-            if not g["is_control"] and (g["detection_rate"] or 0.0) == 0.0
-        }
-    )
+    by_strength: dict[float, list[float]] = {}
+    for g in pw["grid"]:
+        if g["is_control"]:
+            continue
+        by_strength.setdefault(float(g["loop_strength"]), []).append(
+            float(g["detection_rate"] or 0.0)
+        )
+    full = sorted(s for s, rates in by_strength.items() if min(rates) >= 1.0)
+    weak = sorted(s for s, rates in by_strength.items() if max(rates) <= 0.25)
     ctx.put("val_power_full_strengths", full, text=", ".join(f"{x:g}" for x in full) or "none")
-    ctx.put("val_power_blind_strengths", blind, text=", ".join(f"{x:g}" for x in blind) or "none")
+    ctx.put("val_power_weak_strengths", weak, text=", ".join(f"{x:g}" for x in weak) or "none")
+    ctx.put(
+        "val_power_by_strength",
+        {f"{s:g}": [round(min(r), 3), round(max(r), 3)] for s, r in sorted(by_strength.items())},
+        text="; ".join(
+            f"strength {s:g}: {min(r):.2f}-{max(r):.2f}" for s, r in sorted(by_strength.items())
+        ),
+    )
     best_n = {}
     for g in pw["grid"]:
         if g["is_control"]:
@@ -2941,6 +2969,58 @@ def step_validation(ctx: Ctx) -> None:
     ctx.put("rank_evaluated", int(s["n_evaluated"]))
     ctx.put("rank_skipped", int(s["n_skipped"]))
     ctx.put("rank_mean_rho", float(s["mean_rho"]))
+
+    # I13: half of the evaluable comparisons order two compounds, where rho can
+    # only be +-1 and the two-sided p is 1.0. A mean over them is a mean over
+    # coin flips, so the degenerate entries are counted, excluded from the mean
+    # and replaced by a concordance count with its binomial tail.
+    scored = [
+        r
+        for res in v["assays"].values()
+        for r in res["rows"]
+        if not r.get("skipped") and r.get("spearman_rho") is not None
+    ]
+    degenerate = [r for r in scored if int(r.get("n_compounds") or 0) <= 2]
+    informative = [r for r in scored if int(r.get("n_compounds") or 0) > 2]
+    ctx.put("rank_n_degenerate", len(degenerate))
+    ctx.put("rank_n_informative", len(informative))
+    ctx.put(
+        "rank_mean_rho_informative",
+        (sum(float(r["spearman_rho"]) for r in informative) / len(informative))
+        if informative
+        else None,
+    )
+    ctx.put(
+        "rank_min_n_compounds",
+        min((int(r.get("n_compounds") or 0) for r in scored), default=None),
+    )
+    ctx.put(
+        "rank_max_n_compounds",
+        max((int(r.get("n_compounds") or 0) for r in scored), default=None),
+    )
+    concordant = sum(1 for r in scored if float(r["spearman_rho"]) > 0)
+    discordant = sum(1 for r in scored if float(r["spearman_rho"]) < 0)
+    ctx.put("rank_concordant", concordant)
+    ctx.put("rank_discordant", discordant)
+    ctx.put("rank_binomial_p", _binomial_two_sided(concordant, concordant + discordant))
+    if degenerate:
+        ctx.note(
+            "the literature-concordance mean is not quotable bare: %d of the %d "
+            "evaluable comparisons order exactly two compounds, where Spearman's rho "
+            "can only be +-1 and the two-sided p is 1.0 whatever the model does. Over "
+            "the %d comparisons with more than two compounds the mean is %s; as a "
+            "concordance count it is %d concordant against %d discordant orderings "
+            "(two-sided binomial p = %s)."
+            % (
+                len(degenerate),
+                len(scored),
+                len(informative),
+                ctx.text("rank_mean_rho_informative"),
+                concordant,
+                discordant,
+                ctx.text("rank_binomial_p"),
+            )
+        )
     ctx.put("rank_mean_rho_occupancy", float(v["assays"]["occupancy"]["mean_rho"]))
     ctx.put("rank_mean_rho_subgraph", float(v["assays"]["subgraph"]["mean_rho"]))
     ctx.put("rank_exact_occupancy", int(v["assays"]["occupancy"]["n_exact"]))
@@ -2970,6 +3050,11 @@ def step_validation(ctx: Ctx) -> None:
     }
     ctx.put("rank_source_disjoint", len(evaluated_ids - overlap_ids))
     ctx.put("rank_entries_evaluable", len(evaluated_ids))
+    n_shared = len(overlap_ids)
+    ctx.put("rank_shared_source_verb", n_shared, text="comes" if n_shared == 1 else "come")
+    ctx.put("rank_shared_source_be", n_shared, text="is" if n_shared == 1 else "are")
+    n_disjoint = len(evaluated_ids - overlap_ids)
+    ctx.put("rank_source_disjoint_be", n_disjoint, text="is" if n_disjoint == 1 else "are")
 
     rows = []
     for assay, res in v["assays"].items():
@@ -3015,7 +3100,12 @@ def step_validation(ctx: Ctx) -> None:
             "source",
         ],
         "Literature concordance of the model's ordering with published orderings in "
-        "`data/literature/published_rank_orders.yaml`. `independence` is computed by "
+        "`data/literature/published_rank_orders.yaml`. Read `spearman_rho` beside its "
+        "`n_compounds`: an entry ordering two compounds can only return +-1 and its "
+        "two-sided p is 1.0 whatever the model does, so those entries are excluded "
+        "from any mean and the aggregate the paper quotes is a count of concordant "
+        "against discordant orderings with its binomial tail. `independence` is "
+        "computed by "
         "comparing DOIs/PMIDs: `shared-source` means the published ordering comes from "
         "a publication the library already cites for one of the compounds it orders, so "
         "agreement there is internal consistency and not out-of-sample validation. "
@@ -3434,10 +3524,10 @@ def step_ablation(ctx: Ctx) -> None:
     dense = cond["random_gain_vectors"]["spearman_rho"] or {}
     ctx.put("abl_ref_observed", _f(ref["observed"]["spearman_rho"]))
     ctx.put("abl_ref_n_draws", int(sparse.get("n") or 0))
-    ctx.put("abl_ref_matched_median", _f(sparse.get("p50")))
+    ctx.put("abl_ref_matched_median", _f(sparse.get("median")))
     ctx.put("abl_ref_matched_p05", _f(sparse.get("p05")))
     ctx.put("abl_ref_matched_p95", _f(sparse.get("p95")))
-    ctx.put("abl_ref_dense_median", _f(dense.get("p50")))
+    ctx.put("abl_ref_dense_median", _f(dense.get("median")))
     ctx.put("abl_ref_observed_percentile", _f(ref["observed_percentile_of_matched_reference"]))
     ctx.put("abl_ref_shuffled", _f(cond["shuffled_compound_assignment"]["spearman_rho"]))
     ctx.put(
@@ -3477,14 +3567,14 @@ def step_ablation(ctx: Ctx) -> None:
             },
             {
                 "condition": "matched reference: one gain moved per pseudo-compound",
-                "spearman_rho": sparse.get("p50"),
+                "spearman_rho": sparse.get("median"),
                 "n_compounds": ref["n_compounds"],
                 "draws": sparse.get("n"),
                 "note": cond["random_single_gain_vectors"]["note"],
             },
             {
                 "condition": "dense reference: every gain moved per pseudo-compound",
-                "spearman_rho": dense.get("p50"),
+                "spearman_rho": dense.get("median"),
                 "n_compounds": ref["n_compounds"],
                 "draws": dense.get("n"),
                 "note": cond["random_gain_vectors"]["note"],
@@ -3959,6 +4049,62 @@ def step_stability(ctx: Ctx) -> None:
 
     # ---- threshold grid ---------------------------------------------
     ctx.put("thr_stable", bool(grid["stable"]))
+    ctx.put(
+        "thr_compounds",
+        list(grid["compounds"]),
+        text=", ".join(grid["compounds"]),
+    )
+    ctx.put("thr_n_compounds", len(grid["compounds"]))
+    # I12: T8 and T15 disagreed on how many compounds the circuit buffers at
+    # the same default thresholds. They do not measure the same set: T8 scores
+    # the whole library on both cuts, T15 only the compounds of the two
+    # mechanism classes the conclusion is about. Name the difference rather
+    # than leaving two tables to contradict each other.
+    default_cell = [
+        r
+        for r in grid["per_compound"]
+        if abs(r["circuit_frac"] - 0.50) < 1e-9 and abs(r["vert_limit"] - 0.20) < 1e-9
+    ]
+    t15_scored = {r["compound"] for r in default_cell if r["si_gap_circuit_minus_receptor"] is not None}
+    t15_unscored = {r["compound"] for r in default_cell if r["si_gap_circuit_minus_receptor"] is None}
+    t8_buffered = set(ctx.get("landscape_buffer_compounds") or [])
+    t8_amplified = set(ctx.get("landscape_amplify_compounds") or [])
+    t8_scored = t8_buffered | t8_amplified
+    only_t8 = sorted(t8_scored - set(grid["compounds"]))
+    both_disagree = sorted(t8_scored & t15_unscored)
+    ctx.put("thr_t15_scored", sorted(t15_scored), text=", ".join(sorted(t15_scored)) or "none")
+    ctx.put("thr_t15_unscored", sorted(t15_unscored), text=", ".join(sorted(t15_unscored)) or "none")
+    ctx.put(
+        "thr_outside_t15_scope",
+        only_t8,
+        text=", ".join(only_t8) or "none",
+    )
+    ctx.put("thr_n_outside_t15_scope", len(only_t8))
+    ctx.put(
+        "thr_scored_in_t8_unscored_in_t15",
+        both_disagree,
+        text=", ".join(both_disagree) or "none",
+    )
+    if only_t8 or both_disagree:
+        ctx.note(
+            "T8 and T15 have different scopes and must be read that way: T8 scores the "
+            "whole library on both cuts, T15 only the %d compounds of the two mechanism "
+            "classes the conclusion is about. %s %s a circuit index in T8 and %s "
+            "outside T15's compound set entirely%s."
+            % (
+                len(grid["compounds"]),
+                ", ".join(only_t8) or "no compound",
+                "carries" if len(only_t8) == 1 else "carry",
+                "is" if len(only_t8) == 1 else "are",
+                (
+                    "; " + ", ".join(both_disagree) + " are in T15's set but have no "
+                    "defined gap at the default thresholds and are reported unscored "
+                    "there"
+                )
+                if both_disagree
+                else "",
+            )
+        )
     ctx.put("thr_circuit_fracs", grid["circuit_fracs"], text=", ".join(f"{f:.0%}" for f in grid["circuit_fracs"]))
     ctx.put("thr_vert_limits", grid["vert_limits"], text=", ".join(f"{v:.0%}" for v in grid["vert_limits"]))
     for check in grid["class_checks"]:
@@ -4000,7 +4146,11 @@ def step_stability(ctx: Ctx) -> None:
         "Threshold sensitivity of the amplify/buffer split. Both thresholds entering "
         "the circuit selectivity index are conventions: the relative circuit change "
         "that defines C_circuit and the vertebrate engagement that defines C_vert. The "
-        "mechanism-level verdict is recomputed on every cell of the grid.",
+        "mechanism-level verdict is recomputed on every cell of the grid. The counts "
+        "are over the compounds of the two mechanism classes the conclusion is about "
+        "and not over the whole library, which is why they are smaller than T8's at "
+        "the same thresholds; a compound with no circuit threshold inside the tested "
+        "ladder is reported unscored here, never as buffered.",
     )
 
     # ---- F14: the stability matrix -----------------------------------
@@ -4175,9 +4325,15 @@ def step_uncertainty(ctx: Ctx) -> None:
         f"({res['compound']} at {_fmt_M(res['conc_M'])}, {res['n_evaluations']} model "
         "evaluations, Jansen estimators on a Saltelli cross-sample). S1 is the variance "
         "share resolving that factor alone would remove; ST includes its interactions. "
-        "The shares do not sum to one; the remainder is the interaction row. A null "
-        "factor with no effect on the deterministic rate engine is included on purpose "
-        "and reports the estimator's noise floor at this sample size.",
+        "Estimates are **unclipped**, so a factor whose true index is zero can come out "
+        "negative; the largest such magnitude is the estimator's measured noise floor "
+        "and is reported with the factor that set it. A factor counts as resolved only "
+        "when its bootstrap interval excludes zero, which is a stronger test than "
+        "exceeding that floor. The shares do not sum to one; the remainder is the "
+        "interaction row, and it is reported both on the raw estimates and with the "
+        "negative ones clipped, because leaving them in counts estimator noise as "
+        "interaction. A null factor with no effect on the deterministic rate engine is "
+        "included on purpose as a control.",
     )
 
     v = voi(result=res)
@@ -4188,6 +4344,17 @@ def step_uncertainty(ctx: Ctx) -> None:
         ctx.put(f"voi_rank{i}_fraction", _f(r["voi_fraction"]))
         ctx.put(f"voi_rank{i}_experiment", r["experiment"])
         ctx.put(f"voi_rank{i}_cost", r["cost"])
+        ctx.put(f"voi_rank{i}_state", str(r.get("state")))
+    ctx.put(
+        "voi_unresolved_factors",
+        list(v["unresolved_factors"]),
+        text=", ".join(v["unresolved_factors"]) or "none",
+    )
+    ctx.put(
+        "voi_resolved_factors",
+        list(v["resolved_factors"]),
+        text=", ".join(v["resolved_factors"]) or "none",
+    )
     ctx.put("voi_recommendation", v["recommendation"], text=str(v["recommendation"]))
     free = [r["factor"] for r in v["rows"] if r.get("cost") == "none (compute only)" and r["voi_fraction"] > 0]
     ctx.put("voi_no_experiment_needed", free, text=", ".join(free) or "none")
@@ -4198,7 +4365,10 @@ def step_uncertainty(ctx: Ctx) -> None:
             {
                 "rank": r["rank"],
                 "factor": r["factor"],
+                "state": r.get("state"),
                 "voi_fraction_of_var": r["voi_fraction"],
+                "voi_fraction_raw": r.get("voi_fraction_raw"),
+                "clipped_from_negative": r.get("clipped_from_negative"),
                 "voi_var_hz2": r["voi_var"],
                 "voi_upper_bound_var_hz2": r["voi_upper_bound_var"],
                 "sd_reduction_hz": r["sd_reduction"],
@@ -4212,7 +4382,10 @@ def step_uncertainty(ctx: Ctx) -> None:
         [
             "rank",
             "factor",
+            "state",
             "voi_fraction_of_var",
+            "voi_fraction_raw",
+            "clipped_from_negative",
             "voi_var_hz2",
             "voi_upper_bound_var_hz2",
             "sd_reduction_hz",
@@ -4224,9 +4397,14 @@ def step_uncertainty(ctx: Ctx) -> None:
         "Value of information. VOI_j = S_j x Var(Y) is the model variance that would "
         "disappear if assumption j were resolved exactly while everything else stayed "
         "as uncertain as it is; the upper bound uses the total-order index and is what "
-        "resolving j *last* would buy. This is variance of a model output under assumed "
-        "input ranges, not an expected gain in accuracy about a living fly.",
-        md_fields=["rank", "factor", "voi_fraction_of_var", "voi_var_hz2", "experiment", "cost"],
+        "resolving j *last* would buy. A value of information cannot be negative, so a "
+        "negative first-order estimate is clipped to zero for the decision value and "
+        "kept unclipped in `voi_fraction_raw`. `state` says whether the sample could "
+        "resolve the factor at all: an unresolved factor carries no ranking claim, "
+        "which is a statement about the sample size rather than about the factor. This "
+        "is variance of a model output under assumed input ranges, not an expected gain "
+        "in accuracy about a living fly.",
+        md_fields=["rank", "factor", "state", "voi_fraction_of_var", "voi_var_hz2", "experiment", "cost"],
     )
 
     import numpy as np
@@ -4330,6 +4508,27 @@ def step_claims(ctx: Ctx) -> None:
     ctx.put("claims_n_facts", len(split["facts"]))
     ctx.put("claims_n_inference", len(split["model_inference"]))
     ctx.put("claims_n_unknown", len(split["unknown"]))
+    # the noun has to agree with the count, and the prose cannot know it
+    ctx.put(
+        "claims_facts_phrase",
+        len(split["facts"]),
+        text=_plural(len(split["facts"]), "fact"),
+    )
+    ctx.put(
+        "claims_inference_phrase",
+        len(split["model_inference"]),
+        text=_plural(len(split["model_inference"]), "model inference"),
+    )
+    ctx.put(
+        "claims_unknown_phrase",
+        len(split["unknown"]),
+        text=_plural(len(split["unknown"]), "unknown"),
+    )
+    ctx.put(
+        "claims_observed_phrase",
+        int(counts.get("OBSERVED", 0)),
+        text=_plural(int(counts.get("OBSERVED", 0)), "link"),
+    )
     observed = [link["step"] for link in audit["chain"] if link["label"] == "OBSERVED"]
     ctx.put("claims_observed_steps", observed, text=", ".join(observed) or "none")
     if len(observed) <= 1:
