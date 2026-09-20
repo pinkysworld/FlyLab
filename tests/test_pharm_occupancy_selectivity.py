@@ -31,6 +31,23 @@ def test_imidacloprid_still_prefers_the_insect_receptor():
     assert pair["occupancy_difference"] > 0.8
 
 
+def test_the_selectivity_block_is_never_empty():
+    """Regression: `_selectivity` once built every pair and returned none of them,
+    silently emptying the scorecard in the UI and the paper figures."""
+    from flylab.pharm.occupancy import list_compounds, selectivity_pairs
+
+    expected = set(selectivity_pairs())
+    for key in list_compounds():
+        block = compare_compound(key, 1e-6)["selectivity"]
+        assert block, f"{key}: empty selectivity block"
+        assert set(block) == expected, key
+        for name, pair in block.items():
+            if pair["placeholder"]:
+                assert pair["ratio"] is None and pair["reason"] == "placeholder"
+            else:
+                assert pair["ratio"] > 0
+
+
 def test_selectivity_block_has_every_pair():
     result = compare_compound("imidacloprid", 1e-6)
     assert set(result["selectivity"]) == {"nAChR", "GABA_A", "GluCl", "AChE", "Nav"}

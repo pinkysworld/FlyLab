@@ -23,10 +23,33 @@ def test_taste_vehicle_is_unity():
     assert nb["readouts"]["mn9_sugar_hz"] == nb["readouts"]["mn9_vehicle_sugar_hz"]
 
 
-def test_taste_warns_about_gains_it_cannot_inject():
+def test_taste_injects_the_gaba_gain_so_an_rdl_blocker_lifts_the_bitter_veto():
+    """fipronil used to leave the reduced plot identical to vehicle.
+
+    ``run_taste_circuit`` always accepted ``g_gaba`` (it scales the bitter
+    inhibitory unit) but the assay never passed it, so an RDL antagonist read as
+    "does nothing to feeding motor output". Lower g_gaba weakens the inhibitory
+    unit, so sugar+bitter MN9 must rise and the veto must lift - the direction
+    the map-based assay already shows.
+    """
+    veh = run_taste_assay(None, 0.0)
     nb = run_taste_assay("fipronil", 1e-6)
     assert nb["gains"]["g_gaba"] < 1.0
-    assert any("injects only g_ach" in w for w in nb["warnings"])
+    assert nb["readouts"]["g_gaba"] == nb["gains"]["g_gaba"]
+    assert nb["readouts"]["mn9_sugar_bitter_hz"] > veh["readouts"]["mn9_sugar_bitter_hz"]
+    assert nb["readouts"]["bitter_veto_ratio"] > veh["readouts"]["bitter_veto_ratio"]
+    # the vehicle arm is frozen: same drive, both gains at 1.0
+    assert veh["readouts"]["mn9_sugar_hz"] == 300.0
+    assert veh["readouts"]["mn9_sugar_bitter_hz"] == 0.0
+    assert nb["readouts"]["mn9_vehicle_sugar_hz"] == veh["readouts"]["mn9_sugar_hz"]
+    # no warning may still claim the circuit ignores RDL
+    assert not any("injects only g_ach" in w for w in nb["warnings"])
+
+
+def test_taste_still_warns_about_gains_it_really_cannot_inject():
+    nb = run_taste_assay("deltamethrin", 1e-6)
+    assert nb["gains"]["g_nav"] > 1.0
+    assert any("g_nav" in w and "not applied" in w for w in nb["warnings"])
 
 
 def test_ache_inhibitor_reaches_the_taste_circuit():
