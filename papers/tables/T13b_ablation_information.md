@@ -1,4 +1,4 @@
-**T13b_ablation_information.** How much of the full model's ordering of the library each ablated level recovers, per concentration. `reproduces_full_ordering` is applied to the **signed** rank correlation: an ordering that is a perfect inversion of the full model's reproduces nothing, and the previous absolute-value test would have credited it.
+**T13b_ablation_information.** How much of the full model's ordering of the library each ablated level recovers, per concentration. `reproduces_full_ordering` is applied to the **signed** rank correlation: an ordering that is a perfect inversion of the full model's reproduces nothing, and the previous absolute-value test would have credited it. Rate-engine quantities labelled Hz in legacy fields or axes are rate-model units, not calibrated physiological firing rates.
 
 | conc_M | level | unit | spearman_rho_vs_full | pearson_r_vs_full | residual_rms_standardised | residual_rms_hz | reproduces_full_ordering | information_added_vs_previous |
 |---|---|---|---|---|---|---|---|---|
