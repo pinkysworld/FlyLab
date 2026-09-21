@@ -357,3 +357,24 @@ def test_manuscript_cites_the_adjacent_tools_it_is_positioned_against() -> None:
     text = TEMPLATE.read_text()
     for needle in ("FlyBrainLab", "10.7554/eLife.62362", "10.1038/s42003-024-06852-9"):
         assert needle in text, f"the manuscript no longer cites {needle}"
+
+
+@pytest.mark.parametrize("cached", [False, True])
+def test_scale_renderer_records_descriptive_status_with_or_without_cache(tmp_path, cached):
+    """Both branches must emit the keyed record without rerunning large cuts."""
+    from scripts.reproduce_paper import Ctx, step_scale
+    if cached:
+        (tmp_path / "scale_study.json").write_bytes(
+            (PAPERS / "scale_study.json").read_bytes()
+        )
+    ctx = Ctx(outdir=tmp_path, quiet=True)
+    ctx._step = "scale"
+    step_scale(ctx)
+    row = ctx.values["scale_study_statement"]
+    assert row["step"] == "scale"
+    if cached:
+        assert row["value"]
+        assert "observed cuts share the label" in row["text"]
+    else:
+        assert row["value"] is None
+        assert "not been measured" in row["text"]

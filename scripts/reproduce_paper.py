@@ -4799,7 +4799,8 @@ def step_scale(ctx: Ctx) -> None:
                 )
             label_statements.append(statement)
         ctx.put(
-                    label_statements,
+            "scale_study_statement",
+            label_statements,
             text=" ".join(label_statements),
         )
         seqs = []
@@ -4933,7 +4934,8 @@ def step_scale(ctx: Ctx) -> None:
         ctx.put("scale_study_settled", None, text="not measured")
         ctx.put("scale_study_settled_clean_ladder", None, text="not measured")
         ctx.put(
-                    None,
+            "scale_study_statement",
+            None,
             text=(
                 "Dependence labels across the unobserved cut ladder have not been measured at "
                 "this commit: the scale ladder's rungs on disk are "
