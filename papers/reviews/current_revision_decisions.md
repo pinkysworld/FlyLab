@@ -50,6 +50,7 @@ The statistical and implementation reviews used GPT-5.6 Sol with high reasoning;
 - BH is applied to structural component tests. A cell is classified by an OR over those tests, so component-test adjustment does not automatically control cell-level FDR. Shared random draws do not establish the usual BH dependence condition.
 - High permutation effort and compound identity do not make a retrospectively selected profile confirmatory.
 - Missing permutation probability cannot yield a within-tolerance verdict. The helper now returns indeterminate rather than accepting the point gap or failing while formatting a missing value.
+- The recovery network has 250 nodes and is not size- or density-matched to the named cut; the main text and captions now say so.
 - The standard pipeline imports the scale-study cache. Large source cuts and cache source/input hashes are missing, so replay is distinguished from independent recomputation.
 
 ## Remaining limits and author actions
@@ -58,4 +59,4 @@ The manuscript remains a computational-methods working draft. No animal outcome,
 
 Before submission, confirm author metadata and AI-use disclosure, create a genuine archival deposit, confirm venue formatting and prepare submission materials. A DOI alone would not constitute preregistration; that requires a frozen protocol before data collection. These are not fabricated to make the checklist appear complete.
 
-Validation details are recorded in the revision's final verification note after the checks complete.
+Validation details are recorded in `current_verification.md`. The full numerical rerun was interrupted; the delivered update preserves the committed default-effort estimates and explicitly records editorial replay. It does not claim a completed independent numerical reproduction.

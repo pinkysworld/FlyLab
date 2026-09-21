@@ -222,8 +222,10 @@ class Ctx:
 
     def note(self, msg: str) -> None:
         """A finding worth printing and recording (e.g. a contradicted claim)."""
-        self.notes.append(f"[{self._step}] {msg}")
-        self.say(f"    ! {msg}")
+        from scripts.paper_review_metadata import review_note
+        note = review_note(f"[{self._step}] {msg}")
+        self.notes.append(note)
+        self.say(f"    ! {note}")
 
     # -- recording --------------------------------------------------------
     def put(
@@ -331,7 +333,13 @@ def save_fig(ctx: Ctx, fig, name: str, caption: str, svg: bool = False) -> None:
     """Write ``name.png`` (300 dpi) and optionally ``name.svg``; record both."""
     import matplotlib.pyplot as plt
 
+    from scripts.paper_review_metadata import review_caption
+    caption = review_caption(name, caption)
     ctx.ensure_dirs()
+    if name.startswith(("F1_", "F2_", "F3_", "F7_", "F8_", "F9_")):
+        from matplotlib.text import Text
+        for artist in fig.findobj(match=Text):
+            artist.set_text(artist.get_text().replace("occupancy", "engagement").replace("Occupancy", "Engagement"))
     png = ctx.figdir / f"{name}.png"
     fig.savefig(png)
     out = [png]
@@ -363,6 +371,8 @@ def save_table(
     md_fields: Iterable[str] | None = None,
 ) -> None:
     """Write ``name.csv`` (all fields) and ``name.md`` (a readable subset)."""
+    from scripts.paper_review_metadata import review_caption
+    caption = review_caption(name, caption)
     ctx.ensure_dirs()
     fields = list(fields)
     csv_path = ctx.tabdir / f"{name}.csv"
@@ -1014,7 +1024,7 @@ def step_graph(ctx: Ctx) -> None:
             "node that itself receives input (mean degree %.2f). A degree-preserving "
             "rewire of such a graph is close to the identity, so a negative topology "
             "verdict on this cut is weak evidence. The `taste_motor` cut (mean degree "
-            "%.2f) is the substrate to generalise from."
+            "%.2f) provides a denser comparison, not a basis for whole-network generalisation."
             % (
                 ctx.text("named_share_onto_seeds"),
                 ctx.get("named_edges") or 0,
@@ -1840,7 +1850,7 @@ def step_dependence(ctx: Ctx) -> None:
     )
     if gap_plain is not None and gap_matched is not None:
         ctx.note(
-            "the transmitter null changes the descriptive point-gap diagnostic, not the "
+            "the transmitter null changes both the descriptive point-gap diagnostic and the "
             "probability: imidacloprid's gap from the null median is %.2f rate-model units under the "
             "plain label permutation and %.2f rate-model units under the weight-matched null, against "
             "a configured margin of %s rate-model units. The plain permutation is a joint "

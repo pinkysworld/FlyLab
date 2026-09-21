@@ -7,6 +7,8 @@
 
 **Current internal-review update:** the denser-cut study, synthetic recovery cases, corrected evidence propagation and specification fixes are retained. The current revision narrows the remaining claims: extract sensitivity is observed, recurrence is not isolated causally, the legacy equivalence label is only a median-gap diagnostic, and the small synthetic detection grid does not establish endpoint-specific power. Review reports and decisions are in `papers/reviews/`.
 
+**This review's verification:** the existing default-effort numerical record is retained. The attempted full rerun was interrupted during dependence analysis. `scripts/paper_review_metadata.py` refreshes interpretation and captions while asserting that numerical value payloads and table CSV bytes are unchanged; `results.json.review_metadata` distinguishes this replay from a completed rerun. See `papers/reviews/current_verification.md` for completed checks.
+
 **Reproduction boundary:** the standard pipeline recomputes core committed-cut analyses but imports the previously computed `papers/scale_study.json`. Only `scale_1k` is committed; large-rung results require upstream cuts to recompute and the saved study lacks source/input hashes. Re-rendering its table is not an independent rerun.
 
 ```bash
