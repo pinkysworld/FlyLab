@@ -346,6 +346,7 @@ def save_fig(ctx: Ctx, fig, name: str, caption: str, svg: bool = False) -> None:
     if svg:
         s = ctx.figdir / f"{name}.svg"
         fig.savefig(s)
+        s.write_text("\n".join(line.rstrip() for line in s.read_text().splitlines()) + "\n")
         out.append(s)
     plt.close(fig)
     for p in out:
@@ -752,14 +753,14 @@ def step_scorecard(ctx: Ctx) -> None:
         ax.set_title(f"{title} at {_fmt_M(PAPER_CONC)}")
         ax.grid(axis="y", lw=0.5, zorder=0)
         ax.set_axisbelow(True)
-    axes[0].set_ylabel("receptor engagement (0-1); occupancy only for Kd/Ki rows)")
+    axes[0].set_ylabel("receptor engagement (0-1)")
     handles = [
         plt.Rectangle((0, 0), 1, 1, color=INSECT, label="insect target"),
         plt.Rectangle((0, 0), 1, 1, color=VERTEBRATE, label="vertebrate counterpart"),
-        plt.Rectangle((0, 0), 1, 1, facecolor="white", edgecolor=TEXT2, hatch="///", label="class placeholder (no sourced EC50)"),
+        plt.Rectangle((0, 0), 1, 1, facecolor="white", edgecolor=TEXT2, hatch="///", label="not modelled (no sourced parameter)"),
     ]
     fig.legend(handles=handles, loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.12))
-    fig.suptitle("Dual scorecard: same compound, same concentration, two organisms", y=1.02)
+    fig.suptitle("Insect and vertebrate receptor panels at the same concentration", y=1.02)
     save_fig(
         ctx,
         fig,
