@@ -16,9 +16,9 @@ standardised distance from a usually non-normal null, not a probability.
 
 The information ladder
 ----------------------
-Each null keeps a different amount of the real connectome, so a drug effect
-that is distinguishable from a given null tells you that *that* level of
-information is necessary:
+Each null alters a different part of the real connectome.  A drug effect that
+is distinguishable from one null establishes a contrast with that degradation;
+it does not by itself prove that a general level of information is necessary:
 
 ======  ============================  ================================================
 rank    graph model (null mode)       what the model still knows
@@ -49,11 +49,12 @@ For each mode the module reports one of three verdicts, never two:
 ``distinguishable``
     the empirical two-sided permutation probability is at or below ``alpha``.
     The real graph and this graph model give different drug effects.
-``equivalent_within_tolerance``
+``equivalent_within_tolerance`` (legacy identifier)
     the test did not reject **and** the absolute gap between the real effect
     and the null ensemble's median is smaller than a prespecified margin
-    ``delta``.  Only this verdict licenses the phrase "this graph model
-    reproduces the effect".
+    ``delta``.  This is a descriptive point-gap check, not a formal
+    equivalence test and not evidence that the graph model reproduces the
+    effect.  The identifier is retained for output compatibility.
 ``indeterminate``
     the test did not reject and the gap is not smaller than ``delta``: the
     data are consistent with a difference this study cannot resolve.  This is
@@ -74,21 +75,23 @@ to override it with an absolute value in readout units.  Where the vehicle
 readout is undefined or zero no margin exists, equivalence cannot be claimed,
 and every non-rejected mode is ``indeterminate``.
 
-Multiplicity
-------------
-A single prespecified profile (:func:`dependence_profile` for imidacloprid or
-fipronil at ``PAPER_N``) is a **confirmatory** test and needs no correction.
-The 84-cell landscape is not: it runs 21 compounds x 4 concentrations x 4
-modes, and turning the resulting count into a claim without correction inflates
-it.  :func:`dependence_landscape` therefore applies Benjamini-Hochberg FDR
-across the structural tests of the run (:data:`STRUCTURAL_MODES` x cells),
-reports ``p_adjusted`` / ``q_value`` / ``fdr_alpha`` per cell, classifies on
-the adjusted values and keeps the raw ones beside them, and reports **both**
-counts so that the change in the headline number is visible.  A landscape is
-labelled ``exploratory`` unless its permutation resolution ``1/(n+1)`` is fine
-enough for the adjusted threshold ``fdr_alpha / m`` to be reachable by a single
-test; when the resolution cannot support any rejection at all, the result says
-so instead of silently reporting zero topology-dependent cells.
+Multiplicity and design status
+------------------------------
+Profiles are exploratory by default, including the high-effort imidacloprid
+and fipronil reference profiles at ``PAPER_N``.  Computational effort and
+compound identity do not make a retrospective analysis confirmatory.  A caller
+may retain the legacy ``confirmatory=True`` flag, but the result records that
+this is an unverified caller assertion; this module does not verify a dated
+protocol or preregistration.
+
+The landscape is always exploratory.  It applies Benjamini-Hochberg across
+the structural **component tests** of the run (:data:`STRUCTURAL_MODES` x
+cells), reports adjusted component probabilities and reclassifies cells from
+those component decisions.  That sensitivity analysis does not establish
+cell-level FDR control for the compound-level OR decision, and reuse of shuffle
+draws does not verify the dependence conditions required by ordinary BH.
+Permutation resolution describes what the component tests can resolve; it
+does not change the design into a confirmatory one.
 
 Classification rule (a label, not a hypothesis test)
 ----------------------------------------------------
@@ -101,11 +104,10 @@ on this readout:
 * ``no-effect`` - ``|e| <= effect_floor``.
 * ``topology-dependent`` - at least one *structural* null
   (``weight_permute`` or ``rewire_degree_preserving``) is distinguishable from
-  the real graph: the prediction needs the wiring pattern, not just the
-  graph's size or census.
+  the real graph: the effect differs from at least one selected structural
+  degradation under this cut, engine and readout.
 * ``mixed`` - no structural null is distinguishable but ``sign_permute`` is:
-  the prediction needs to know *which* cells carry which transmitter, but not
-  the wiring pattern itself.
+  the joint sign/target-assignment null differs on this readout.
 * ``composition-dominated`` - neither, whether or not ``erdos_renyi`` is
   distinguishable: no structure-preserving degradation could be told apart
   from the real graph on this readout.  Whether that is *equivalence* or
@@ -204,6 +206,7 @@ __all__ = [
     "DEFAULT_EFFECT_FLOOR_FRAC",
     "effective_effect_floor",
     "DEFAULT_DELTA_FRAC",
+    "REFERENCE_COMPOUNDS",
     "CONFIRMATORY_COMPOUNDS",
     "FAST_N",
     "DEFAULT_N",
@@ -362,11 +365,11 @@ DEFAULT_EFFECT_FLOOR_FRAC = 0.01
 #: change :mod:`flylab.analysis.selectivity` treats as a circuit response.
 DEFAULT_DELTA_FRAC = 0.05
 
-#: The compounds whose profiles the paper prespecifies as confirmatory tests.
-#: A profile is ``confirmatory`` only for one of these, at ``n >= PAPER_N``;
-#: everything else (in particular the landscape) is exploratory and is
-#: multiplicity-corrected instead.
-CONFIRMATORY_COMPOUNDS: tuple[str, ...] = ("imidacloprid", "fipronil")
+#: Retrospectively selected high-effort reference profiles.  The historical
+#: ``CONFIRMATORY_COMPOUNDS`` name is retained as an API alias only; membership
+#: never changes design status automatically.
+REFERENCE_COMPOUNDS: tuple[str, ...] = ("imidacloprid", "fipronil")
+CONFIRMATORY_COMPOUNDS: tuple[str, ...] = REFERENCE_COMPOUNDS
 
 #: ``--fast``-style n ladder, so one landscape function serves three callers.
 #: ``FAST_N`` sits just above the smallest n at which anything can be
@@ -608,8 +611,8 @@ def benjamini_hochberg(
         permutation budget rather than a result.
     ``resolution_supports_single_rejection``
         True when ``resolution <= alpha / m``, i.e. one isolated test could be
-        rejected on its own.  This is the condition a *confirmatory* landscape
-        has to meet.
+        rejected on its own.  This is a resolution diagnostic and does not
+        confer confirmatory status on a landscape.
     """
     import math
 
@@ -701,12 +704,17 @@ def mode_verdict(
     alpha: float = DEFAULT_ALPHA,
     delta: float | None = None,
 ) -> dict[str, Any]:
-    """One mode's three-way verdict - the only claim this design supports.
+    """One mode's three-way descriptive diagnostic.
 
     ``distinguishable`` when the permutation test rejects; otherwise
     ``equivalent_within_tolerance`` when ``|real - median(null)| < delta``;
-    otherwise ``indeterminate``.  A rejected test that *also* sits inside the
-    margin is still reported as ``distinguishable`` (the test is the decision
+    otherwise ``indeterminate``.
+
+    This is not an equivalence test: no uncertainty interval for the gap is
+    tested against the margin. The legacy label is retained for API compatibility.
+    A missing p-value is unassessed, even if the point gap is small.
+
+    A rejected result inside the margin is still ``distinguishable`` (the decision
     rule), but ``within_tolerance`` stays True so that "statistically
     distinguishable, practically small" is visible rather than hidden.
     """
@@ -724,17 +732,20 @@ def mode_verdict(
             f"alpha = {float(alpha):.3g}: the real graph and this graph model give "
             "different drug effects."
         )
-    elif within:
+    elif within and p is not None:
         verdict = "equivalent_within_tolerance"
         why = (
             f"the test did not reject (p = {'n/a' if p is None else format(float(p), '.4g')}) "
             f"and the gap between the real effect and the null median, {gap:.4g}, is "
-            f"below the prespecified margin delta = {float(delta):.4g}: this graph "
-            "model gives the same effect to within the margin."
+            f"below the configured tolerance delta = {float(delta):.4g}. This is a "
+            "descriptive point-gap check, not statistical equivalence or evidence "
+            "that individual null graphs give sufficiently close effects."
         )
     else:
         verdict = "indeterminate"
-        if gap is None or delta is None:
+        if p is None:
+            why = "no permutation probability is available; this comparison is unassessed."
+        elif gap is None or delta is None:
             why = (
                 f"the test did not reject (p = {'n/a' if p is None else format(float(p), '.4g')}) "
                 "and no equivalence margin could be formed, so nothing stronger than "
@@ -879,15 +890,15 @@ def classify(
         why = (
             "the effect is distinguishable from "
             + " and ".join(structural)
-            + ", so it needs the wiring pattern and not only the graph's size, "
-            "degree sequence and transmitter census."
+            + " under the selected engine, cut and threshold. This establishes "
+            "a contrast with those degradations, not a general necessity claim."
         )
     elif sign_distinguishable:
         label = "mixed"
         why = (
             "no structure-preserving null is distinguishable from the real "
-            "graph but sign_permute is: the prediction needs to know which "
-            "cells carry which transmitter, not the wiring pattern itself."
+            "graph but sign_permute is: the joint sign/target-assignment null "
+            "differs on this readout."
         )
     else:
         label = "composition-dominated"
@@ -904,15 +915,14 @@ def classify(
             )
         why = (
             "no structure-preserving degradation could be distinguished from "
-            "the real graph on this readout, so nothing here requires its "
-            "topology"
+            "the real graph on this readout; this is a set of non-rejections, "
+            "not evidence that topology is unnecessary"
             + ("; " + "; ".join(detail) if detail else "")
             + (
-                ". A same-size random graph IS distinguishable (erdos_renyi), "
-                "so the prediction is not wholly network-insensitive."
+                ". A same-size random graph IS distinguishable (erdos_renyi)."
                 if er_distinguishable
                 else ". Even a same-size random graph is not distinguishable, "
-                "so the prediction is network-insensitive on this readout."
+                "which remains a non-rejection rather than equivalence."
             )
         )
     return {
@@ -1076,11 +1086,12 @@ def necessary_information_level(
         equivalent = v["verdict"] == "equivalent_within_tolerance"
         if equivalent:
             description = (
-                f"a graph model that keeps only {info['keeps']} is equivalent to "
-                "the real cut on this readout within the prespecified margin "
+                f"a graph model that keeps only {info['keeps']} has a median "
+                "point gap below the prespecified descriptive margin "
                 f"delta = {float(v['delta']):.4g} (gap "
-                f"{float(v['abs_gap_from_null_median']):.4g}), so nothing more "
-                "detailed is necessary for this prediction."
+                f"{float(v['abs_gap_from_null_median']):.4g}). The legacy "
+                "equivalent_within_tolerance identifier does not denote a "
+                "formal equivalence test or prove that this level suffices."
             )
         else:
             description = (
@@ -1191,12 +1202,12 @@ def dependence_profile(
     :func:`equivalence_margin` and the module docstring.  The absolute value
     used is always recorded in ``delta``.
 
-    ``confirmatory`` marks a prespecified test.  Left at ``None`` it is
-    inferred: True for one of :data:`CONFIRMATORY_COMPOUNDS` at
-    ``n >= PAPER_N``, False otherwise.  A confirmatory profile is a single
-    planned comparison and carries no multiplicity correction; an exploratory
-    one says so in its warnings, and the corrected form of the exploratory
-    question is :func:`dependence_landscape`.
+    ``confirmatory`` is a legacy caller assertion.  ``None`` always means
+    exploratory; neither compound identity nor ``n`` can confer prospective
+    design status.  Passing ``True`` preserves API compatibility but the
+    result explicitly records that no dated protocol was verified.  The
+    retrospective high-effort reference profiles are listed in
+    :data:`REFERENCE_COMPOUNDS`.
 
     Runtime is ``len(modes) * n`` shuffles; on the 1126-node ``named`` cut that
     is about 4.6 s per 100 shuffles across all four modes (the degree-
@@ -1269,10 +1280,11 @@ def dependence_profile(
                 warnings.append(w)
     rows.sort(key=lambda r: [m for m in modes].index(r["mode"]))
 
-    if confirmatory is None:
-        confirmatory = bool(
-            str(compound) in CONFIRMATORY_COMPOUNDS and int(n) >= PAPER_N
-        )
+    caller_asserted_confirmatory = bool(confirmatory is True)
+    confirmatory = caller_asserted_confirmatory
+    high_effort_reference = bool(
+        str(compound) in REFERENCE_COMPOUNDS and int(n) >= PAPER_N
+    )
     return _assemble_profile(
         compound=compound,
         conc_M=conc_M,
@@ -1292,6 +1304,10 @@ def dependence_profile(
         warnings=warnings,
         runtime_s=time.perf_counter() - t0,
         confirmatory=bool(confirmatory),
+        confirmatory_basis=(
+            "caller_asserted_unverified" if caller_asserted_confirmatory else None
+        ),
+        high_effort_reference=high_effort_reference,
     )
 
 
@@ -1378,6 +1394,8 @@ def _assemble_profile(
     delta: float | None = None,
     real_vehicle: float | None = None,
     confirmatory: bool = False,
+    confirmatory_basis: str | None = None,
+    high_effort_reference: bool = False,
 ) -> dict[str, Any]:
     margin = equivalence_margin(real_vehicle, delta_frac=delta_frac, delta=delta)
     floors = effective_effect_floor(real_vehicle, effect_floor, effect_floor_frac)
@@ -1426,13 +1444,19 @@ def _assemble_profile(
             + ". These modes support 'not distinguishable from this null "
             "ensemble' and nothing stronger."
         )
-    if not confirmatory:
+    if confirmatory:
         warnings.append(
-            "exploratory: this profile is not one of the prespecified "
-            "confirmatory tests (" + ", ".join(CONFIRMATORY_COMPOUNDS)
-            + f" at n >= {PAPER_N}) and carries no multiplicity correction of "
-            "its own. Counting verdicts over many such profiles needs the "
-            "FDR-controlled dependence_landscape instead."
+            "CONFIRMATORY STATUS IS CALLER-ASSERTED AND UNVERIFIED: the API "
+            "does not verify a dated protocol or preregistration. Treat this "
+            "profile as confirmatory only when external design documentation "
+            "supports the assertion."
+        )
+    else:
+        warnings.append(
+            "exploratory: this profile carries no independently verified "
+            "prospective design status and no multiplicity correction of its "
+            "own. Counting verdicts over many profiles requires an explicitly "
+            "defined multiplicity analysis."
         )
     profile = {
         "compound": compound,
@@ -1455,8 +1479,18 @@ def _assemble_profile(
         "delta_frac": margin["delta_frac"],
         "delta_scale": margin["delta_scale"],
         "confirmatory": bool(confirmatory),
+        "confirmatory_basis": confirmatory_basis,
+        "high_effort_reference": bool(high_effort_reference),
         "multiplicity_correction": None,
-        "design": "confirmatory (prespecified)" if confirmatory else "exploratory",
+        "design": (
+            "confirmatory (caller asserted; protocol unverified)"
+            if confirmatory
+            else (
+                "exploratory high-effort reference profile"
+                if high_effort_reference
+                else "exploratory"
+            )
+        ),
         # permutation probabilities first, then the z profile D
         "p": P,
         "q": Q,
@@ -1670,7 +1704,7 @@ def _ladder_on_state(
             "and exists to test the instrument rather than to describe a fly.",
         ],
         runtime_s=time.perf_counter() - t0,
-        confirmatory=True,
+        confirmatory=False,
     )
 
 
@@ -1977,7 +2011,7 @@ def dependence_landscape(
     n_jobs: int = 1,
     **kw: Any,
 ) -> dict[str, Any]:
-    """The compound x concentration dependence landscape, FDR-controlled.
+    """The exploratory compound x concentration dependence landscape.
 
     One cell per ``(compound, conc_M)``: its real effect, the per-mode
     permutation p and z, the three-way verdict, the dependence class and the
@@ -1986,10 +2020,15 @@ def dependence_landscape(
     **Multiplicity.** A landscape is a screen, not a planned comparison: the
     default grid is 21 compounds x 4 concentrations x 4 modes, and the count
     of topology-dependent cells is the number the paper quotes.  Benjamini-
-    Hochberg FDR is therefore applied across the structural tests of the run
+    Hochberg adjustment is therefore applied across the structural component
+    tests of the run
     (``fdr_modes`` x cells, ``fdr_alpha`` defaulting to ``alpha``), every cell
     carries ``p_adjusted`` / ``q_value`` / ``fdr_alpha``, and the class is
-    decided on the adjusted probabilities while the raw ones stay beside them.
+    decided on the adjusted component probabilities while the raw ones stay
+    beside them.  BH control for those component hypotheses is not a guarantee
+    of cell-level FDR control for the compound-level OR decisions, and the
+    dependence assumptions of ordinary BH are not verified here.  Treat this
+    as a multiplicity sensitivity analysis.
     The summary reports **both** counts (``n_topology_dependent`` and
     ``n_topology_dependent_raw``) so the effect of the correction on the
     headline number is visible rather than silent.
@@ -2000,8 +2039,8 @@ def dependence_landscape(
     before anything can be rejected) and ``fdr.can_reject``; when nothing can
     be rejected the summary says so instead of reporting zero
     topology-dependent cells as if that were a finding.  The landscape is
-    ``confirmatory`` only when its resolution is fine enough for one isolated
-    test to clear ``fdr_alpha / m``; otherwise it is labelled ``exploratory``.
+    always labelled ``exploratory``.  Fine permutation resolution improves the
+    numerical component tests; it does not change retrospective grid design.
 
     ``gains_by_compound`` replaces the gain patch this landscape would
     otherwise compute from the library for the named compounds.  It exists so
@@ -2297,12 +2336,14 @@ def _apply_fdr(
     fdr_modes: Sequence[str],
     resolution: float,
 ) -> dict[str, Any]:
-    """Benjamini-Hochberg across the structural tests of a whole landscape.
+    """Benjamini-Hochberg across structural component tests of a landscape.
 
     Writes ``p_adjusted`` / ``q_value`` / ``fdr_alpha`` into every row of the
     family, records each cell's own ``q_value`` (its smallest adjusted
     structural probability), keeps the uncorrected class as ``class_raw`` and
-    re-decides ``class`` on the adjusted values.
+    re-decides ``class`` on the adjusted values.  The resulting cell classes
+    are based on BH-adjusted component tests; this does not establish FDR
+    control for cell-level OR decisions.
     """
     family = [m for m in fdr_modes if m in MODES]
     index: list[tuple[int, str]] = []
@@ -2346,6 +2387,9 @@ def _apply_fdr(
             cell.get("delta"),
         )
     bh["modes"] = list(family)
+    bh["scope"] = "structural_component_tests"
+    bh["cell_level_fdr_controlled"] = False
+    bh["dependence_assumptions_verified"] = False
     bh.pop("adjusted", None)
     bh.pop("rejected", None)
     return bh
@@ -2486,17 +2530,17 @@ def _landscape_result(
             "any is rejected, so an isolated strong cell cannot survive the "
             "correction at this n."
         )
-    confirmatory = bool(bh.get("resolution_supports_single_rejection"))
-    if not confirmatory:
-        warnings.append(
-            "EXPLORATORY: this landscape's permutation resolution "
-            f"({res:.5f}) does not reach the adjusted threshold fdr_alpha/m = "
-            f"{q_alpha / max(bh['m'], 1):.6f}, so its counts are a screen to be "
-            "confirmed, not a confirmatory result. The prespecified "
-            "confirmatory tests are the "
-            + "/".join(CONFIRMATORY_COMPOUNDS)
-            + f" profiles at n >= {PAPER_N}."
-        )
+    # Resolution is a property of the component tests, not of study design.
+    # A retrospectively assembled compound x concentration grid remains
+    # exploratory at every n.
+    confirmatory = False
+    warnings.append(
+        "EXPLORATORY LANDSCAPE: permutation resolution does not confer "
+        "confirmatory status. Benjamini-Hochberg is applied to structural "
+        "component tests as a sensitivity analysis; its dependence assumptions "
+        "are unverified, and the resulting compound-level OR classes are not "
+        "guaranteed cell-level FDR control."
+    )
     unstable = [r for r in table if not r["stabilised"]]
     if unstable:
         warnings.append(
@@ -2534,24 +2578,19 @@ def _landscape_result(
             f"multiplicity changes the headline count: {n_topo_raw} cells are "
             f"topology-dependent on the raw permutation p and {n_topo} survive "
             f"Benjamini-Hochberg at fdr_alpha = {q_alpha} over {bh['m']} "
-            "structural tests. The corrected count is the one to quote."
+            "structural component tests. Report both as an exploratory "
+            "sensitivity analysis; neither is a cell-level FDR guarantee."
         )
     topo = sorted({r["compound"] for r in table if r["class"] == "topology-dependent"})
     topo_raw = sorted({r["compound"] for r in table if r["class_raw"] == "topology-dependent"})
     comp = sorted({r["compound"] for r in table if r["class"] == "composition-dominated"})
     statement = (
-        "exploratory screen, FDR-controlled: "
+        "exploratory classes based on BH-adjusted component tests: "
         f"{n_topo} of {len(cells)} cells are topology-dependent after "
-        f"Benjamini-Hochberg at fdr_alpha = {q_alpha} across {bh['m']} structural "
-        f"tests ({n_topo_raw} before correction)."
-        if not confirmatory
-        else (
-            f"confirmatory-resolution landscape: {n_topo} of {len(cells)} cells "
-            f"are topology-dependent after Benjamini-Hochberg at fdr_alpha = "
-            f"{q_alpha} across {bh['m']} structural tests ({n_topo_raw} before "
-            "correction); the permutation resolution supports the adjusted "
-            "threshold for a single isolated test."
-        )
+        f"Benjamini-Hochberg at alpha = {q_alpha} across {bh['m']} structural "
+        f"component tests ({n_topo_raw} before adjustment). This is a "
+        "multiplicity sensitivity analysis under unverified dependence, not a "
+        "guarantee of cell-level FDR control."
     )
     if not bh["can_reject"]:
         statement += (
@@ -2579,17 +2618,24 @@ def _landscape_result(
         "p_resolution": res,
         "resolution_coarser_than_alpha": bool(res > float(alpha)),
         "confirmatory": confirmatory,
-        "design": "confirmatory" if confirmatory else "exploratory",
+        "design": "exploratory",
+        "design_basis": "retrospective compound-by-concentration landscape",
         "design_statement": statement,
         "multiplicity_correction": bh["method"],
+        "multiplicity_scope": "structural_component_tests",
+        "cell_level_fdr_controlled": False,
+        "bh_dependence_assumptions_verified": False,
         "fdr": bh,
         "shape": [len(compounds), len(concs)],
         "n_cells": len(cells),
         "cells": cells,
         "table": table,
         "summary": {
-            "design": "confirmatory" if confirmatory else "exploratory",
+            "design": "exploratory",
             "statement": statement,
+            "multiplicity_scope": "structural_component_tests",
+            "cell_level_fdr_controlled": False,
+            "bh_dependence_assumptions_verified": False,
             "class_counts": counts,
             "class_counts_raw": counts_raw,
             "class_counts_absolute_floor": counts_absolute_floor,

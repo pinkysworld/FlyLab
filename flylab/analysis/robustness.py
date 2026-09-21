@@ -68,9 +68,12 @@ n = 1000 headline -- at :data:`DEFAULT_SHUFFLES` shuffles per specification
 
 Because 25 specifications x 2 compounds x 2 structural modes is a family of
 tests and not a planned comparison, Benjamini-Hochberg is applied across the
-whole run and the verdicts are re-decided on the adjusted probabilities;
+component tests as a multiplicity sensitivity analysis and the verdicts are
+re-decided on the adjusted probabilities;
 ``matrix_uncorrected`` keeps the uncorrected view and every topology row
 carries ``fraction_retained_uncorrected`` beside its headline fraction.
+This does not establish FDR control for the compound-level OR decisions, and
+reuse of a shuffle stream does not verify ordinary BH's dependence conditions.
 
 One consequence is worth stating plainly, because it invalidates the v0.6
 result rather than refining it: :func:`mechanism_spec` rebinds
@@ -977,8 +980,9 @@ def _c_fipronil_topology_exceeds(run: SpecRun) -> bool | None:
     on the same engine, the same null draws and the same criterion that
     imidacloprid is measured against in C3.
 
-    The pair (C3 False-positive-free, C4 positive) is the contrast the paper
-    rests on: same cut, same readout, same shuffles, opposite verdict.
+    C4 is a thresholded rejection predicate: at least one of the two
+    structural component tests must reject.  It is not a threshold-free
+    effect-size contrast.
     """
     ev = run.topology_evidence("fipronil")
     run.evidence["C4_fipronil_topology_exceeds"] = ev
@@ -1038,7 +1042,7 @@ CONCLUSIONS: dict[str, dict[str, Any]] = {
             "structural tests of this run; a failure to reject, not a claim of "
             "equivalence"
         ),
-        "kind": "permutation classification (failure to reject), FDR-corrected",
+        "kind": "permutation classification (failure to reject), based on BH-adjusted component tests",
         "topology": True,
         "expect_topology_dependent": False,
         "compound": "imidacloprid",
@@ -1057,7 +1061,7 @@ CONCLUSIONS: dict[str, dict[str, Any]] = {
             "{alpha:g}, Benjamini-Hochberg across the {n_tests} structural "
             "tests of this run"
         ),
-        "kind": "permutation classification (rejection), FDR-corrected",
+        "kind": "permutation classification (thresholded OR rejection), based on BH-adjusted component tests",
         "topology": True,
         "expect_topology_dependent": True,
         "compound": "fipronil",
@@ -1134,7 +1138,7 @@ def _topology_fdr(
     alpha: float,
     resolution: float,
 ) -> dict[str, Any]:
-    """Benjamini-Hochberg across every structural test of a stability run.
+    """Benjamini-Hochberg across structural component tests of a stability run.
 
     A single specification's topology cell is a planned comparison; 25 of them
     are not.  The family is therefore all
@@ -1142,7 +1146,8 @@ def _topology_fdr(
     correction, at the same alpha, that
     :func:`flylab.analysis.dependence.dependence_landscape` applies to its own
     grid -- and each cell's topology verdict is re-decided on the adjusted
-    probabilities.
+    probabilities.  This is a sensitivity analysis; it does not guarantee FDR
+    control for the cell-level OR decisions.
 
     Returns the adjusted view keyed ``(spec, compound) -> bool`` plus the
     family's own diagnostics, including whether its resolution can support a
@@ -1179,6 +1184,9 @@ def _topology_fdr(
         "q_value": q_by_cell,
         "family": [list(k) for k in index],
         "fdr": bh,
+        "scope": "structural_component_tests",
+        "cell_level_fdr_controlled": False,
+        "dependence_assumptions_verified": False,
     }
 
 
@@ -1257,9 +1265,10 @@ def conclusion_stability(
     warnings.append(
         f"the topology conclusions were evaluated at n_shuffles = {shuffles} "
         f"per specification (permutation resolution 1/(n+1) = {resolution:.4f}). "
-        "C3 is an empirical two-sided permutation test at alpha = "
-        f"{TOPOLOGY_ALPHA}; C4 is an effect-size contrast with no threshold. "
-        "Neither uses a Gaussian z."
+        "C3 is retained when neither structural component test rejects at "
+        f"alpha = {TOPOLOGY_ALPHA}; C4 is a thresholded OR predicate retained "
+        "when at least one structural component test rejects after the stated "
+        "Benjamini-Hochberg adjustment. Neither uses a Gaussian z."
     )
     if resolution > TOPOLOGY_ALPHA:
         warnings.append(
@@ -1333,18 +1342,28 @@ def conclusion_stability(
         warnings.append(
             "every specification's topology cell is run on the SAME shuffle "
             f"stream (seed {int(seed)}), so the {n_structural_tests} structural "
-            "tests of this run are positively dependent rather than "
-            "independent. Benjamini-Hochberg controls the FDR under positive "
-            "dependence, but the corrected fractions should be read as a "
-            "property of this shuffle stream, not as 25 independent replications."
+            "tests of this run are dependent rather than independent. Reusing "
+            "draws does not verify the positive-dependence conditions required "
+            "by ordinary Benjamini-Hochberg. Treat the adjusted component-test "
+            "fractions as a multiplicity sensitivity analysis, not cell-level "
+            "FDR control or 25 independent replications."
+        )
+        warnings.append(
+            "the adjustment is asymmetric across the topology conclusions: "
+            "raising component probabilities can support C4 only when a "
+            "rejection remains, but it can only make C3's failure-to-reject "
+            "predicate easier to retain. Do not describe C3 as strengthened "
+            "by or surviving correction; report its raw non-rejections and "
+            "descriptive margin breakdown separately."
         )
     if topo_names and not topo_fdr["fdr"]["can_reject"]:
         warnings.append(
-            "FDR cannot reject anything across this stability run: with "
+            "the BH-adjusted component tests cannot reject anything across "
+            "this stability run: with "
             f"{n_structural_tests} structural tests at permutation resolution "
             f"{resolution:.4f}, at least {topo_fdr['fdr']['min_rejections']} of "
             "them would have to sit at the resolution floor together. The "
-            "corrected topology fractions below are therefore an artefact of "
+            "adjusted topology fractions below are therefore an artefact of "
             "the shuffle budget, not a result; raise n_shuffles."
         )
 
@@ -1385,7 +1404,7 @@ def conclusion_stability(
             rows[-1].update(
                 {
                     "multiplicity": (
-                        "benjamini-hochberg across the "
+                        "benjamini-hochberg sensitivity adjustment across the "
                         f"{n_structural_tests} structural tests of this run "
                         f"({len(spec_names)} specifications x "
                         f"{len(TOPOLOGY_COMPOUNDS)} compounds x "
@@ -1412,8 +1431,9 @@ def conclusion_stability(
                 f"{r['conclusion']}: multiplicity changes the fraction - "
                 f"{r['n_retained_uncorrected']}/{r['n_specs']} retained on the raw "
                 f"permutation p, {r['n_retained']}/{r['n_specs']} after "
-                "Benjamini-Hochberg across the run. The corrected fraction is "
-                "the one to quote."
+                "Benjamini-Hochberg across the component tests. Report both "
+                "as a sensitivity analysis; adjustment does not strengthen a "
+                "failure-to-reject conclusion."
             )
     if any(r["fragile"] for r in rows):
         warnings.append(
@@ -1432,6 +1452,11 @@ def conclusion_stability(
         "topology_compounds": list(TOPOLOGY_COMPOUNDS),
         "topology_engine": "flylab.analysis.dependence.dependence_landscape",
         "topology_fdr": topo_fdr["fdr"],
+        "topology_multiplicity_scope": topo_fdr["scope"],
+        "cell_level_fdr_controlled": topo_fdr["cell_level_fdr_controlled"],
+        "bh_dependence_assumptions_verified": topo_fdr[
+            "dependence_assumptions_verified"
+        ],
         "n_structural_tests": n_structural_tests,
         "matrix_uncorrected": matrix_uncorrected,
         "topology_criteria": {

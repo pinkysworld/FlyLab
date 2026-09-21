@@ -178,10 +178,10 @@ flylab/analysis/dependence.py compares a real-graph drug contrast with degraded-
 It reports one of three verdicts per null mode, never two:
 
 - **distinguishable**: the empirical permutation probability is at or below alpha, so the real graph and that graph model give different drug effects,
-- **equivalent within tolerance**: the test did not reject and the gap between the real effect and the null ensemble's median is below a prespecified margin,
+- **equivalent within tolerance**: the test did not reject and the gap between the real effect and the null ensemble's median is below a configured margin,
 - **indeterminate**: the test did not reject and the gap is not below that margin, so the result is consistent with a difference this study cannot resolve.
 
-The margin is prespecified rather than fitted, and is by default a small fraction of the vehicle readout of the real graph. Only the equivalence verdict licenses saying a graph model *reproduces* an effect; a bare non-rejection is indeterminate and must be written as such.
+The margin defaults to a small fraction of the vehicle readout. The legacy equivalence label is a descriptive point-gap diagnostic: it supplies neither a confidence interval nor a formal equivalence test. It does not license saying that a degraded graph reproduces the effect.
 
 The instrument itself is tested against planted ground truth rather than assumed to work: dependence.py provides synthetic_cut, ladder_recovery and ladder_power, which plant a recurrent loop of known strength, check that the ladder calls it topology-dependent and the unplanted control not, and map detection rate against effect size and permutation count.
 
@@ -223,7 +223,7 @@ This is value with respect to model uncertainty, not biological or clinical valu
 
 flylab/analysis/scale.py runs the *same* dependence profile across a ladder of nested cuts of increasing size, so a verdict can be compared across scale without the construction changing underneath it. It reimplements no statistic: it calls dependence_profile unchanged and adds the bookkeeping that makes the comparison honest — a permutation budget that falls with the edge count and refuses to drop below the resolution floor, a per-rung record of the n actually used, a recipe filter so that hops-limited neighbourhoods are not compared against nested ranked-BFS cuts as if the difference were scale, and a stability criterion under which one rung of agreement does not count as settled.
 
-Its result is the paper's main finding: the dependence verdict is a joint property of the prediction and the extract, and the extract's recurrence rather than its node count predicts which way it goes.
+The observed dependence verdict changes across extracts and is not ordered by node count alone. Recurrence covaries with density, composition and extraction recipe; the study does not isolate it as a cause or validated predictor. Matching labels at the two largest rungs (20 permutations each) do not establish convergence. The paper pipeline imports the saved scale study; it does not recompute its uncommitted large cuts.
 
 ### Claim provenance
 

@@ -14,6 +14,7 @@ import pytest
 from flylab.analysis.dependence import (
     CLASSES,
     CONFIRMATORY_COMPOUNDS,
+    REFERENCE_COMPOUNDS,
     DEFAULT_DELTA_FRAC,
     BALANCED_TRANSMITTERS,
     DEFAULT_MODES,
@@ -457,7 +458,8 @@ def test_necessary_level_separates_equivalence_from_indeterminacy():
     assert lvl["mode"] == "rewire_degree_preserving"
     assert lvl["verdict"] == "equivalent_within_tolerance"
     assert lvl["equivalent_within_tolerance"] is True
-    assert "equivalent to the real cut" in lvl["description"]
+    assert "legacy equivalent_within_tolerance identifier" in lvl["description"]
+    assert "formal equivalence test" in lvl["description"]
 
     # widen the gap past the margin: the same non-rejection is now indeterminate
     rows[1]["null_median"] = -5.0
@@ -506,7 +508,7 @@ def test_benjamini_hochberg_knows_when_resolution_forbids_rejection():
     assert out3["can_reject"] is False
 
 
-def test_landscape_reports_both_raw_and_fdr_controlled_counts():
+def test_landscape_reports_raw_and_bh_component_adjusted_counts():
     land = dependence_landscape(
         compounds=["imidacloprid", "fipronil", "diazepam"],
         concs_M=(1e-7, 1e-6),
@@ -540,8 +542,14 @@ def test_landscape_reports_both_raw_and_fdr_controlled_counts():
                 assert row.get("p_adjusted") is None
         assert cell["q_value"] is not None
     # the summary states what kind of run this was
-    assert land["summary"]["design"] in ("exploratory", "confirmatory")
+    assert land["summary"]["design"] == "exploratory"
     assert "Benjamini-Hochberg" in land["summary"]["statement"]
+    assert "component tests" in land["summary"]["statement"]
+    assert "not a guarantee of cell-level FDR control" in land["summary"]["statement"]
+    assert land["multiplicity_scope"] == "structural_component_tests"
+    assert land["cell_level_fdr_controlled"] is False
+    assert land["bh_dependence_assumptions_verified"] is False
+    assert land["fdr"]["cell_level_fdr_controlled"] is False
     json.dumps(land)
 
 
@@ -567,7 +575,7 @@ def test_landscape_fdr_guards_an_unresolvable_grid():
     assert "uninformative rather than zero" in land["summary"]["statement"]
 
 
-def test_a_landscape_is_exploratory_and_a_prespecified_profile_is_not():
+def test_landscape_and_reference_profiles_default_to_exploratory():
     # a real screen: 6 cells x 2 structural modes, so the adjusted threshold
     # 0.05/12 sits below what 60 shuffles can resolve
     land = dependence_landscape(
@@ -582,12 +590,22 @@ def test_a_landscape_is_exploratory_and_a_prespecified_profile_is_not():
     small = dependence_profile("fipronil", 1e-6, modes=("erdos_renyi",), n=25)
     assert small["confirmatory"] is False
     assert any("exploratory" in w for w in small["warnings"])
-    # the prespecified confirmatory tests are named, and only they qualify
-    assert set(CONFIRMATORY_COMPOUNDS) == {"imidacloprid", "fipronil"}
+    # The historical constant is an API alias for retrospective reference
+    # profiles; compound identity and n never confer confirmatory status.
+    assert CONFIRMATORY_COMPOUNDS == REFERENCE_COMPOUNDS
+    reference = dependence_profile(
+        "fipronil", 1e-6, modes=("erdos_renyi",), n=PAPER_N
+    )
+    assert reference["confirmatory"] is False
+    assert reference["high_effort_reference"] is True
+    assert reference["design"] == "exploratory high-effort reference profile"
     forced = dependence_profile(
         "fipronil", 1e-6, modes=("erdos_renyi",), n=25, confirmatory=True
     )
-    assert forced["confirmatory"] is True and forced["design"] == "confirmatory (prespecified)"
+    assert forced["confirmatory"] is True
+    assert forced["confirmatory_basis"] == "caller_asserted_unverified"
+    assert forced["design"] == "confirmatory (caller asserted; protocol unverified)"
+    assert any("CALLER-ASSERTED AND UNVERIFIED" in w for w in forced["warnings"])
     assert PAPER_N == 1000
 
 
@@ -769,3 +787,12 @@ def test_the_landscape_counts_its_non_monotone_ladders():
     assert s["n_non_monotone_ladders"] <= land["n_cells"]
     for row in s["non_monotone_cells"]:
         assert row["richer_models_distinguishable"]
+
+
+def test_missing_probability_cannot_establish_within_margin_verdict():
+    """A point gap without a test must remain unassessed, including outside margin."""
+    from flylab.analysis.dependence import mode_verdict
+    for median in (1.0, 10.0):
+        row = mode_verdict(real_effect=1.0, null_median=median, p=None, delta=0.1)
+        assert row["verdict"] == "indeterminate"
+        assert "unassessed" in row["verdict_reason"]

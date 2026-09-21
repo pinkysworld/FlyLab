@@ -1264,17 +1264,22 @@ def step_veto(ctx: Ctx) -> None:
             r = nb["readouts"]
             data[engine][label] = r
             tag = f"{engine}_{label}"
-            ctx.put(f"veto_{tag}_sugar", _f(r["mn9_sugar_hz"]), unit="Hz")
-            ctx.put(f"veto_{tag}_sugar_bitter", _f(r["mn9_sugar_bitter_hz"]), unit="Hz")
+            output_unit = "rate-model units" if engine == "rate" else "LIF spikes/s"
+            ctx.put(f"veto_{tag}_sugar", _f(r["mn9_sugar_hz"]), unit=output_unit)
+            ctx.put(f"veto_{tag}_sugar_bitter", _f(r["mn9_sugar_bitter_hz"]), unit=output_unit)
             ctx.put(f"veto_{tag}_ratio", _f(r["bitter_veto_ratio"]))
     ctx.put("veto_n_sweet_grn", int(data["rate"]["vehicle"]["n_sweet_grn"]))
     ctx.put("veto_n_bitter_grn", int(data["rate"]["vehicle"]["n_bitter_grn"]))
-    ctx.put("veto_sugar_hz", float(data["rate"]["vehicle"]["sugar_hz"]), unit="Hz")
+    ctx.put(
+        "veto_sugar_hz",
+        float(data["rate"]["vehicle"]["sugar_hz"]),
+        unit="rate-model input units / LIF input spikes/s",
+    )
 
     if data["rate"]["imidacloprid"]["bitter_veto_ratio"] is None:
         ctx.note(
             "imidacloprid at 1 uM silences MN9 on the map path on both engines "
-            "(sugar-driven MN9 = 0 Hz), so its bitter-veto ratio is undefined, not 0. "
+            "(sugar-driven MN9 output = 0), so its bitter-veto ratio is undefined, not 0. "
             "g_ach hits the 0.05 floor, which removes the cholinergic GRN->MN9 drive "
             "itself. This is a property of the agonist patch rule, and it is why the "
             "taste-map arm of the null panel is undefined for imidacloprid."
@@ -1302,7 +1307,11 @@ def step_veto(ctx: Ctx) -> None:
             )
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
-        ax.set_ylabel("MN9 rate (Hz)")
+        ax.set_ylabel(
+            "MN9 output (rate-model units)"
+            if engine == "rate"
+            else "MN9 output (LIF spikes/s)"
+        )
         ax.set_title(f"{engine} engine")
         ax.set_ylim(0, max(sugar + both) * 1.3 + 0.1)
         ax.grid(axis="y", lw=0.5)
@@ -1318,15 +1327,17 @@ def step_veto(ctx: Ctx) -> None:
         "F5_bitter_veto",
         "MN9 firing on the map-extracted labellar-GRN path, driven through the real "
         f"MaleCNS sweet ({ctx.get('veto_n_sweet_grn')}) and bitter "
-        f"({ctx.get('veto_n_bitter_grn')}) GRN body IDs at {ctx.get('veto_sugar_hz'):.0f} Hz, "
+        f"({ctx.get('veto_n_bitter_grn')}) GRN body IDs with nominal drive "
+        f"{ctx.get('veto_sugar_hz'):.0f} rate-model input units (rate) or input spikes/s (LIF), "
         "never by driving MN9 directly. Left: leaky rate engine. Right: Shiu-style LIF "
         "engine with a background Poisson drive. In vehicle, adding bitter drive takes "
         "MN9 to zero on both engines (veto ratio 0.00). Fipronil at "
         f"{_fmt_M(PAPER_CONC)} blocks RDL, raises the sugar-only rate and partially "
         f"relieves the veto (ratio {ctx.get('veto_rate_fipronil_ratio'):.2f} rate, "
         f"{ctx.get('veto_lif_fipronil_ratio'):.2f} LIF). Imidacloprid silences MN9 "
-        "altogether, so its ratio is undefined rather than zero. Absolute rates differ "
-        "between engines by construction and are not calibrated to any recording.",
+        "altogether, so its ratio is undefined rather than zero. Rate-engine outputs "
+        "are rate-model units; LIF outputs are simulated spikes/s. Neither is calibrated "
+        "to a physiological recording.",
     )
 
 
@@ -1501,16 +1512,17 @@ def step_evidence(ctx: Ctx) -> None:
             "engagement_model_note",
             "param_type_note",
         ],
-        "The transformation rule of the evidence type system, materialised. The "
+        "The validated evidence dispatch rule, materialised. The "
         "permitted transformation is a function of two facts: the parameter the "
         "source measured and the ordered distance E0-E4 between that source and "
         "this compound at this receptor in this species. A binding constant yields "
         "physical fractional occupancy only at E0; transferred, it becomes a labelled "
         "proxy carrying a warning that names the gap. Anything at E4 is `not_modelled` "
-        "and returns N/A. `tests/test_pharm_evidence.py` checks the soundness "
-        "invariant exhaustively over every library row and every entry point: no "
+        "and returns N/A. The finite tests in `tests/test_pharm_evidence.py` enumerate "
+        "every row in the shipped library and each listed engagement-to-circuit path: no "
         "number reaching a circuit readout originates from a row whose "
-        "(param_type, distance) pair does not admit one.",
+        "(param_type, distance) pair does not admit one. This is an audit of that "
+        "finite implementation surface, not a proof over arbitrary future rows or paths.",
         md_fields=[
             "param_type",
             "evidence_distance_label",
@@ -1607,16 +1619,17 @@ def step_evidence(ctx: Ctx) -> None:
         "What the compound library rests on, row by row. Left: the parameter each "
         "cited source actually measured. Middle: the ordered evidence distance between "
         "that source and this compound at this receptor in this species. Right: the "
-        "transformation the type system then permits, which is a function of the two. "
+        "transformation the evidence dispatch rule permits, a function of the two. "
         f"Green marks the {ctx.get('ev_dist_E0')} on-target (E0) rows and the "
         f"{ctx.get('ev_n_binding_occupancy')} of them that may use a physical "
         "binding-occupancy model; amber marks the proxy models, where the same Hill "
         "expression is computed but reported as a transfer with a warning naming the "
         "gap; red marks rows that carry no modellable evidence and return N/A rather "
-        "than a small number. The type system, not a convention, enforces this: asking "
-        "for an engagement from an untyped row raises rather than returning a value, "
-        "and a soundness invariant is checked exhaustively over every row and every "
-        "entry point.",
+        "than a small number. Runtime validation enforces this: asking "
+        "for an engagement from an untyped row raises rather than returning a value. "
+        "Finite tests enumerate every row in the shipped library and each listed "
+        "engagement-to-circuit path; that audit does not establish correctness for "
+        "arbitrary future rows or paths.",
     )
 
 
@@ -1633,7 +1646,7 @@ def step_dependence(ctx: Ctx) -> None:
     difference rather than asserting it).
 
     *Non-rejection is no longer equivalence.* Every mode carries a three-way
-    verdict against a prespecified margin, and the landscape is
+    verdict plus a descriptive point-gap diagnostic against a configured margin, and the landscape is
     Benjamini-Hochberg corrected across its structural tests with both counts
     reported.
 
@@ -1687,7 +1700,7 @@ def step_dependence(ctx: Ctx) -> None:
     def arm(compound: str, assay: str, readout: str, n_i: int, tag: str) -> dict[str, Any]:
         """One profile, plus the raw draws the histogram and the sweep need.
 
-        The profile is authoritative -- it carries the equivalence margin, the
+        The profile is authoritative -- it carries the configured point-gap margin, the
         three-way verdicts, the class and the ladder. ``null_distribution`` is
         called again only for the four ``nullmodels`` degradations, to keep
         their draws for F6 and their checkpoint prefixes for T11; shuffle *i*
@@ -1745,13 +1758,17 @@ def step_dependence(ctx: Ctx) -> None:
         ctx.put(
             f"dep_{tag}_{compound}_effect",
             _f(prof["real_effect"]),
-            unit="Hz" if assay == "subgraph" else None,
+            unit="rate-model units" if assay == "subgraph" else None,
         )
         ctx.put(f"dep_{tag}_{compound}_vehicle", _f(prof.get("real_vehicle")))
         ctx.put(f"dep_{tag}_{compound}_class", cls["class"])
         ctx.put(f"dep_{tag}_{compound}_level", lvl.get("level"))
         ctx.put(f"dep_{tag}_{compound}_level_verdict", lvl.get("verdict"))
-        ctx.put(f"dep_{tag}_{compound}_delta", _f(prof.get("delta")), unit="Hz")
+        ctx.put(
+            f"dep_{tag}_{compound}_delta",
+            _f(prof.get("delta")),
+            unit="rate-model units" if assay == "subgraph" else "ratio units",
+        )
         ctx.put(
             f"dep_{tag}_{compound}_delta_frac",
             _f(prof.get("delta_frac")),
@@ -1823,10 +1840,10 @@ def step_dependence(ctx: Ctx) -> None:
     )
     if gap_plain is not None and gap_matched is not None:
         ctx.note(
-            "the transmitter null matters to the equivalence claim and not to the "
-            "probability: imidacloprid's gap from the null median is %.2f Hz under the "
-            "plain label permutation and %.2f Hz under the weight-matched null, against "
-            "a prespecified margin of %s Hz. The plain permutation is a joint "
+            "the transmitter null changes the descriptive point-gap diagnostic, not the "
+            "probability: imidacloprid's gap from the null median is %.2f rate-model units under the "
+            "plain label permutation and %.2f rate-model units under the weight-matched null, against "
+            "a configured margin of %s rate-model units. The plain permutation is a joint "
             "target-set-and-sign null and is reported as one."
             % (gap_plain, gap_matched, ctx.text("dep_named_imidacloprid_delta"))
         )
@@ -1835,8 +1852,8 @@ def step_dependence(ctx: Ctx) -> None:
             "the fipronil bitter-veto ratio on the taste-motor path is a negative at "
             "n=%d shuffles (max |z| = %s, p resolution %.4f): the veto ratio is model "
             "behaviour, not evidence about the wiring, and the verdicts say which "
-            "modes are equivalent within tolerance (%s) and which are merely "
-            "indeterminate (%s)."
+            "modes pass the descriptive within-margin point-gap check (%s) and which "
+            "are indeterminate (%s). The legacy label is not a formal equivalence result."
             % (
                 n_taste,
                 ctx.text("dep_taste_fipronil_max_abs_z"),
@@ -1879,11 +1896,14 @@ def step_dependence(ctx: Ctx) -> None:
         "cut, with the seed block and node order held fixed. `p_two_sided` is the "
         "empirical permutation probability (k+1)/(n+1) and is the statistic to read "
         "first; `p_resolution` is its floor, and `z` is a standardised distance from a "
-        "usually non-normal null. `verdict` is the only claim the design supports: "
-        "`distinguishable` when the test rejects, `equivalent_within_tolerance` when "
-        "the gap from the null median is below the prespecified margin `delta`, and "
-        "`indeterminate` otherwise -- a failure to reject is never evidence of "
-        "equivalence. `sign_permute` is a **joint** target-set-and-sign null and is "
+        "usually non-normal null. `verdict` records `distinguishable` when the test "
+        "rejects. The legacy API label `equivalent_within_tolerance` means only that "
+        "the point estimate of the absolute real-effect to null-median gap is below "
+        "the configured margin `delta`; it is a descriptive point-gap diagnostic, not "
+        "a formal equivalence test. `indeterminate` means neither condition was met. "
+        "No interval for the gap, TOST, distributional closeness criterion, or "
+        "error-controlled equivalence decision is computed. `sign_permute` is a "
+        "**joint** target-set-and-sign null and is "
         "off the ladder (`on_ladder = False`); the rank-3 rung is the weight-matched "
         "transmitter null, which holds each transmitter's share of total outgoing "
         "weight fixed (T23).",
@@ -2090,11 +2110,11 @@ def step_dependence(ctx: Ctx) -> None:
         ),
     )
     ctx.note(
-        "instrument validation: %s Detection over the planted grid by permutation "
-        "count is %s and by planted strength %s; the empirical false-positive rate on "
-        "the unplanted control is %d of %d. Effect size dominates the permutation "
-        "count: full power at planted strength %s, detection at or below one in four "
-        "at %s."
+        "synthetic recovery check: %s Detection over the planted grid by permutation "
+        "count is %s and by planted strength %s; detections on "
+        "the unplanted control are %d of %d. All sampled networks were detected at "
+        "planted strength %s, with detection at or below one in four "
+        "at %s. These small-sample frequencies do not establish general power or calibration."
         % (
             rec["statement"],
             ctx.text("val_power_by_n"),
@@ -2195,7 +2215,8 @@ def step_dependence(ctx: Ctx) -> None:
             f"dep_{tag}_below_relative_floor_cells",
             [f"{r['compound']}@{r['conc_M']:.0e}" for r in s["below_relative_effect_floor"]],
             text=", ".join(
-                f"{r['compound']} {_fmt_M(r['conc_M'])} ({r['real_effect']:.3g} Hz)"
+                f"{r['compound']} {_fmt_M(r['conc_M'])} "
+                f"({r['real_effect']:.3g} rate-model units)"
                 for r in s["below_relative_effect_floor"]
             )
             or "none",
@@ -2233,8 +2254,8 @@ def step_dependence(ctx: Ctx) -> None:
         for v, k in verdicts.items():
             ctx.put(f"dep_{tag}_verdicts_{v}", int(k))
         deltas = land.get("delta_range") or [None, None]
-        ctx.put(f"dep_{tag}_delta_min", _f(deltas[0]), unit="Hz")
-        ctx.put(f"dep_{tag}_delta_max", _f(deltas[1]), unit="Hz")
+        ctx.put(f"dep_{tag}_delta_min", _f(deltas[0]), unit="rate-model units")
+        ctx.put(f"dep_{tag}_delta_max", _f(deltas[1]), unit="rate-model units")
         # the cells the paper names one by one
         for cell in land["cells"]:
             if abs(cell["conc_M"] - PAPER_CONC) > 1e-18:
@@ -2260,10 +2281,12 @@ def step_dependence(ctx: Ctx) -> None:
 
     if land["summary"]["n_topology_dependent"] != land["summary"]["n_topology_dependent_raw"]:
         ctx.note(
-            "multiplicity changes the headline count on the `named` cut: %d cells are "
-            "topology-dependent on the raw permutation p and %d survive "
-            "Benjamini-Hochberg across the %d structural tests of the landscape. The "
-            "corrected count is the one the paper quotes."
+            "multiplicity changes the headline count on the `named` cut: the raw "
+            "test-level rule labels %d cells topology-dependent, while the rule using "
+            "Benjamini-Hochberg-adjusted probabilities labels %d. BH is applied across "
+            "the %d individual structural tests, not across cells; a cell is labelled "
+            "topology-dependent when at least one of its adjusted structural tests "
+            "rejects. This is not a cell-level FDR statement."
             % (
                 land["summary"]["n_topology_dependent_raw"],
                 land["summary"]["n_topology_dependent"],
@@ -2365,10 +2388,14 @@ def step_dependence(ctx: Ctx) -> None:
         landscape_fields,
         f"Connectome-dependence landscape on the `named` cut: every compound of the "
         f"library at {len(land['concs_M'])} concentrations, {n_land} shuffles per mode, "
-        "the same shuffled graphs reused by every cell (a paired design). `class` is "
-        "decided on the Benjamini-Hochberg adjusted probabilities across the "
-        "structural tests of the whole landscape and `class_raw` on the uncorrected "
-        "ones; `class_absolute_floor` drops the prespecified relative effect floor (1 % "
+        "the same shuffled graphs reused by every cell (a paired design). Benjamini-"
+        "Hochberg adjusts the individual structural-test probabilities across the "
+        "whole landscape; it is not a cell-level FDR procedure. `class` uses those "
+        "test-level adjusted probabilities and labels a cell topology-dependent when "
+        "at least one adjusted structural test rejects; `class_raw` uses the nominal "
+        "probabilities. `q_value` is the smallest adjusted structural-test probability "
+        "for the cell, not a cell-level q-value. `class_absolute_floor` drops the "
+        "prespecified relative effect floor (1 % "
         "of the vehicle readout) so the cost of that convention is visible. "
         "`necessary_level` is the weakest graph model on the information ladder that "
         "this test could **not** distinguish from the real cut -- never a claim that "
@@ -2386,7 +2413,9 @@ def step_dependence(ctx: Ctx) -> None:
         f"The same landscape repeated on the denser `taste_motor` cut "
         f"({ctx.get('taste_nodes')} nodes, {ctx.get('taste_edges')} edges, mean degree "
         f"{ctx.get('taste_motor_mean_degree') or 0.0:.1f}) at {n_land_taste} shuffles per "
-        "mode. The `named` cut is an in-star (T19) and a degree-preserving rewire of it "
+        "mode. As in T12, BH adjusts individual structural tests across the landscape, "
+        "not cells; a cell is topology-dependent when at least one adjusted structural "
+        "test rejects. The `named` cut is an in-star (T19) and a degree-preserving rewire of it "
         "is close to the identity; this table is what the same instrument says about a "
         "cut that has wiring to destroy. The two do not agree, and that disagreement "
         "is the paper's main RQ2 result.",
@@ -2420,11 +2449,12 @@ def step_dependence(ctx: Ctx) -> None:
             if col == 0:
                 ax.set_ylabel(f"{compound}\nshuffles")
             if row == 1:
-                ax.set_xlabel("effect on mean rate (Hz)")
+                ax.set_xlabel("effect on mean output (rate-model units)")
     axes[0, 0].legend(fontsize=7)
     fig.suptitle(
         f"Connectome-dependence profile, {n} permutations per mode "
-        f"(network mean rate, {_fmt_M(PAPER_CONC)}); p floor 1/(n+1) = {1.0 / (n + 1):.4f}",
+        f"(network mean rate-model output, {_fmt_M(PAPER_CONC)}); "
+        f"p floor 1/(n+1) = {1.0 / (n + 1):.4f}",
         y=1.02,
     )
     fig.tight_layout()
@@ -2433,17 +2463,18 @@ def step_dependence(ctx: Ctx) -> None:
         fig,
         "F6_dependence_profile",
         "Histograms are the drug effect (treated minus vehicle on the network mean "
-        f"rate) measured on {n} degraded copies of the 1-hop MN9/DNp01 `named` cut; the "
+        f"rate-model output) measured on {n} degraded copies of the 1-hop MN9/DNp01 `named` cut; the "
         "red line is the same contrast on the real cut. Columns run in increasing order "
         "of destruction: transmitter labels permuted, synapse weights permuted, "
         "degree-preserving double-edge rewiring, Erdos-Renyi. Titles carry the "
-        "empirical two-sided permutation p and the three-way verdict against the "
-        f"prespecified equivalence margin (delta = "
-        f"{ctx.text('dep_named_imidacloprid_delta')} Hz, 5 % of the vehicle readout): "
-        "`distinguishable` means the test rejected, `equivalent within tolerance` means "
-        "the gap from the null median is below the margin, and `indeterminate` means "
-        "neither -- a failure to reject is not evidence that the degraded graph gives "
-        "the same effect. Plain label permutation is shown because it is informative, "
+        "empirical two-sided permutation p and the three-way legacy verdict against the "
+        f"configured point-gap margin (delta = "
+        f"{ctx.text('dep_named_imidacloprid_delta')} rate-model units, 5 % of the vehicle readout): "
+        "`distinguishable` means the test rejected; `equivalent within tolerance` means "
+        "only that the point gap from the null median is below the margin; and "
+        "`indeterminate` means neither. The within-margin label is a descriptive "
+        "point-gap diagnostic, not a formal equivalence result. Plain label permutation "
+        "is shown because it is informative, "
         "but it moves the weighted excitation/inhibition balance as well as transmitter "
         "identity (T23), so it is a joint null and not a rung of the ladder. "
         f"Imidacloprid is {imi['class']} (necessary level: "
@@ -2519,8 +2550,9 @@ def step_dependence(ctx: Ctx) -> None:
         "Every compound of the library at four concentrations, on both committed cuts, "
         "classified by the weakest graph model the permutation test could **not** "
         "distinguish from the real cut -- never by a model that reproduces the effect. "
-        "Classes are decided on Benjamini-Hochberg adjusted probabilities across each "
-        "landscape's structural tests, with a prespecified relative effect floor of 1 % "
+        "Benjamini-Hochberg adjusts the individual structural-test probabilities across "
+        "each landscape, not cells; the displayed class uses those adjusted tests and "
+        "a configured relative effect floor of 1 % "
         f"of the vehicle readout. Left, the 1-hop `named` cut: "
         f"{counts.get('topology-dependent', 0)} of {land['n_cells']} cells need the "
         f"wiring pattern, {counts.get('composition-dominated', 0)} are not "
@@ -2560,7 +2592,7 @@ def step_dependence(ctx: Ctx) -> None:
     ax2.set_xticks(range(len(labels)))
     ax2.set_xticklabels(labels)
     ax2.set_xlabel("planted loop strength")
-    ax2.set_ylabel("|drug effect| on the synthetic cut (Hz)")
+    ax2.set_ylabel("|drug effect| on the synthetic cut (rate-model units)")
     ax2.set_title(
         f"Ground-truth recovery at n = {rec['n']}\n"
         f"{rec['n_detected']} of {rec['n_positive']} planted effects recovered, "
@@ -2577,16 +2609,19 @@ def step_dependence(ctx: Ctx) -> None:
         "F16_instrument_validation",
         "The dependence ladder pointed at a graph whose answer is known in advance. A "
         "recurrent cholinergic cycle of known strength is planted in a synthetic cut of "
-        "the same size, density and transmitter composition as the `named` cut; a gain "
+        "approximately the size, density and transmitter composition of `named`; a gain "
         "patch that collapses `g_ach` then removes an amplification that exists only "
         "while the cycle is intact, so the drug contrast depends on the wiring by "
         "construction. Left: the share of independently generated graphs the ladder "
         "classifies topology-dependent, against planted strength and permutation count. "
         "Right: the recovery experiment itself, with red marking the strengths the "
-        "ladder recovered. The unplanted control is the empirical false-positive rate "
+        "ladder recovered. Detections on the unplanted control are "
         f"({ctx.get('val_power_control_hits')} of "
-        f"{ctx.get('val_power_control_runs')}). Without this panel, a negative from the "
-        "ladder would be indistinguishable from an under-powered test.",
+        f"{ctx.get('val_power_control_runs')}). Each grid cell has only "
+        f"{pw['replicates']} networks; uncertainty is broad and networks are reused "
+        "across permutation counts. The zero-strength control omits cycle edges and "
+        "transmitter relabelling. This is a limited recovery check, not general "
+        "calibration or endpoint-specific power for a real circuit.",
     )
 
 def step_landscape(ctx: Ctx) -> None:
@@ -2741,8 +2776,8 @@ def step_dose(ctx: Ctx) -> None:
     ctx.put("ic50_hi_M", float(ci["ic50"][1]), text=_fmt_M(ci["ic50"][1]))
     ctx.put("ic50_slope", float(fit["slope"]))
     ctx.put("ic50_r2", float(fit["r2"]), text=f"{fit['r2']:.4f}")
-    ctx.put("ic50_top_hz", float(fit["top"]), unit="Hz")
-    ctx.put("ic50_bottom_hz", float(fit["bottom"]), unit="Hz")
+    ctx.put("ic50_top_hz", float(fit["top"]), unit="rate-model units")
+    ctx.put("ic50_bottom_hz", float(fit["bottom"]), unit="rate-model units")
     ctx.put("ic50_in_range", bool(fit["in_range"]))
     ctx.put("ic50_readout", ic["readout"])
     ctx.put(
@@ -2754,14 +2789,14 @@ def step_dose(ctx: Ctx) -> None:
     tor = sensitivity("subgraph", "imidacloprid", PAPER_CONC, readout="mean_hz", seed=ctx.seed)
     tor = sorted(tor, key=lambda r: abs(float(r["span"])), reverse=True)
     for r in tor:
-        ctx.put(f"tornado_span_{r['param']}", float(r["span"]), unit="Hz")
+        ctx.put(f"tornado_span_{r['param']}", float(r["span"]), unit="rate-model units")
     ctx.put("tornado_top_param", tor[0]["param"])
     zero_span = [r["param"] for r in tor if abs(float(r["span"])) < 1e-9]
     ctx.put("tornado_zero_span_params", zero_span, text=", ".join(zero_span) or "none")
     if "ec50" in zero_span:
         ctx.note(
             "at 1 uM imidacloprid the model is exactly insensitive to a 2x change in "
-            "the insect_nAChR EC50 and in the Hill coefficient (span 0 Hz): occupancy "
+            "the insect_nAChR EC50 and in the Hill coefficient (span 0 rate-model units): engagement "
             "is saturated, so the gain-rule coefficient is the only parameter that "
             "still moves the readout. A dose-response experiment, not a single high "
             "dose, is what constrains the EC50."
@@ -2780,7 +2815,7 @@ def step_dose(ctx: Ctx) -> None:
     ax.axvline(fit["ic50"], color=CRIT, lw=1, ls="--")
     ax.set_xscale("log")
     ax.set_xlabel("imidacloprid concentration (M)")
-    ax.set_ylabel(f"network {ic['readout']} (Hz)")
+    ax.set_ylabel(f"network {ic['readout']} (rate-model units)")
     ax.set_title(
         f"Model IC50 = {_fmt_M(fit['ic50'])}\n"
         f"[{_fmt_M(ci['ic50'][0])}, {_fmt_M(ci['ic50'][1])}], slope {fit['slope']:.2f}, r2 {fit['r2']:.4f}"
@@ -2800,7 +2835,9 @@ def step_dose(ctx: Ctx) -> None:
     ax2.axvline(base, color=TEXT1, lw=1)
     ax2.set_yticks(y)
     ax2.set_yticklabels(names)
-    ax2.set_xlabel(f"network mean rate (Hz); treated baseline at 1 uM = {base:.2f} Hz")
+    ax2.set_xlabel(
+        f"network mean output (rate-model units); treated baseline at 1 uM = {base:.2f}"
+    )
     ax2.set_title("One-at-a-time sensitivity\n(each parameter halved and doubled)")
     ax2.grid(axis="x", lw=0.5)
     ax2.set_axisbelow(True)
@@ -3391,11 +3428,11 @@ def step_expression(ctx: Ctx) -> None:
 
     nb = run_weighted_subgraph_assay("imidacloprid", PAPER_CONC)
     r = nb["readouts"]
-    ctx.put("expr_mn9_uniform_hz", float(r["uniform"]["mn9_hz"]), unit="Hz")
-    ctx.put("expr_mn9_weighted_hz", float(r["mn9_hz"]), unit="Hz")
-    ctx.put("expr_mn9_delta_hz", float(r["delta_vs_uniform"]["mn9_hz"]), unit="Hz")
-    ctx.put("expr_mean_uniform_hz", float(r["uniform"]["mean_hz"]), unit="Hz")
-    ctx.put("expr_mean_weighted_hz", float(r["mean_hz"]), unit="Hz")
+    ctx.put("expr_mn9_uniform_hz", float(r["uniform"]["mn9_hz"]), unit="rate-model units")
+    ctx.put("expr_mn9_weighted_hz", float(r["mn9_hz"]), unit="rate-model units")
+    ctx.put("expr_mn9_delta_hz", float(r["delta_vs_uniform"]["mn9_hz"]), unit="rate-model units")
+    ctx.put("expr_mean_uniform_hz", float(r["uniform"]["mean_hz"]), unit="rate-model units")
+    ctx.put("expr_mean_weighted_hz", float(r["mean_hz"]), unit="rate-model units")
 
 
 def step_ablation(ctx: Ctx) -> None:
@@ -3460,7 +3497,7 @@ def step_ablation(ctx: Ctx) -> None:
                     "spearman_rho_vs_full": rho,
                     "pearson_r_vs_full": lvl.get("pearson_r_vs_full"),
                     "residual_rms_standardised": lvl.get("residual_rms_standardised"),
-                    "residual_rms_hz": lvl.get("residual_rms_hz"),
+                    "residual_rms_rate_model_units": lvl.get("residual_rms_hz"),
                     "reproduces_full_ordering": lvl.get("reproduces_full_ordering"),
                     "information_added_vs_previous": lvl.get("information_added_vs_previous"),
                 }
@@ -3471,11 +3508,11 @@ def step_ablation(ctx: Ctx) -> None:
                 {
                     "conc_M": float(conc_key),
                     "level": C_FLOOR_LEVEL,
-                    "unit": floor.get("unit") or "Hz",
+                    "unit": floor.get("unit") or "rate-model units",
                     "spearman_rho_vs_full": floor.get("spearman_rho_vs_full"),
                     "pearson_r_vs_full": floor.get("pearson_r_vs_full"),
                     "residual_rms_standardised": floor.get("residual_rms_standardised"),
-                    "residual_rms_hz": floor.get("residual_rms_hz"),
+                    "residual_rms_rate_model_units": floor.get("residual_rms_hz"),
                     "reproduces_full_ordering": floor.get("reproduces_full_ordering"),
                     "information_added_vs_previous": None,
                 }
@@ -3492,7 +3529,11 @@ def step_ablation(ctx: Ctx) -> None:
     paper = tab["information_gain"][f"{1e-6:.3e}"]
     by_name = {lvl["level"]: lvl for lvl in paper["levels"]}
     ctx.put("abl_rho_topology_paper", _f(by_name["C_topology_only"].get("spearman_rho_vs_full")))
-    ctx.put("abl_rms_topology_hz", _f(by_name["C_topology_only"].get("residual_rms_hz")), unit="Hz")
+    ctx.put(
+        "abl_rms_topology_hz",
+        _f(by_name["C_topology_only"].get("residual_rms_hz")),
+        unit="rate-model units",
+    )
     ctx.put("abl_rho_composition_paper", _f(by_name["B_composition_only"].get("spearman_rho_vs_full")))
     ctx.put("abl_rho_receptor_paper", _f(by_name["A_receptor_only"].get("spearman_rho_vs_full")))
     paper_cmp = paper.get("generic_rule_comparison") or {}
@@ -3748,8 +3789,8 @@ def step_ablation(ctx: Ctx) -> None:
         "compound-concentration cell from a model that has been denied one layer of "
         "information: receptor engagement only (dimensionless), mechanism gains on the "
         "graph's transmitter composition only (excitation index), the real cut with one "
-        "generic multiplier instead of mechanism-specific gains (Hz), and the full "
-        "model (Hz). The generic multiplier is direction-aware: generic in magnitude, "
+        "generic multiplier instead of mechanism-specific gains (rate-model units), "
+        "and the full model (rate-model units). The generic multiplier is direction-aware: generic in magnitude, "
         "with one bit of sign taken from the mechanism table, which is the minimum a "
         "connectome-without-pharmacology model needs to order a library containing "
         "disinhibitors. `C_topology_only_floor` is the historical depression-only rule, "
@@ -3769,7 +3810,7 @@ def step_ablation(ctx: Ctx) -> None:
             "spearman_rho_vs_full",
             "pearson_r_vs_full",
             "residual_rms_standardised",
-            "residual_rms_hz",
+            "residual_rms_rate_model_units",
             "reproduces_full_ordering",
             "information_added_vs_previous",
         ],
@@ -3890,8 +3931,9 @@ def step_stability(ctx: Ctx) -> None:
             "the C3 retention rate is no longer vacuous and is no longer uniform: at "
             "n_shuffles = %d (resolution %.4f, against the previous 6 at which p <= "
             "0.05 was arithmetically unattainable) the conclusion is retained by %d of "
-            "%d specifications, but only %d of those reach equivalence within the "
-            "prespecified margin; %d are merely indeterminate."
+            "%d specifications; %d of those pass the descriptive point-gap check "
+            "against the configured margin, while %d are non-rejections without "
+            "that point-gap result."
             % (
                 int(res["n_shuffles"]),
                 float(res["shuffle_resolution"]),
@@ -3925,8 +3967,8 @@ def step_stability(ctx: Ctx) -> None:
             with mechanism_spec(spec):
                 nb = run_subgraph_assay("imidacloprid", PAPER_CONC)
             r = nb["readouts"]
-            ctx.put(f"stab_{label}_treated_hz", _f(r.get("mean_hz")), unit="Hz")
-            ctx.put(f"stab_{label}_vehicle_hz", _f((r.get("vehicle") or {}).get("mean_hz")), unit="Hz")
+            ctx.put(f"stab_{label}_treated_hz", _f(r.get("mean_hz")), unit="rate-model units")
+            ctx.put(f"stab_{label}_vehicle_hz", _f((r.get("vehicle") or {}).get("mean_hz")), unit="rate-model units")
             ctx.put(f"stab_{label}_g_ach", _f((nb.get("gains") or {}).get("g_ach")))
         t, v = ctx.get("stab_monotone_treated_hz"), ctx.get("stab_monotone_vehicle_hz")
         if t and v:
@@ -3934,7 +3976,7 @@ def step_stability(ctx: Ctx) -> None:
         ctx.note(
             "the suppression conclusion is specification-dependent: %d of %d "
             "prespecified specifications reverse it. Under %s the same compound at the "
-            "same engagement EXCITES the network (%s Hz treated vs %s Hz vehicle) "
+            "same engagement EXCITES the network (%s vs %s rate-model units, treated vs vehicle) "
             "instead of suppressing it. Suppression is a property of the biphasic "
             "desensitisation term, not of the pharmacology-connectome integration."
             % (
@@ -4040,7 +4082,7 @@ def step_stability(ctx: Ctx) -> None:
                 "fraction_retained_decidable": r["fraction_retained_decidable"],
                 "n_retained_uncorrected": r.get("n_retained_uncorrected"),
                 "multiplicity": r.get("multiplicity"),
-                "n_equivalent_within_tolerance": (r.get("equivalence_breakdown") or {}).get(
+                "n_within_margin_point_gap": (r.get("equivalence_breakdown") or {}).get(
                     "equivalent_within_tolerance"
                 ),
                 "n_indeterminate": (r.get("equivalence_breakdown") or {}).get("indeterminate"),
@@ -4061,7 +4103,7 @@ def step_stability(ctx: Ctx) -> None:
             "fraction_retained_decidable",
             "n_retained_uncorrected",
             "multiplicity",
-            "n_equivalent_within_tolerance",
+            "n_within_margin_point_gap",
             "n_indeterminate",
             "failing_specs",
             "undecidable_specs",
@@ -4080,8 +4122,9 @@ def step_stability(ctx: Ctx) -> None:
         "the permutation path resolves, so every specification fed the *default* gains "
         "to its nulls and the matrix's topology rows were empty; they are now computed "
         "per specification. For a conclusion shaped as a failure to reject, "
-        "`n_equivalent_within_tolerance` is the part of the retention that is evidence "
-        "of equivalence and `n_indeterminate` the part that is only a non-rejection.",
+        "`n_within_margin_point_gap` counts retained specifications whose point gap is "
+        "below the configured margin; it is a descriptive diagnostic, not a formal "
+        "equivalence result. `n_indeterminate` counts the remaining non-rejections.",
         md_fields=[
             "conclusion",
             "n_specs",
@@ -4089,7 +4132,7 @@ def step_stability(ctx: Ctx) -> None:
             "n_lost",
             "n_undecidable",
             "n_retained_uncorrected",
-            "n_equivalent_within_tolerance",
+            "n_within_margin_point_gap",
             "n_indeterminate",
         ],
     )
@@ -4252,9 +4295,9 @@ def step_stability(ctx: Ctx) -> None:
         + (", ".join(r["conclusion"] for r in res["rows"] if not r["fragile"]) or "none")
         + ". The nicotinic suppression conclusion is reversed by every monotone rule, "
         "which is how a result that depends on a modelling choice looks when it is "
-        "tested rather than asserted; and for a conclusion shaped as a failure to "
-        "reject, the fraction retained is only as strong as the equivalence behind it "
-        "(T14's `n_equivalent_within_tolerance` against `n_indeterminate`).",
+        "tested rather than asserted. For a conclusion shaped as a failure to reject, "
+        "T14 separates specifications passing the descriptive within-margin point-gap "
+        "check from indeterminate non-rejections; neither is a formal equivalence test.",
     )
 
 
@@ -4280,8 +4323,8 @@ def step_uncertainty(ctx: Ctx) -> None:
     ctx.put("unc_n_factors", int(res["n_factors"]))
     ctx.put("unc_evaluations", int(res["n_evaluations"]))
     ctx.put("unc_estimator", str(res["estimator"]))
-    ctx.put("unc_output_mean", _f(res["output_mean"]), unit="Hz")
-    ctx.put("unc_variance", _f(res["output_variance"]), unit="Hz^2")
+    ctx.put("unc_output_mean", _f(res["output_mean"]), unit="rate-model units")
+    ctx.put("unc_variance", _f(res["output_variance"]), unit="rate-model units squared")
     ctx.put("unc_interaction_share", _f(res["interaction_share"]))
     ctx.put("unc_interaction_share_clipped", _f(res["interaction_share_clipped"]))
     ctx.put("unc_sum_first_order", _f(res["sum_first_order"]))
@@ -4330,7 +4373,7 @@ def step_uncertainty(ctx: Ctx) -> None:
     ctx.put("unc_resolution_statement", str(resolution["statement"]))
     if resolution["noise_floor_factor"] and resolution["noise_floor_factor"] != "lif_seed":
         ctx.note(
-            "the estimator's noise floor is %s, set by the most negative first-order "
+            "the largest negative-estimate magnitude is %s, from the first-order "
             "estimate (%s), not by the declared null factor lif_seed at %s. Only %s "
             "%s a first-order confidence interval that excludes zero; every other "
             "factor is unresolved at this sample size, and a negative point estimate "
@@ -4368,19 +4411,19 @@ def step_uncertainty(ctx: Ctx) -> None:
                 "kind": b.get("kind"),
                 "share_of_variance_S1": b["share_of_variance"],
                 "share_with_interactions_ST": b.get("share_with_interactions"),
-                "variance_removed_hz2": b["variance_removed"],
+                "variance_removed_rate_model_units_sq": b["variance_removed"],
                 "ci_low": (b.get("ci") or [None, None])[0],
                 "ci_high": (b.get("ci") or [None, None])[1],
             }
             for b in res["budget"]
         ],
-        ["source", "kind", "share_of_variance_S1", "share_with_interactions_ST", "variance_removed_hz2", "ci_low", "ci_high"],
+        ["source", "kind", "share_of_variance_S1", "share_with_interactions_ST", "variance_removed_rate_model_units_sq", "ci_low", "ci_high"],
         f"Global uncertainty budget for the neighbourhood mean rate "
         f"({res['compound']} at {_fmt_M(res['conc_M'])}, {res['n_evaluations']} model "
         "evaluations, Jansen estimators on a Saltelli cross-sample). S1 is the variance "
         "share resolving that factor alone would remove; ST includes its interactions. "
         "Estimates are **unclipped**, so a factor whose true index is zero can come out "
-        "negative; the largest such magnitude is the estimator's measured noise floor "
+        "negative; the largest such magnitude is an observed error diagnostic "
         "and is reported with the factor that set it. A factor counts as resolved only "
         "when its bootstrap interval excludes zero, which is a stronger test than "
         "exceeding that floor. The shares do not sum to one; the remainder is the "
@@ -4391,10 +4434,10 @@ def step_uncertainty(ctx: Ctx) -> None:
     )
 
     v = voi(result=res)
-    ctx.put("voi_var_total", _f(v["output_variance"]), unit="Hz^2")
+    ctx.put("voi_var_total", _f(v["output_variance"]), unit="rate-model units squared")
     for i, r in enumerate(v["rows"][:3], 1):
         ctx.put(f"voi_rank{i}_factor", r["factor"])
-        ctx.put(f"voi_rank{i}_var", _f(r["voi_var"]), unit="Hz^2")
+        ctx.put(f"voi_rank{i}_var", _f(r["voi_var"]), unit="rate-model units squared")
         ctx.put(f"voi_rank{i}_fraction", _f(r["voi_fraction"]))
         ctx.put(f"voi_rank{i}_experiment", r["experiment"])
         ctx.put(f"voi_rank{i}_cost", r["cost"])
@@ -4423,9 +4466,9 @@ def step_uncertainty(ctx: Ctx) -> None:
                 "voi_fraction_of_var": r["voi_fraction"],
                 "voi_fraction_raw": r.get("voi_fraction_raw"),
                 "clipped_from_negative": r.get("clipped_from_negative"),
-                "voi_var_hz2": r["voi_var"],
-                "voi_upper_bound_var_hz2": r["voi_upper_bound_var"],
-                "sd_reduction_hz": r["sd_reduction"],
+                "voi_var_rate_model_units_sq": r["voi_var"],
+                "voi_upper_bound_var_rate_model_units_sq": r["voi_upper_bound_var"],
+                "sd_reduction_rate_model_units": r["sd_reduction"],
                 "experiment": r["experiment"],
                 "resolves": r["resolves"],
                 "cost": r["cost"],
@@ -4440,9 +4483,9 @@ def step_uncertainty(ctx: Ctx) -> None:
             "voi_fraction_of_var",
             "voi_fraction_raw",
             "clipped_from_negative",
-            "voi_var_hz2",
-            "voi_upper_bound_var_hz2",
-            "sd_reduction_hz",
+            "voi_var_rate_model_units_sq",
+            "voi_upper_bound_var_rate_model_units_sq",
+            "sd_reduction_rate_model_units",
             "experiment",
             "resolves",
             "cost",
@@ -4458,7 +4501,7 @@ def step_uncertainty(ctx: Ctx) -> None:
         "which is a statement about the sample size rather than about the factor. This "
         "is variance of a model output under assumed input ranges, not an expected gain "
         "in accuracy about a living fly.",
-        md_fields=["rank", "factor", "state", "voi_fraction_of_var", "voi_var_hz2", "experiment", "cost"],
+        md_fields=["rank", "factor", "state", "voi_fraction_of_var", "voi_var_rate_model_units_sq", "experiment", "cost"],
     )
 
     import numpy as np
@@ -4481,7 +4524,7 @@ def step_uncertainty(ctx: Ctx) -> None:
     ax.text(
         floor,
         len(order) - 0.4,
-        f" estimator noise floor ({resolution['noise_floor_factor']})",
+        f" largest negative estimate ({resolution['noise_floor_factor']})",
         fontsize=7,
         color=CRIT,
         va="top",
@@ -4507,8 +4550,8 @@ def step_uncertainty(ctx: Ctx) -> None:
     ax2.barh(y2, [r["voi_var"] for r in top], color=[GOOD if r.get("cost") == "none (compute only)" else SEQ[2] for r in top])
     ax2.set_yticks(y2)
     ax2.set_yticklabels([r["factor"] for r in top], fontsize=8)
-    ax2.set_xlabel("model variance an exact answer would remove (Hz$^2$)")
-    ax2.set_title(f"Value of information (Var(Y) = {res['output_variance']:.3g} Hz$^2$)", fontsize=10)
+    ax2.set_xlabel("model variance an exact answer would remove (rate-model units squared)")
+    ax2.set_title(f"Value of information (Var(Y) = {res['output_variance']:.3g})", fontsize=10)
     ax2.grid(axis="x", lw=0.5)
     ax2.set_axisbelow(True)
     fig.tight_layout()
@@ -4520,7 +4563,7 @@ def step_uncertainty(ctx: Ctx) -> None:
         "each assumption, first-order and total-order, from a Saltelli cross-sample "
         "with Jansen estimators, with bootstrap first-order confidence intervals. A "
         "factor is **resolved** only when its interval excludes zero; the starred rows "
-        "are not, and a factor's index exceeding the noise floor does not resolve it. "
+        "are not, and exceeding that diagnostic magnitude does not resolve a factor. "
         "The dashed line is that floor, defined as the largest magnitude among the "
         "*negative* first-order estimates: a true first-order index cannot be negative, "
         "so that magnitude is a measured lower bound on the estimator's error, and on "
@@ -4620,14 +4663,14 @@ def step_claims(ctx: Ctx) -> None:
 
 
 def step_scale(ctx: Ctx) -> None:
-    """Where the dependence verdict might settle with the size of the cut.
+    """Summarise cached dependence labels across the available cut ladder.
 
     The verdict reversed between the two committed cuts, and nothing in the
-    method says where -- or whether -- it stabilises.  A scaling study
-    (:func:`flylab.analysis.scale.dependence_vs_scale`) answers that on a
+    method says how labels would vary on other cuts. A separate scaling study
+    (:func:`flylab.analysis.scale.dependence_vs_scale`) records them on a
     ladder of nested cuts of 1k to 50k cells built by one fixed recipe.  Only
     the 1k rung is small enough to commit; the rest are CI artifacts, so the
-    study is run outside this pipeline and its result is **read** here from
+    study is run outside this pipeline and its cached result is **read** here from
     ``<outdir>/scale_study.json`` (or ``data/derived/scale_study.json``) when
     one exists.  Without it, this step still records what is on disk, what the
     study would cost at each rung (T26) and an explicit "not yet measured"
@@ -4735,13 +4778,36 @@ def step_scale(ctx: Ctx) -> None:
         ctx.put("scale_study_compounds", list(study.get("compounds") or []), text=", ".join(study.get("compounds") or []))
         ctx.put("scale_study_settled", bool(stab.get("all_settled")), text="yes" if stab.get("all_settled") else "no")
         ctx.put("scale_study_settled_clean_ladder", bool(clean.get("all_settled")), text="yes" if clean.get("all_settled") else "no")
-        ctx.put("scale_study_statement", rep["statements"], text=" ".join(rep["statements"]))
+        label_statements: list[str] = []
+        for compound, block in (stab.get("by_compound") or {}).items():
+            cuts = list(block.get("cuts") or [])
+            sequence = list(block.get("sequence") or [])
+            if len(cuts) < 2:
+                statement = (
+                    f"{compound}: only one cut was observed, with label "
+                    f"'{sequence[0] if sequence else 'unknown'}'."
+                )
+            elif block.get("settled"):
+                statement = (
+                    f"{compound}: the largest {int(block.get('n_cuts_agreeing_at_top') or 0)} "
+                    f"of {len(cuts)} observed cuts share the label '{block.get('final')}'."
+                )
+            else:
+                statement = (
+                    f"{compound}: labels do not match across the largest observed cuts "
+                    f"({sequence[-2:] if len(sequence) >= 2 else sequence})."
+                )
+            label_statements.append(statement)
+        ctx.put(
+                    label_statements,
+            text=" ".join(label_statements),
+        )
         seqs = []
         for comp, b in (clean.get("by_compound") or {}).items():
             seqs.append(f"{comp}: " + " -> ".join(f"{c} ({v})" for c, v in zip(b["cuts"], b["sequence"])))
         ctx.put("scale_study_sequences", seqs, text="; ".join(seqs) or "n/a")
 
-        # --- the paper-quotable shape of the result -------------------
+        # --- the paper-quotable shape of the cached result ------------
         # Rows, smallest cut first.  The key methodological point is that the
         # inversion does NOT track node count: `scale_1k` has fewer nodes than
         # `named` and a mean degree twenty times higher, and it already comes
@@ -4826,17 +4892,22 @@ def step_scale(ctx: Ctx) -> None:
             "T27_scale_study",
             rep["rows"],
             list(rep["columns"]),
-            "The same dependence profile across the cuts the scaling study could afford, "
+            "Cached dependence-profile records across the cuts the separate scaling "
+            "study could afford, "
             "smallest first: the cut's structure, the permutation count it was run at (which "
             "falls with the edge count, so the resolution coarsens up the ladder), the per-mode "
             "empirical probabilities, the necessary information level and the class. `named` "
             "and `taste_motor` are built by a different recipe from the `scale_*` rungs, so the "
-            "clean scale axis is the `scale_*` rows alone. " + str(stab.get("caveat") or ""),
+            "clean scale axis is the `scale_*` rows alone. This reproduction step reads "
+            "and summarises those cached rows; it does not recompute the profiles. The "
+            "legacy `settled` field records matching labels on the largest observed "
+            "cuts, not statistical stability or convergence.",
             md_fields=["cut", "n_nodes", "n_edges", "mean_degree", "compound", "n", "p_degree", "p_weight", "p_sign_wm", "necessary_information_level", "class"],
         )
         ctx.note(
-            "scale study: %d cuts (%s); verdicts settled on the clean ladder: %s. %s"
-            % (len(cuts_run), ", ".join(cuts_run), "yes" if clean.get("all_settled") else "no", " ".join(rep["statements"]))
+            "cached scale study: %d cuts (%s); labels match across the largest observed "
+            "clean-ladder rungs under the legacy descriptive rule: %s. %s"
+            % (len(cuts_run), ", ".join(cuts_run), "yes" if clean.get("all_settled") else "no", " ".join(label_statements))
         )
     else:
         ctx.put("scale_study_status", "not yet run")
@@ -4862,10 +4933,9 @@ def step_scale(ctx: Ctx) -> None:
         ctx.put("scale_study_settled", None, text="not measured")
         ctx.put("scale_study_settled_clean_ladder", None, text="not measured")
         ctx.put(
-            "scale_study_statement",
-            None,
+                    None,
             text=(
-                "Where the verdict settles with the size of the cut has not been measured at "
+                "Dependence labels across the unobserved cut ladder have not been measured at "
                 "this commit: the scale ladder's rungs on disk are "
                 + (", ".join(on_disk) or "none")
                 + " and the study over the full ladder had not been run."
@@ -5046,7 +5116,7 @@ STEPS: list[Step] = [
     ("stability", "specification robustness + threshold grid (F14, T14, T14b, T15)", step_stability),
     ("uncertainty", "global uncertainty budget + VOI (F15, T16, T17)", step_uncertainty),
     ("claims", "claim provenance chain (T18)", step_claims),
-    ("scale", "where the dependence verdict settles with the cut (T26, T27 when the study exists)", step_scale),
+    ("scale", "summarise cached scale-study labels and the cost frontier (T26, T27 when available)", step_scale),
     ("architecture", "architecture schematic (F1)", step_architecture),
     ("paper", "render the draft and supplement from their templates", step_paper),
 ]
@@ -5295,7 +5365,6 @@ PAPER_KEYS: tuple[str, ...] = (
     "scale_study_n_range",
     "scale_study_resolution_range",
     "scale_study_settled_clean_ladder",
-    "scale_study_statement",
     "scale_top_landscape_days",
     "scale_top_profile_hours",
     "scale_top_rung",
@@ -5319,8 +5388,6 @@ PAPER_KEYS: tuple[str, ...] = (
     "stab_C3_retained_uncorrected",
     "stab_C3_undecidable",
     "stab_C4_claim",
-    "stab_C4_equivalent",
-    "stab_C4_indeterminate",
     "stab_C4_lost",
     "stab_C4_retained",
     "stab_C4_retained_uncorrected",

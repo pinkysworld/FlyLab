@@ -16,13 +16,14 @@ abstract: >-
   say which of its inputs its predictions depend on. Its four instruments --
   typed evidence propagation under a checked soundness invariant,
   input-dependence testing against an ordered ladder of degraded inputs with a
-  prespecified equivalence margin and multiplicity control, an ablation ladder
+  descriptive median-gap tolerance and multiplicity adjustment, an ablation ladder
   scored against a matched reference distribution, and specification-family
   robustness with variance attribution -- are not specific to any domain. They
   are demonstrated on cuts of the public MaleCNS v1.0 connectome, where the
   headline result is methodological: a dependence verdict obtained on one
   extract of a network can invert on another extract of the same network, and
-  the extract's recurrence rather than its size predicts which way.
+  node count alone does not order the observed classifications. Recurrence is
+  a candidate associated feature, not an isolated cause.
   Concretely, FlyLab maps a compound and a free concentration onto a typed engagement
   panel for insect receptors and their vertebrate counterparts at the same
   dose, converts the insect side through a fixed mechanism table into gain
@@ -36,9 +37,9 @@ abstract: >-
   N/A rather than a small number. Around that it ships the analyses that test
   its own predictions: connectome-dependence analysis (empirical permutation
   probabilities against degraded graph models, with a three-way verdict
-  against a prespecified equivalence margin and the weakest graph model the
+  against a descriptive median-gap tolerance and the weakest graph model the
   test could not distinguish from the real cut), an ablation ladder over the
-  pipeline's layers, a conclusion-stability matrix over a prespecified family
+  pipeline's layers, a conclusion-stability matrix over a fixed family
   of gain specifications, a variance-based uncertainty budget with a
   value-of-information ranking, a receptor-versus-circuit selectivity
   landscape, literature concordance against published orderings, published
@@ -60,7 +61,6 @@ keywords:
   - sensitivity analysis
   - specification robustness
   - reproducible research
-  - 3Rs
 identifiers:
   - type: other
     value: "Zenodo DOI to be minted on release"

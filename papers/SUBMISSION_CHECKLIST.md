@@ -12,9 +12,9 @@ python -m pytest -q                    # must be green
 
 ## Framing
 
-IJRC is a computing research journal and the manuscript is written as one. The lead is the general problem — *a simulation built on a measured network and literature parameters cannot say which of its inputs its predictions depend on* — and the contribution is four transferable instruments: typed evidence propagation under a checked soundness invariant; input-dependence testing against an ordered ladder with an equivalence margin and multiplicity control; an ablation ladder scored against a matched reference; and specification-family robustness with variance attribution. §3 evaluates **the instruments**. The fly pharmacology is the demonstration domain, with its census, readouts and literature concordance as supporting material in §S6 and §S10.
+IJRC is a computing research journal and the manuscript is written as one. The lead is the general problem — *a simulation built on a measured network and literature parameters cannot say which of its inputs its predictions depend on* — and the contribution is four transferable instruments: typed evidence propagation under a checked soundness invariant; input-dependence testing against an ordered ladder with a descriptive median-gap tolerance and multiplicity adjustment; an ablation ladder scored against a matched reference; and specification-family robustness with variance attribution. §3 evaluates **the instruments**. The fly pharmacology is the demonstration domain, with its census, readouts and literature concordance as supporting material in §S6 and §S10.
 
-The headline is methodological: **a dependence verdict obtained on one extract of a network can invert on another extract of the same network, and the extract's recurrence — not its size — predicts which way** (§3.2, T27).
+The headline is extract sensitivity: dependence labels change across extracts. The current evidence does not isolate recurrence as the cause. A point-gap tolerance is descriptive, not a formal equivalence test. Current review decisions are in `papers/reviews/current_revision_decisions.md`.
 
 Internal review history lives in `papers/reviews/`. It is archived critique, not journal correspondence: the corrections it forced are in the manuscript and the code, and a formal point-by-point response belongs to an actual resubmission against real referees' numbered comments.
 
@@ -25,7 +25,7 @@ Internal review history lives in `papers/reviews/`. It is archived critique, not
 | Title, author block, affiliations | **missing** — authors are "FlyLab contributors" | needs real names, ORCIDs, affiliations, a corresponding author and an email |
 | Abstract | done — computing problem first, the methodological headline, the central limitation | draft §Abstract |
 | Index terms / keywords | done | draft §Index terms |
-| Numbered IEEE-style references with DOIs | done — 77 entries | draft §References |
+| Numbered IEEE-style references with DOIs | 76 entries after source audit; final author verification pending | draft §References |
 | In-text citation of every reference | check with the grep in §D | — |
 | Figures, 300 dpi, captions | done — 16 figures (F16 is the instrument validation) | `papers/figures/`, `figures/captions.md` |
 | Tables | done — T0–T27 as CSV and Markdown | `papers/tables/` |
@@ -42,20 +42,18 @@ Internal review history lives in `papers/reviews/`. It is archived critique, not
 
 1. **One live *Drosophila* assay.** Climbing first: a complete published protocol and control statistics exist. Until a real table is imported by hand into `live_lab`, H1–H7 stay prospective software predictions.
 2. **The one fitted parameter.** The variance budget names it: the engagement→gain transformation, not a potency value, which the model cannot see at a saturating dose.
-3. **Better power at the top of the scale ladder.** The ladder settles the verdict, but its 25k/50k rungs run at n = 20 (resolution 0.048), where a rejection is the smallest the test can express. More permutations there, or a cheaper null, would turn confirmation into evidence.
+3. **Better power at the top of the scale ladder.** The ladder reports matching labels, but its 25k/50k rungs run at n = 20 (resolution 0.048), where a rejection is the smallest the test can express. More permutations there, or a cheaper null, would provide finer-resolution estimates.
 4. **Expression coverage above its current value**, with adult motor-neuron receptor expression sourced or the bound declared permanent.
-5. **An externally archived release**, without which "prospective" may not become "pre-registered".
+5. **An externally archived release**, plus a frozen experimental protocol before using the term "pre-registered".
 
-## C. Known weaknesses a reviewer will find first
+## C. Remaining methodological limits
 
-1. **The central RQ2 result reverses between the two cuts.** Answer: that *is* the result, it is measured rather than argued, the instrument is validated against planted ground truth (F16, T22) so the reversal is not an artefact of power, the structural difference is reported in advance (T19), and the scaling study over seven extracts (T27) identifies recurrence rather than size as what predicts it.
-2. **The top rungs of the scale ladder run at n = 20.** Answer: stated in §3.2 and §S2.4 with the resolution (0.048 against α = 0.05) — those rungs confirm a verdict already settled at better-powered rungs, and the paper says they do not establish it.
-3. **The composition-versus-full correlation is nearly an algebraic identity.** Answer: stated as such, with a matched reference distribution (T24) and a normalisation sweep (T25); the generalisation drawn from it is withdrawn.
-4. **The headline circuit result's direction depends on the gain rule.** Answer: a first-class result (§3.4), quantified over the prespecified specification family, and nominated by the variance budget as the measurement to make next.
-5. **The gain rules and five transmitter signs are asserted coefficients.** Answer: published (T2, T21) and named as such; the paper says which of its own claims that costs it.
-6. **No independent out-of-sample validation.** Answer: stated in §2.5 and §S10, with shared-source rank comparisons flagged by the pipeline. The ground-truth experiment validates the instrument, not the domain model, and the paper says so.
-7. **Two of the instruments were broken.** Answer: found by us, published in §3.4, §S1.1 and §S2, and both fixed with the corrected numbers in the text. Neither failure was detectable by a determinism check, which is itself reported as a finding.
-8. **`--fast` is not the paper.** Answer: one test refuses a committed record from a fast run, another asserts the record's statistical knobs equal the shipped defaults.
+1. A controlled intervention or better matched extract comparison is needed to isolate recurrence from other structural differences.
+2. A confidence-bounded equivalence analysis is needed before interpreting a within-margin median as statistical equivalence.
+3. The small synthetic grid does not establish general calibration or power for the taste-motor ratio endpoint.
+4. The BH dependence condition has not been established by merely reusing shuffle streams.
+5. Large scale profiles are cached results with missing cut/source hashes. Archive those inputs and rerun with adequate permutation effort before calling them independently reproduced.
+6. Biological validation, receptor expression and gain calibration remain unresolved.
 
 ## D. Pre-submission mechanical checks
 
@@ -100,7 +98,7 @@ python -m pytest -q tests/test_reproduce.py
 ## E. Final pass before sending
 
 - [ ] Real authors, affiliations, ORCIDs, corresponding author.
-- [ ] Zenodo deposit created; DOI substituted for the placeholder in the draft and in `CITATION.cff`; only then may the predictions be called pre-registered.
+- [ ] Zenodo deposit created; DOI substituted for the placeholder in the draft and in `CITATION.cff`; preregistration additionally requires a frozen, dated experimental protocol before collection.
 - [ ] Tag the release; confirm `git_sha` in `papers/results.json` matches the tag.
 - [ ] Re-run `scripts/reproduce_paper.py` on a clean checkout and confirm the values are unchanged.
 - [ ] `python -m pytest -q` green; `pytest -m slow` green.
