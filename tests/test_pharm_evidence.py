@@ -208,7 +208,8 @@ def test_describe_is_a_provenance_record():
     assert record["relation"].startswith("exact_compound_exact_receptor")
     assert record["species"]
     assert record["evidence_tier"] == "literature_order"
-    assert "Ratra" in record["source"]
+    assert "Hainzl" in record["source"]
+    assert "multi-species binding-site proxy" in record["source"]
     assert record["modelled"] is True
 
     # the aphid Kd: a genuine binding constant, but not measured in the fly

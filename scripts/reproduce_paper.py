@@ -1657,6 +1657,7 @@ def step_dependence(ctx: Ctx) -> None:
         dependence_profile,
         ladder_power,
         ladder_recovery,
+        _local_null_draws,
     )
     from flylab.analysis.nullmodels import MODES, null_distribution
 
@@ -1781,7 +1782,8 @@ def step_dependence(ctx: Ctx) -> None:
             min([p for p in struct if p is not None], default=None),
         )
 
-        # draws and prefix sweep, for F6 and T11 only
+        # Draws and prefix sweep for F6 and T11.  The balanced transmitter
+        # null is local to dependence.py, so it needs its own draw path.
         for mode in MODES:
             d = null_distribution(
                 assay,
@@ -1810,6 +1812,16 @@ def step_dependence(ctx: Ctx) -> None:
                 ctx.put(f"sweep_{tag}_{compound}_{mode}_n{cp['n']}", _f(cp["p"]))
             if assay == "subgraph":
                 draws[(compound, mode)] = [v for v in d["null_effects"] if v is not None]
+        if assay == "subgraph":
+            matched_draws, _ = _local_null_draws(
+                assay=assay, compound=compound, conc_M=PAPER_CONC,
+                readout=readout, graph_name="named",
+                mode="sign_permute_weight_matched", n=int(n_i),
+                seed=int(ctx.seed), kw={},
+            )
+            draws[(compound, "sign_permute_weight_matched")] = [
+                v for v in matched_draws if v is not None
+            ]
         return prof
 
     named = {c: arm(c, "subgraph", "mean_hz", n, "named") for c in ("imidacloprid", "fipronil")}
@@ -2394,10 +2406,25 @@ def step_dependence(ctx: Ctx) -> None:
     )
 
     # ---- F6: the profile itself --------------------------------------
-    fig, axes = plt.subplots(2, len(MODES), figsize=(12.0, 5.4))
+    fig_modes = (
+        "sign_permute_weight_matched", "weight_permute",
+        "rewire_degree_preserving", "erdos_renyi",
+    )
+    mode_titles = {
+        "sign_permute_weight_matched": "Weight-matched labels",
+        "weight_permute": "Shuffled weights",
+        "rewire_degree_preserving": "Degree-preserving rewiring",
+        "erdos_renyi": "Random graph",
+    }
+    verdict_titles = {
+        "distinguishable": "distinguishable",
+        "equivalent_within_tolerance": "within point-gap tolerance",
+        "indeterminate": "not resolved",
+    }
+    fig, axes = plt.subplots(2, len(fig_modes), figsize=(12.0, 5.4))
     for row, compound in enumerate(("imidacloprid", "fipronil")):
         sub = {r["mode"]: r for r in rows if r["assay"] == "subgraph" and r["compound"] == compound}
-        for col, mode in enumerate(MODES):
+        for col, mode in enumerate(fig_modes):
             ax = axes[row, col]
             vals = np.asarray(draws.get((compound, mode), []), dtype=float)
             real = sub[mode]["real_effect"]
@@ -2408,11 +2435,9 @@ def step_dependence(ctx: Ctx) -> None:
             p = sub[mode]["p_two_sided"]
             verdict = str(sub[mode].get("verdict") or "")
             ax.set_title(
-                f"{mode}\np = {'n/a' if p is None else f'{p:.3f}'}\n{verdict.replace('_', ' ')}",
+                f"{mode_titles[mode]}\np = {'n/a' if p is None else f'{p:.3f}'}\n{verdict_titles.get(verdict, verdict)}",
                 fontsize=7.6,
-                color=CRIT if verdict == "distinguishable" else (
-                    GOOD if verdict == "equivalent_within_tolerance" else TEXT2
-                ),
+                color=CRIT if verdict == "distinguishable" else TEXT2,
             )
             ax.tick_params(labelsize=7)
             ax.grid(axis="y", lw=0.4)
@@ -2421,7 +2446,7 @@ def step_dependence(ctx: Ctx) -> None:
                 ax.set_ylabel(f"{compound}\nshuffles")
             if row == 1:
                 ax.set_xlabel("effect on mean rate (model units)")
-            if col == len(MODES) - 1 and vals.size:
+            if col == len(fig_modes) - 1 and vals.size:
                 # The Erdős–Rényi null concentrates near zero. Show its shape
                 # without hiding the real-cut contrast on the main axis.
                 lo, hi = np.quantile(vals, [0.005, 0.995])
@@ -2445,18 +2470,18 @@ def step_dependence(ctx: Ctx) -> None:
         "Histograms are the drug effect (treated minus vehicle on the network mean "
         f"rate) measured on {n} degraded copies of the 1-hop MN9/DNp01 `named` cut; the "
         "red line is the same contrast on the real cut. Columns run in increasing order "
-        "of destruction: transmitter labels permuted, synapse weights permuted, "
+        "of destruction: transmitter labels permuted while holding outgoing-weight "
+        "shares near their real values, synapse weights permuted, "
         "degree-preserving double-edge rewiring, Erdős–Rényi. Insets show the "
         "central 99% of the concentrated Erdős–Rényi null distributions. Titles carry the "
         "empirical two-sided permutation p and the three-way verdict against the "
         f"prespecified equivalence margin (delta = "
         f"{ctx.text('dep_named_imidacloprid_delta')} model rate units, 5 % of the vehicle readout): "
-        "`distinguishable` means the test rejected, `equivalent within tolerance` means "
-        "the gap from the null median is below the margin, and `indeterminate` means "
-        "neither -- a failure to reject is not evidence that the degraded graph gives "
-        "the same effect. Plain label permutation is shown because it is informative, "
-        "but it moves the weighted excitation/inhibition balance as well as transmitter "
-        "identity (T23), so it is a joint null and not a rung of the ladder. "
+        "`distinguishable` means the test rejected, `within point-gap tolerance` "
+        "means the gap from the null median is below the margin after non-rejection, "
+        "and `not resolved` means neither -- no label is a statistical equivalence "
+        "test. The plain label permutation is documented in T23: it moves weighted "
+        "excitation/inhibition balance and is a joint null rather than a ladder rung. "
         f"Imidacloprid is {imi['class']} (necessary level: "
         f"{imi['necessary_information_level'].get('level')}, "
         f"{imi['necessary_information_level'].get('verdict')}); fipronil is "
@@ -3791,7 +3816,7 @@ def step_ablation(ctx: Ctx) -> None:
         "have credited it.",
     )
 
-    fig, ax = plt.subplots(figsize=(7.4, 4.0))
+    fig, ax = plt.subplots(figsize=(8.2, 4.1))
     xs = list(range(len(LEVELS)))
     for i, conc_key in enumerate(sorted(tab["information_gain"], key=float)):
         gain = tab["information_gain"][conc_key]
@@ -3808,21 +3833,27 @@ def step_ablation(ctx: Ctx) -> None:
             ax.plot(
                 [xs[LEVELS.index("C_topology_only")]], [floor_rho], "x",
                 color=SEQ[min(i + 1, 4)], ms=9, mew=2,
+                label="depression-only comparator" if i == 0 else None,
             )
     ax.axhline(0.0, color=TEXT2, lw=1)
+    x_b = xs[LEVELS.index("B_composition_only")]
     if sparse.get("p05") is not None and sparse.get("p95") is not None:
-        ax.axhspan(float(sparse["p05"]), float(sparse["p95"]), color=GOOD,
-                   alpha=0.15, label="matched reference 5th–95th percentile")
+        ax.fill_betweenx(
+            [float(sparse["p05"]), float(sparse["p95"])],
+            x_b - 0.10, x_b + 0.10, color=GOOD, alpha=0.22,
+            label="B versus D reference 5th–95th percentile",
+        )
     if sparse.get("median") is not None:
-        ax.axhline(float(sparse["median"]), color=GOOD, lw=1, ls="--",
-                   label="matched reference median")
+        ax.plot(
+            [x_b - 0.11, x_b + 0.11], [float(sparse["median"])] * 2,
+            color=GOOD, lw=1.5, ls="--", label="B versus D reference median",
+        )
     ax.set_xticks(xs)
     ax.set_xticklabels([lvl.split("_", 1)[0] for lvl in LEVELS])
     ax.set_ylabel("Signed Spearman ρ vs full model")
     ax.set_xlabel("Ablation level")
     ax.set_title(f"Ablation ladder over the {len(tab['compounds'])}-compound library")
-    ax.legend(fontsize=7.5, title="concentration", title_fontsize=7.5,
-              loc="lower right")
+    ax.legend(fontsize=7.2, loc="center left", bbox_to_anchor=(1.01, 0.5))
     ax.grid(lw=0.5)
     ax.set_axisbelow(True)
     fig.tight_layout()
@@ -3840,9 +3871,10 @@ def step_ablation(ctx: Ctx) -> None:
         "finding about connectomes, and the conclusion drawn from it is withdrawn. "
         f"With a direction-aware rule level C rises to "
         f"{ctx.text('abl_rho_topology_paper')} at 1 uM from "
-        f"{ctx.text('abl_rho_topology_floor_paper')}. The green band shows the "
-        "5th–95th percentile of the matched one-gain-per-pseudo-compound reference "
-        "distribution (T24), with its median dashed. The composition level's "
+        f"{ctx.text('abl_rho_topology_floor_paper')}. The short green interval at B "
+        "shows the 5th–95th percentile of the matched one-gain-per-pseudo-compound "
+        "B-versus-D reference distribution (T24), with its median dashed. The "
+        "composition level's "
         "agreement with the full model must be read against that distribution.",
     )
 
@@ -5113,12 +5145,9 @@ PAPER_KEYS: tuple[str, ...] = (
     "bal_tol",
     "claims_chain_links",
     "claims_computed",
-    "claims_facts_phrase",
-    "claims_inference_phrase",
     "claims_literature_derived",
     "claims_model_assumption",
     "claims_observed_phrase",
-    "claims_unknown_phrase",
     "dep_land_below_relative_floor",
     "dep_land_below_relative_floor_cells",
     "dep_land_cells",
@@ -5140,9 +5169,6 @@ PAPER_KEYS: tuple[str, ...] = (
     "dep_land_non_monotone_cells",
     "dep_land_taste_cells",
     "dep_land_taste_composition_dominated",
-    "dep_land_taste_imidacloprid_class",
-    "dep_land_taste_imidacloprid_p_rewire_degree_preserving",
-    "dep_land_taste_imidacloprid_q",
     "dep_land_taste_n_structural_tests",
     "dep_land_taste_no_effect",
     "dep_land_taste_non_monotone",

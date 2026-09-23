@@ -48,7 +48,7 @@ notes:
     measured_fit: Reserved. Only for values fitted to data imported by the user. Nothing in the shipped library uses this tier.
   hill_n: Hill coefficients are teaching defaults in the 1.0-1.5 range unless the source reports steeper cooperativity.
   efficacy: Optional relative efficacy (0..1), used as the tau-like term of the operational model in flylab.pharm.binding. Absent means 'assume full'.
-  nicotinic_subunits: 'insect_nAChR is a documented AGGREGATE key and still drives the g_ach gain rules. insect_nAChR_alpha6 and insect_nAChR_beta1 carry the subunit-resolved rows: spinosad''s value sits on alpha6 (Perry 2015) and imidacloprid''s aphid binding Kd sits on beta1 (Bass 2011, R81T; cross-species/E1, so it reports binding_engagement_proxy). A third nicotinic key, insect_nAChR_native_dmel, is preparation-resolved rather than subunit-resolved and holds the one Drosophila-measured binding constant in the library (Tomizawa 1996). Neonicotinoid electrophysiology is nearly all done on hybrid Dalpha/chicken-beta2 or native mixed preparations, which is why those rows stay on the aggregate key and say so in relation/source. No number was invented for the split.'
+  nicotinic_subunits: 'insect_nAChR is a documented AGGREGATE key and still drives the g_ach gain rules. insect_nAChR_alpha6 and insect_nAChR_beta1 carry the subunit-resolved rows: spinosad''s target is alpha6 (Perry 2015), but its potency is currently unsupported and imidacloprid''s aphid binding Kd sits on beta1 (Bass 2011, R81T; cross-species/E1, so it reports binding_engagement_proxy). A third nicotinic key, insect_nAChR_native_dmel, is preparation-resolved rather than subunit-resolved and holds the one Drosophila-measured binding constant in the library (Tomizawa 1996). Neonicotinoid electrophysiology is nearly all done on hybrid Dalpha/chicken-beta2 or native mixed preparations, which is why those rows stay on the aggregate key and say so in relation/source. The alpha6 target row is withheld until a matched potency and direction are sourced.'
   v04_continuity: imidacloprid, nitenpyram, nicotine, diazepam and fipronil keep the exact value_M / n / direction shipped in v0.4 and v0.5; schema v3 only adds the type of each value, its relation and its species. Tests depend on those numbers.
 receptors:
   insect_nAChR:
@@ -368,8 +368,8 @@ compounds:
         direction: antagonist
         efficacy: 1.0
         relation: exact_compound_exact_receptor_other_species
-        species: Homo sapiens recombinant GABA-A ([3H]EBOB displacement)
-        source: 'Ratra and Casida 2001, Toxicol Lett 122:215 ([3H]EBOB displacement, human recombinant GABA-A): vertebrate average IC50 for fipronil is 1103 nM = 1.1e-6 M. CORRECTED in v0.5: FlyLab v0.4 carried 1.0e-05 M while citing this same paper, so the library contradicted its own citation; the value is now the cited one. SUBUNIT CAVEAT: the human beta3 HOMOpentamer is far more sensitive, 0.5-2.4 nM (Ratra, Kamita and Casida 2001, Toxicol Appl Pharmacol 172:233), so the ''vertebrate-safe'' reading of this row applies to native heteromeric receptors only, not to beta3 homomers.'
+        species: native GABA-related chloride-channel preparations from multiple vertebrate species ([3H]EBOB displacement)
+        source: 'Hainzl, Cole and Casida 1998, Chem Res Toxicol 11:1529-1535 (DOI 10.1021/tx980157t; PMID 9860498): mean fipronil IC50 1103 nM across human, dog, mouse, chicken, quail and salmon preparations by [3H]EBOB displacement. This is a multi-species binding-site proxy, not a human recombinant functional GABA-A potency.'
         evidence_tier: literature_order
       insect_RDL:
         param_type: IC50
@@ -377,9 +377,9 @@ compounds:
         n: 1.2
         direction: antagonist
         efficacy: 1.0
-        relation: exact_compound_exact_receptor_exact_species
-        species: Drosophila melanogaster
-        source: 'Hosie et al. 1995, Br J Pharmacol 115:909 (fipronil block of dieldrin-sensitive Drosophila GABA receptors, tens-of-nM order). SPREAD NOTE: the literature spans ~1500-fold for this one row - 2.4-12 nM on house-fly head membranes ([3H]EBOB displacement; Cole et al. 1993, Pestic Biochem Physiol 46:47 and Ratra and Casida 2001, Toxicol Lett 122:215) versus 0.3-3 uM on the predominant in vivo splice/edit variant of Drosophila RDL in Xenopus oocytes (Lees et al. 2014, PLoS ONE 9:e97468). Library keeps the potent end (unchanged from FlyLab v0.4); it is a defensible midpoint-to-potent choice, not a measured constant.'
+        relation: exact_compound_related_receptor
+        species: insect GABA-related chloride-channel preparations; Drosophila RDL variant response differs by assay
+        source: 'The 30 nM model value is an assay-transfer proxy, not a measured constant for the predominant Drosophila RDLbd I/V variant. Hainzl et al. 1998 (DOI 10.1021/tx980157t) reports 3-12 nM insect [3H]EBOB displacement; Lees et al. 2014 (DOI 10.1371/journal.pone.0097468) reports about 0.63 uM functional block on RDLbd I/V. Model sensitivity to this range is unresolved.'
         evidence_tier: literature_order
   clothianidin:
     name: Clothianidin
@@ -546,15 +546,14 @@ compounds:
     notes: 'Teaching case: the electrophysiological EC50 on isolated neurons is far weaker than the whole-insect potency.'
     receptors:
       insect_nAChR:
-        param_type: EC50
-        value_M: 0.00015
+        param_type: unknown
+        value_M: null
         n: 1.0
-        direction: agonist
-        efficacy: 1.0
-        relation: exact_compound_related_receptor
-        species: Periplaneta americana DUM neurons (alpha-bungarotoxin-insensitive nAChR)
-        source: Watson et al. 2011, Pestic Biochem Physiol 101:32 (sulfoxaflor fully activates alpha-bungarotoxin-insensitive nAChRs of cockroach DUM neurons, EC50 about 154 uM); Sparks et al. 2013, Pestic Biochem Physiol 107:1 (mode of action review).
-        evidence_tier: literature_order
+        direction: none
+        efficacy: 0.0
+        relation: unsupported
+        source: 'Placeholder pending source verification: Watson et al. 2011, Insect Biochem Mol Biol 41:432-439 (DOI 10.1016/j.ibmb.2011.01.009; PMID 21296156) supports Dalpha2/chicken beta2 receptor activity but does not verify the former 154 uM value in the checked record. A table-verified potency is required.'
+        evidence_tier: class_placeholder
       vertebrate_nAChR_a4b2:
         param_type: EC50
         value_M: 0.001
@@ -596,18 +595,17 @@ compounds:
     name: Spinosad (spinosyn A)
     class: spinosyn
     cas: 131929-60-7
-    notes: 'Allosteric activator: acts at a site distinct from the acetylcholine site and still activates alpha-bungarotoxin-blocked receptors.'
+    notes: 'Dalpha6 target involvement is documented, but the former 5 uM agonist EC50 was not supported by the cited study; this compound is unmodelled pending an assay-matched potency and direction.'
     receptors:
       insect_nAChR:
-        param_type: EC50
-        value_M: 5.0e-06
+        param_type: unknown
+        value_M: null
         n: 1.0
-        direction: positive_modulator
-        efficacy: 1.0
-        relation: exact_compound_related_receptor
-        species: Drosophila melanogaster Dalpha6 / heterologous insect alpha6-like receptors
-        source: 'Perry et al. 2015, Insect Biochem Mol Biol 64:106 (Drosophila Dalpha6 is required for spinosad action in vivo); heterologous alpha6 nAChR studies report allosteric activation in the low-micromolar order (EC50 about 5 uM). AGGREGATE ROW (v0.6): the measurement behind this number is alpha6-specific and is recorded subunit-resolved in insect_nAChR_alpha6. The same value is repeated here on the documented aggregate key (no new number was invented) so the legacy g_ach gain rule still fires; read as an aggregate it overstates the receptor population the value applies to.'
-        evidence_tier: literature_order
+        direction: none
+        efficacy: 0.0
+        relation: unsupported
+        source: 'Placeholder pending source verification: Perry et al. 2015 (DOI 10.1016/j.ibmb.2015.01.017; PMID 25747008) supports Dalpha6 target involvement but not a 5 uM receptor EC50. Martelli et al. 2022 (PMID 35191376) reports low-dose antagonism of Dalpha6-mediated cholinergic response. No quantitative receptor potency or direction is admitted pending an assay-matched source.'
+        evidence_tier: class_placeholder
       vertebrate_nAChR_a4b2:
         param_type: unknown
         value_M: null
@@ -645,15 +643,14 @@ compounds:
         source: class-order placeholder
         evidence_tier: class_placeholder
       insect_nAChR_alpha6:
-        param_type: EC50
-        value_M: 5.0e-06
+        param_type: unknown
+        value_M: null
         n: 1.0
-        direction: positive_modulator
-        efficacy: 1.0
-        relation: exact_compound_related_receptor
-        species: Drosophila melanogaster Dalpha6 (in vivo requirement) / heterologous insect alpha6-like receptors (the exact preparation behind the 5 uM order is not pinned)
-        source: 'Perry et al. 2015, Insect Biochem Mol Biol 64:106 (Drosophila Dalpha6 is required for spinosad action in vivo; Dalpha6 knockouts are highly resistant); heterologous alpha6 nAChR studies report allosteric activation in the low-micromolar order (EC50 about 5 uM). SUBUNIT-RESOLVED ROW (v0.6): this is the assay the spinosad number actually came from. The identical value also appears on the aggregate insect_nAChR key so the legacy gain rules keep working; no new number was invented for the split.'
-        evidence_tier: literature_order
+        direction: none
+        efficacy: 0.0
+        relation: unsupported
+        source: 'Placeholder pending source verification: Dalpha6 is a spinosad target (Perry et al. 2015, DOI 10.1016/j.ibmb.2015.01.017), but that study does not measure the previously entered 5 uM receptor EC50; Martelli et al. 2022 (PMID 35191376) reports low-dose antagonism. This row is intentionally not modelled until potency and effect direction are sourced.'
+        evidence_tier: class_placeholder
   acetylcholine:
     name: Acetylcholine
     class: endogenous transmitter
@@ -788,15 +785,14 @@ compounds:
         source: Ratra and Casida 2001, Toxicol Lett 122:215 (picrotoxinin blocks mammalian GABA-A at about 1 uM, i.e. no useful insect selectivity).
         evidence_tier: literature_order
       vertebrate_GlyR:
-        param_type: IC50
-        value_M: 1.0e-05
+        param_type: unknown
+        value_M: null
         n: 1.0
-        direction: antagonist
-        efficacy: 1.0
-        relation: class_extrapolation
-        species: mammalian homomeric glycine receptor
-        source: Ratra and Casida 2001, Toxicol Lett 122:215 and standard glycine receptor pharmacology (picrotoxin blocks homomeric GlyR in the micromolar order). Order-of-magnitude value.
-        evidence_tier: literature_order
+        direction: none
+        efficacy: 0.0
+        relation: unsupported
+        source: 'Placeholder pending source verification: The previously cited Ratra and Casida GABA-receptor paper does not assay GlyR. A direct glycine-receptor picrotoxin preparation and potency are required before this row can be quantified.'
+        evidence_tier: class_placeholder
       insect_nAChR:
         param_type: unknown
         value_M: null
@@ -875,15 +871,14 @@ compounds:
         source: Kane et al. 2000, PNAS 97:13949 (drug-resistant Drosophila show GluCl is the avermectin target); invertebrate GluCl activation is reported in the 0.1-30 nM order.
         evidence_tier: literature_order
       insect_RDL:
-        param_type: EC50
-        value_M: 1.0e-06
+        param_type: unknown
+        value_M: null
         n: 1.0
-        direction: positive_modulator
-        efficacy: 0.5
-        relation: exact_compound_exact_receptor_exact_species
-        species: Drosophila melanogaster RDL (predominant in vivo variant) in Xenopus oocytes
-        source: Lees et al. 2014, PLoS ONE 9:e97468 (ivermectin activates and potentiates the predominant in vivo RDL variant at sub-micromolar to micromolar).
-        evidence_tier: literature_order
+        direction: none
+        efficacy: 0.0
+        relation: unsupported
+        source: 'Placeholder pending source verification: Lees et al. 2014 (DOI 10.1371/journal.pone.0097468) reports ivermectin inhibition of GABA-evoked RDLbd I/V currents (pIC50 6.33), with no current from 10 uM ivermectin alone. The former positive-modulator EC50 contradicted that assay; an inhibitory model mapping has not yet been validated.'
+        evidence_tier: class_placeholder
       vertebrate_GlyR:
         param_type: EC50
         value_M: 1.0e-06
@@ -920,15 +915,14 @@ compounds:
     notes: Irreversible AChE inhibitor. The library treats fractional AChE occupancy as fractional enzyme inhibition, which ignores time-dependence and ageing.
     receptors:
       insect_AChE:
-        param_type: IC50
-        value_M: 1.0e-08
+        param_type: unknown
+        value_M: null
         n: 1.0
-        direction: inhibitor
-        efficacy: 1.0
-        relation: exact_compound_exact_receptor_exact_species
-        species: Drosophila melanogaster AChE (Ace)
-        source: Fournier and Mutero 1994, Comp Biochem Physiol C 108:19 (Drosophila AChE is inhibited by oxon organophosphates in the low-nM order and is more sensitive than mammalian AChE).
-        evidence_tier: literature_order
+        direction: none
+        efficacy: 0.0
+        relation: unsupported
+        source: 'Placeholder pending source verification: Fournier and Mutero 1994 is a resistance review, not a primary Drosophila chlorpyrifos-oxon 10 nM IC50 assay. The previous number is withheld pending a primary enzyme assay with exposure time.'
+        evidence_tier: class_placeholder
       vertebrate_AChE:
         param_type: IC50
         value_M: 3.0e-07
@@ -1043,15 +1037,14 @@ compounds:
         source: Burton et al. 2011, Insect Biochem Mol Biol 41:723 (Drosophila para tail-current EC50 0.40 uM for permethrin).
         evidence_tier: literature_order
       vertebrate_Nav1_x:
-        param_type: EC50
-        value_M: 4.0e-05
+        param_type: unknown
+        value_M: null
         n: 1.0
-        direction: positive_modulator
-        efficacy: 0.3
-        relation: class_extrapolation
-        species: Rattus norvegicus brain type IIA sodium channels (fold-difference statement)
-        source: Smith and Soderlund 1998, Neurotoxicology 19:823 (permethrin is more than 100-fold less potent on rat brain type IIA sodium channels than on insect para).
-        evidence_tier: literature_order
+        direction: none
+        efficacy: 0.0
+        relation: unsupported
+        source: 'Placeholder pending source verification: Smith and Soderlund 1998 (PMID 9863771) studied cypermethrin, not permethrin. It cannot support the former 40 uM permethrin parameter; a matched mammalian permethrin assay is required.'
+        evidence_tier: class_placeholder
       insect_nAChR:
         param_type: unknown
         value_M: null

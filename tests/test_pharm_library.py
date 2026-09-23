@@ -233,15 +233,15 @@ def test_the_native_drosophila_key_is_documented_as_a_preparation():
     assert "insect_nAChR_native_dmel" not in receptors["insect_nAChR"]["subunit_resolved_keys"]
 
 
-def test_subunit_split_puts_each_compound_where_its_source_measured():
+def test_subunit_split_keeps_only_supported_spinosad_target_metadata():
     rows = {k: set(v["receptors"]) for k, v in LIB["compounds"].items()}
-    # spinosad's number comes from Dalpha6 work, so it sits on the alpha6 key
+    # Dalpha6 target genetics do not establish a 5 uM receptor EC50.
     assert "insect_nAChR_alpha6" in rows["spinosad"]
     assert "insect_nAChR_beta1" not in rows["spinosad"]
-    # ... and the aggregate row keeps the same value, so the gain rules still fire
     alpha6 = LIB["compounds"]["spinosad"]["receptors"]["insect_nAChR_alpha6"]
     aggregate = LIB["compounds"]["spinosad"]["receptors"]["insect_nAChR"]
-    assert alpha6["value_M"] == aggregate["value_M"] == 5.0e-06
+    assert alpha6["value_M"] is aggregate["value_M"] is None
+    assert alpha6["relation"] == aggregate["relation"] == "unsupported"
     assert "alpha6" in aggregate["source"].lower() or "dalpha6" in aggregate["source"].lower()
     # no neonicotinoid or sulfoximine claims an alpha6 row
     for key, entry in LIB["compounds"].items():

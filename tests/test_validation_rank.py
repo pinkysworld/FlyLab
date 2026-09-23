@@ -140,17 +140,17 @@ def test_report_markdown_has_a_table_and_the_discrepancies():
 # the v0.5 library correction
 # --------------------------------------------------------------------------
 def test_fipronil_vertebrate_correction_is_in_compare_compound():
-    """Ratra & Casida 2001 report 1103 nM, not the 1.0e-5 M v0.4 carried."""
+    """The 1103 nM entry is a multi-species radioligand result."""
     rows = {r["receptor"]: r for r in compare_compound("fipronil", 1e-6)["receptors"]}
     vert = rows["vertebrate_GABA_A"]
     assert vert["ec50_M"] == pytest.approx(1.1e-6)
     assert "1103" in vert["source"]
-    assert "beta3" in vert["source"]  # the homopentamer caveat is stated
+    assert "Hainzl" in vert["source"] and "multi-species" in vert["source"]
     assert vert["evidence_tier"] == "literature_order"
-    # the insect row keeps its value and now records the 1500-fold spread
+    # The insect number is explicitly labelled an assay-transfer proxy.
     insect = rows["insect_RDL"]
     assert insect["ec50_M"] == pytest.approx(3.0e-8)
-    assert "Lees" in insect["source"] and "house-fly" in insect["source"]
+    assert "Lees" in insect["source"] and "assay-transfer proxy" in insect["source"]
 
 
 def test_fipronil_selectivity_direction_and_gains_survive_the_correction():
