@@ -755,15 +755,16 @@ def step_scorecard(ctx: Ctx) -> None:
         fig,
         "F2_dual_scorecard",
         f"Dual scorecard for imidacloprid and fipronil at {_fmt_M(PAPER_CONC)}. Bars are "
-        "Hill occupancy of the insect target (blue) and its vertebrate counterpart "
+        "Hill-form engagement of the insect target (blue) and its vertebrate counterpart "
         "(orange) for each of the five receptor pairs declared in "
         "`library.yaml:selectivity_pairs`. Hatched bars rest on a class placeholder: "
         "the compound has no sourced EC50 at that pair and the row is inert. "
         f"Imidacloprid reaches {ctx.get('imi_insect_occ'):.3f} at insect nAChR against "
         f"{ctx.get('imi_vert_occ'):.3f} at vertebrate a4b2; fipronil reaches "
         f"{ctx.get('fip_insect_occ'):.3f} at insect RDL against {ctx.get('fip_vert_occ'):.3f} "
-        "at native heteromeric vertebrate GABA-A. Teaching-tier EC50s: these are "
-        "literature-order values, not measured constants.",
+        "at a multi-species vertebrate GABA-related binding-site proxy. These are "
+        "heterogeneous assay inputs and transfers, not measured fractional occupancy "
+        "of matched receptors in living animals.",
     )
 
 
@@ -830,14 +831,14 @@ def step_curves(ctx: Ctx) -> None:
     for ax in axes[-1]:
         ax.set_xlabel("free concentration (M)")
     for ax in axes[:, 0]:
-        ax.set_ylabel("fractional occupancy")
-    fig.suptitle("Occupancy curves and insect-over-vertebrate selectivity windows", y=0.98)
+        ax.set_ylabel("Hill-form engagement proxy")
+    fig.suptitle("Model engagement curves and insect-over-vertebrate selectivity windows", y=0.98)
     fig.tight_layout()
     save_fig(
         ctx,
         fig,
         "F3_occupancy_curves",
-        "Hill occupancy against free concentration for the four-compound panel, one "
+        "Hill-form model engagement against free concentration for the four-compound panel, one "
         "insect target (solid, blue) and its vertebrate counterpart (dashed, orange) "
         "per compound. The shaded band is the selectivity window between the two "
         "EC50s, annotated in log10 units; the dotted vertical line is the "
@@ -1607,7 +1608,8 @@ def step_evidence(ctx: Ctx) -> None:
         fig,
         "F11_evidence_types",
         "What the compound library rests on, row by row. Left: the parameter each "
-        "cited source actually measured. Middle: the ordered evidence distance between "
+        "library row declares. Some source-to-value links remain under assay-level "
+        "review. Middle: the declared evidence distance between "
         "that source and this compound at this receptor in this species. Right: the "
         "transformation the type system then permits, which is a function of the two. "
         f"Green marks the {ctx.get('ev_dist_E0')} on-target (E0) rows and the "
@@ -1617,8 +1619,8 @@ def step_evidence(ctx: Ctx) -> None:
         "gap; red marks rows that carry no modellable evidence and return N/A rather "
         "than a small number. The type system, not a convention, enforces this: asking "
         "for an engagement from an untyped row raises rather than returning a value, "
-        "and a soundness invariant is checked exhaustively over every row and every "
-        "entry point.",
+        "and the admission invariant is checked over shipped rows and enumerated "
+        "entry points. This does not verify the biological validity of admitted values.",
     )
 
 
@@ -1643,10 +1645,10 @@ def step_dependence(ctx: Ctx) -> None:
     is an in-star (T19); ``taste_motor`` has mean degree 10.4, and the two do
     not agree.
 
-    *The instrument is tested.* A known topology-dependent effect is planted
-    in a synthetic cut of the same size and density and the ladder is asked to
-    find it, with a power surface over planted strength and permutation count
-    (T22, F16).
+    *The instrument has limited positive controls.* A known topology-dependent
+    effect is planted in a 250-node synthetic cut that is not matched to the
+    real extract, and detection is counted over planted strengths and
+    permutation budgets (T22, F16).
     """
     import numpy as np
 
@@ -2477,7 +2479,7 @@ def step_dependence(ctx: Ctx) -> None:
         "degree-preserving double-edge rewiring, Erdős–Rényi. Insets show the "
         "central 99% of the concentrated Erdős–Rényi null distributions. Titles carry the "
         "empirical two-sided permutation p and the three-way verdict against the "
-        f"prespecified equivalence margin (delta = "
+        f"declared point-gap margin (delta = "
         f"{ctx.text('dep_named_imidacloprid_delta')} model rate units, 5 % of the vehicle readout): "
         "`distinguishable` means the test rejected, `within point-gap tolerance` "
         "means the gap from the null median is below the margin after non-rejection, "
@@ -2560,15 +2562,17 @@ def step_dependence(ctx: Ctx) -> None:
         "Classes are decided on Benjamini-Hochberg adjusted probabilities across each "
         "landscape's structural tests, with a prespecified relative effect floor of 1 % "
         f"of the vehicle readout. Left, the 1-hop `named` cut: "
-        f"{counts.get('topology-dependent', 0)} of {land['n_cells']} cells need the "
-        f"wiring pattern, {counts.get('composition-dominated', 0)} are not "
-        "distinguishable from any structure-preserving degradation, and "
-        f"{counts.get('no-effect', 0)} do not move the readout at all. Right, the "
+        f"{counts.get('topology-dependent', 0)} of {land['n_cells']} cells receive the "
+        f"topology-dependent label, {counts.get('composition-dominated', 0)} receive "
+        "composition-dominated and "
+        f"{counts.get('no-effect', 0)} fall below the effect floor. Right, the "
         f"denser `taste_motor` cut: {ct.get('topology-dependent', 0)} topology-dependent, "
         f"{ct.get('composition-dominated', 0)} composition-dominated, "
         f"{ct.get('no-effect', 0)} no-effect. The composition-dominated majority does "
         "not survive the change of substrate, and the `named` cut is an in-star whose "
-        "degree-preserving rewire is close to the identity (T19).",
+        "degree-preserving rewire is close to the identity (T19). These are "
+        "descriptive classes formed from BH-adjusted component tests, without a "
+        "separate cell-level FDR guarantee.",
     )
 
     # ---- F16: the instrument's own power ------------------------------
@@ -2614,17 +2618,19 @@ def step_dependence(ctx: Ctx) -> None:
         fig,
         "F16_instrument_validation",
         "The dependence ladder pointed at a graph whose answer is known in advance. A "
-        "recurrent cholinergic cycle of known strength is planted in a synthetic cut of "
-        "the same size, density and transmitter composition as the `named` cut; a gain "
+        "recurrent cholinergic cycle of known strength is planted in a synthetic "
+        f"{ctx.get('val_recovery_nodes')}-node cut with about "
+        f"{ctx.get('val_recovery_edges')} background edges; it is not matched to "
+        "the real extract's size or connectivity. A gain "
         "patch that collapses `g_ach` then removes an amplification that exists only "
         "while the cycle is intact, so the drug contrast depends on the wiring by "
         "construction. Left: the share of independently generated graphs the ladder "
         "classifies topology-dependent, against planted strength and permutation count. "
         "Right: the recovery experiment itself, with red marking the strengths the "
-        "ladder recovered. The unplanted control is the empirical false-positive rate "
+        "ladder recovered. The unplanted control yielded a detection count "
         f"({ctx.get('val_power_control_hits')} of "
-        f"{ctx.get('val_power_control_runs')}). Without this panel, a negative from the "
-        "ladder would be indistinguishable from an under-powered test.",
+        f"{ctx.get('val_power_control_runs')}). This is a limited positive-control "
+        "check, not a general power estimate for the paper's biological endpoints.",
     )
 
 def step_landscape(ctx: Ctx) -> None:
@@ -2969,7 +2975,7 @@ def step_genotype(ctx: Ctx) -> None:
             ax.set_xticks(x)
             ax.set_xticklabels(labels, fontsize=7, rotation=20, ha="right")
         ax.set_ylim(0, 1.15)
-        ax.set_ylabel("target occupancy at 1 uM")
+        ax.set_ylabel("target engagement proxy at 1 uM")
         ax.set_title(title, fontsize=9.5)
         ax.grid(axis="y", lw=0.5)
         ax.set_axisbelow(True)
@@ -2979,7 +2985,7 @@ def step_genotype(ctx: Ctx) -> None:
         ctx,
         fig,
         "F9_genotype_panel",
-        "Target-receptor occupancy at 1 uM for wild type and each published resistance "
+        "Model target engagement at 1 uM for wild type and each published resistance "
         "allele that has a sourced fold-shift for that compound. Grey bars are alleles "
         "with no sourced number for the compound: they are left identical to wild type "
         "and reported, never extrapolated. Left and centre: fipronil and imidacloprid. "
@@ -4576,7 +4582,7 @@ def step_uncertainty(ctx: Ctx) -> None:
         f"against lif_seed at {ctx.text('unc_null_factor_S')}). Right: the same shares "
         "scaled back into the readout's variance and mapped onto the experiment that "
         "would resolve each assumption; a negative estimate is clipped to zero for the "
-        "decision value, because a value of information cannot be negative. Green marks "
+        "heuristic score. This is not formal expected value of information. Green marks "
         "a factor that needs no experiment at all, only a re-analysis of data already "
         "held.",
     )
