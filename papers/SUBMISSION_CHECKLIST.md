@@ -22,19 +22,19 @@ Internal review history lives in `papers/reviews/`. It is archived critique, not
 
 | Item | State | Where |
 |---|---|---|
-| Title, author block, affiliations | **missing** — authors are "FlyLab contributors" | needs real names, ORCIDs, affiliations, a corresponding author and an email |
+| Title, author block, affiliations | supplied by author on 22 September 2026 | Michél Nguyen; University of the People; michel_ng@icloud.com; ORCID 0000-0001-6834-4422 |
 | Abstract | done — computing problem first, the methodological headline, the central limitation | draft §Abstract |
 | Index terms / keywords | done | draft §Index terms |
 | Numbered IEEE-style references with DOIs | 76 entries after source audit; final author verification pending | draft §References |
 | In-text citation of every reference | check with the grep in §D | — |
 | Figures, 300 dpi, captions | done — 16 figures (F16 is the instrument validation) | `papers/figures/`, `figures/captions.md` |
 | Tables | done — T0–T27 as CSV and Markdown | `papers/tables/` |
-| Word count | done — inside the 5000–7000 target, generated and test-enforced | `values.paper_words_body` |
+| Word count | concise draft below typical Research Articles 6000–8000, within general 5000–10000; confirm with editor | `values.paper_words_body`; editorial test guard 5000–8000 |
 | Required section structure | done | draft §1–§5 |
 | Supplementary material | done — S1–S10 | `papers/SUPPLEMENT.md` |
 | Data / code / ethics / AI statements | done | draft §Statements |
 | Archival DOI | **placeholder** — Zenodo deposit not created | draft §3.7, `CITATION.cff` |
-| Submission format (LaTeX/Word template) | **not done** — the draft is Markdown | convert once the venue's template is confirmed |
+| Submission format (LaTeX/Word template) | editable Word preparation copy; final template/citation check pending | `papers/submission/FlyLab_manuscript.docx` and preparation notes |
 | Cover letter | **not written** | — |
 | Suggested reviewers | **not chosen** | — |
 

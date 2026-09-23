@@ -1,0 +1,19 @@
+{
+  "operation": "Word export only; numerical analyses not rerun",
+  "inputs_sha256": {
+    "papers/IJRC_FlyLab_draft.md": "daf31354c7b8bff83c7319aab05d7ec915731aad03e105fdc2d1a44338bea917",
+    "papers/figures/captions.md": "0e1ffc3302939aee0efd000f040c301464980c63f55ebc0497762659abd4d94b",
+    "scripts/export_paper_word.py": "06ff06bafd0bc81d6e11adfff71bd95de309bea426a635a143d3046e5733e448",
+    "papers/figures/F6_dependence_profile.png": "838219d044a94200adbf6b04270c510a4ec3b3e625bb23b262c2fd4e8b942918",
+    "papers/figures/F13_ablation.png": "f526c9d315fc0be13ef8216ce5ab824c8001ad3486fef8a6454d302cf4ed5560",
+    "papers/figures/F14_conclusion_stability.png": "f4a8474416dc694c703696343717436ae3b2ad39abcdb23142fbb39b0510c2f2",
+    "papers/figures/F11_evidence_types.png": "71c27c1084780bd0d502d9584386ba006aaab28a74bfdbfc690d4dbb8b2b7287"
+  },
+  "output_sha256": "4c6d5da13b9acad3254b0af2d1ddf162d7f83094441c416b57a6322dd217e8ed",
+  "main_figure_archive_ids": [
+    "F6",
+    "F13",
+    "F14",
+    "F11"
+  ]
+}

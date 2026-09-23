@@ -3,7 +3,7 @@
 **Files:** `papers/IJRC_FlyLab_draft.md` and `papers/SUPPLEMENT.md` — **both generated**. Edit `papers/IJRC_FlyLab_draft.md.in` / `papers/SUPPLEMENT.md.in` and re-render; never hand-edit a number into a rendered document.
 
 **Venue:** IJRC (ijrcom.org), as a **Research Article** (Introduction, Methods, Results, Discussion, Conclusion, References).
-**State:** additional internal-review revision of main `38cad67`. Not submitted. Review decisions: `papers/reviews/current_revision_decisions.md`.
+**State:** additional internal-review and readability revision of main `38cad67`. Not submitted. Review decisions: `papers/reviews/current_revision_decisions.md` and `papers/reviews/round4_editorial_decisions.md`. Author details are supplied; an editable Word preparation copy is in `papers/submission/`.
 
 **Current internal-review update:** the denser-cut study, synthetic recovery cases, corrected evidence propagation and specification fixes are retained. The current revision narrows the remaining claims: extract sensitivity is observed, recurrence is not isolated causally, the legacy equivalence label is only a median-gap diagnostic, and the small synthetic detection grid does not establish endpoint-specific power. Review reports and decisions are in `papers/reviews/`.
 
@@ -22,7 +22,7 @@ python -m pytest -q                              # must be green
 | Part | State |
 |---|---|
 | Abstract (architecture + one topology result + one reproducibility result + the central limitation; individual numbers stripped) | done |
-| §1 Introduction — the four research questions, related work, and the narrow novelty claim with a comparison table | done |
+| §1 Introduction: three research questions, related work, and the narrow novelty claim with a comparison table | done; reproduction is supporting evidence rather than RQ4 |
 | §2 Methods — typed evidence, the circuit substrate, connectome-dependence analysis, the ablation ladder and specification family, the evaluation taxonomy, global uncertainty and VOI | done (6 subsections) |
 | §3 Results — the instruments evaluated first (ground truth and power, then the inversion and the scale ladder), with the domain readouts as supporting material; every number from `results.json` | done (7 subsections) |
 | §4 **Discussion** — what was learned computationally (including the substrate dependence of the method's own verdict, and two instruments that were broken in ways that flattered the conclusions); model-generated vs encoded; adjacent work; **what the software cannot support**; five model-specific caveats, at length in §S9; prospective-not-pre-registered | done |
@@ -32,7 +32,7 @@ python -m pytest -q                              # must be green
 | Supplement — mechanism rationale and the level-C rule (S1), the specification family and why the previous matrix was vacuous (S1.1), null-model definitions with the weight-matched transmitter null (S2), the three-way verdict and the equivalence margin (S2.1), effect floor and multiplicity (S2.2), ground-truth recovery and power (S2.3), the scale ladder and where the verdict settles (S2.4), runtimes and the row normalisation (S3), supporting capabilities (S4), prospective predictions with the H2/H3 caveat (S5), evidence-typing rules and the soundness invariant (S6), reproduction knobs (S7), notebook warnings (S8), model-specific caveats in full (S9), and the domain readouts, selectivity and literature concordance moved out of the body (S10) | done |
 | 16 figures (F16 is the instrument validation) + T0–T25, regenerated at 300 dpi | done |
 
-**Body word count is generated, not estimated**, and a test fails if it leaves the 5000–7000 target: `papers/results.json → values.paper_words_body`.
+**Body word count is generated, not estimated**: `papers/results.json → values.paper_words_body`. The editorial test guard is 5000–8000. The concise revision is below the journal's typical Research Articles 6000–8000 range but within its general 5000–10000 guidance. Confirm the length rather than pad the text. Final format and blind-review packaging remain author checks.
 
 ## Implemented capabilities and committed artifacts
 

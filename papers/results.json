@@ -1,6 +1,6 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-21T15:09:34+00:00",
+  "generated_utc": "2026-09-22T10:00:06+00:00",
   "fast": false,
   "seed": 0,
   "jobs": 4,
@@ -7448,15 +7448,15 @@
       "step": "scale"
     },
     "paper_words_body": {
-      "value": 6872,
-      "text": "6872",
+      "value": 5665,
+      "text": "5665",
       "unit": "words",
       "note": null,
       "step": "paper"
     },
     "paper_words": {
-      "value": 10392,
-      "text": "10\u202f392",
+      "value": 9185,
+      "text": "9185",
       "unit": null,
       "note": null,
       "step": "paper"
@@ -8130,7 +8130,7 @@
   "review_metadata": {
     "mode": "editorial replay; not a completed numerical rerun",
     "numerical_source_git_sha": "f95fd88a2165e66d5203db6c6fa8c6a020c5a8e0",
-    "review_source_git_sha": "3bd92cc2bb759774884887c7c0fd6741fe260ef9",
+    "review_source_git_sha": "24431be9597646988c2862a18ea55f3d87d0db05",
     "changed_design_fields": [
       "dep_land_design",
       "dep_land_statement",
