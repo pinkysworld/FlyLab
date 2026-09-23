@@ -1014,7 +1014,7 @@ def step_graph(ctx: Ctx) -> None:
             "node that itself receives input (mean degree %.2f). A degree-preserving "
             "rewire of such a graph is close to the identity, so a negative topology "
             "verdict on this cut is weak evidence. The `taste_motor` cut (mean degree "
-            "%.2f) is the substrate to generalise from."
+            "%.2f) is the denser comparison substrate."
             % (
                 ctx.text("named_share_onto_seeds"),
                 ctx.get("named_edges") or 0,
@@ -1264,8 +1264,9 @@ def step_veto(ctx: Ctx) -> None:
             r = nb["readouts"]
             data[engine][label] = r
             tag = f"{engine}_{label}"
-            ctx.put(f"veto_{tag}_sugar", _f(r["mn9_sugar_hz"]), unit="Hz")
-            ctx.put(f"veto_{tag}_sugar_bitter", _f(r["mn9_sugar_bitter_hz"]), unit="Hz")
+            output_unit = "rate-model units" if engine == "rate" else "Hz"
+            ctx.put(f"veto_{tag}_sugar", _f(r["mn9_sugar_hz"]), unit=output_unit)
+            ctx.put(f"veto_{tag}_sugar_bitter", _f(r["mn9_sugar_bitter_hz"]), unit=output_unit)
             ctx.put(f"veto_{tag}_ratio", _f(r["bitter_veto_ratio"]))
     ctx.put("veto_n_sweet_grn", int(data["rate"]["vehicle"]["n_sweet_grn"]))
     ctx.put("veto_n_bitter_grn", int(data["rate"]["vehicle"]["n_bitter_grn"]))
@@ -1274,7 +1275,8 @@ def step_veto(ctx: Ctx) -> None:
     if data["rate"]["imidacloprid"]["bitter_veto_ratio"] is None:
         ctx.note(
             "imidacloprid at 1 uM silences MN9 on the map path on both engines "
-            "(sugar-driven MN9 = 0 Hz), so its bitter-veto ratio is undefined, not 0. "
+            "(sugar-driven MN9 = 0 in each engine's output units), so its bitter-veto "
+            "ratio is undefined, not 0. "
             "g_ach hits the 0.05 floor, which removes the cholinergic GRN->MN9 drive "
             "itself. This is a property of the agonist patch rule, and it is why the "
             "taste-map arm of the null panel is undefined for imidacloprid."
@@ -1302,7 +1304,7 @@ def step_veto(ctx: Ctx) -> None:
             )
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
-        ax.set_ylabel("MN9 rate (Hz)")
+        ax.set_ylabel("MN9 output (rate-model units)" if engine == "rate" else "MN9 rate (Hz)")
         ax.set_title(f"{engine} engine")
         ax.set_ylim(0, max(sugar + both) * 1.3 + 0.1)
         ax.grid(axis="y", lw=0.5)
@@ -1325,7 +1327,7 @@ def step_veto(ctx: Ctx) -> None:
         f"{_fmt_M(PAPER_CONC)} blocks RDL, raises the sugar-only rate and partially "
         f"relieves the veto (ratio {ctx.get('veto_rate_fipronil_ratio'):.2f} rate, "
         f"{ctx.get('veto_lif_fipronil_ratio'):.2f} LIF). Imidacloprid silences MN9 "
-        "altogether, so its ratio is undefined rather than zero. Absolute rates differ "
+        "altogether, so its ratio is undefined rather than zero. Outputs differ "
         "between engines by construction and are not calibrated to any recording.",
     )
 
@@ -1835,10 +1837,10 @@ def step_dependence(ctx: Ctx) -> None:
     )
     if gap_plain is not None and gap_matched is not None:
         ctx.note(
-            "the transmitter null matters to the equivalence claim and not to the "
-            "probability: imidacloprid's gap from the null median is %.2f Hz under the "
-            "plain label permutation and %.2f Hz under the weight-matched null, against "
-            "a prespecified margin of %s Hz. The plain permutation is a joint "
+            "the transmitter null changes the descriptive point-gap verdict: "
+            "imidacloprid's gap from the null median is %.2f rate-model units under "
+            "the plain label permutation and %.2f under the weight-matched null, "
+            "against a declared margin of %s rate-model units. The plain permutation is a joint "
             "target-set-and-sign null and is reported as one."
             % (gap_plain, gap_matched, ctx.text("dep_named_imidacloprid_delta"))
         )
@@ -1847,7 +1849,7 @@ def step_dependence(ctx: Ctx) -> None:
             "the fipronil bitter-veto ratio on the taste-motor path is a negative at "
             "n=%d shuffles (max |z| = %s, p resolution %.4f): the veto ratio is model "
             "behaviour, not evidence about the wiring, and the verdicts say which "
-            "modes are equivalent within tolerance (%s) and which are merely "
+            "modes pass the descriptive point-gap rule (%s) and which are merely "
             "indeterminate (%s)."
             % (
                 n_taste,
@@ -1894,8 +1896,8 @@ def step_dependence(ctx: Ctx) -> None:
         "usually non-normal null. `verdict` is the only claim the design supports: "
         "`distinguishable` when the test rejects, `equivalent_within_tolerance` when "
         "the gap from the null median is below the prespecified margin `delta`, and "
-        "`indeterminate` otherwise -- a failure to reject is never evidence of "
-        "equivalence. `sign_permute` is a **joint** target-set-and-sign null and is "
+        "`indeterminate` otherwise -- the point-gap rule is not a formal "
+        "equivalence test. `sign_permute` is a **joint** target-set-and-sign null and is "
         "off the ladder (`on_ladder = False`); the rank-3 rung is the weight-matched "
         "transmitter null, which holds each transmitter's share of total outgoing "
         "weight fixed (T23).",
@@ -2207,7 +2209,7 @@ def step_dependence(ctx: Ctx) -> None:
             f"dep_{tag}_below_relative_floor_cells",
             [f"{r['compound']}@{r['conc_M']:.0e}" for r in s["below_relative_effect_floor"]],
             text=", ".join(
-                f"{r['compound']} {_fmt_M(r['conc_M'])} ({r['real_effect']:.3g} Hz)"
+                f"{r['compound']} {_fmt_M(r['conc_M'])} ({r['real_effect']:.3g} rate-model units)"
                 for r in s["below_relative_effect_floor"]
             )
             or "none",
@@ -2284,11 +2286,11 @@ def step_dependence(ctx: Ctx) -> None:
         )
     if land_taste["summary"]["class_counts"].get("composition-dominated", 0) == 0:
         ctx.note(
-            "the central RQ2 result REVERSES on a cut that has topology: repeated on "
+            "the descriptive class distribution differs on a denser cut: repeated on "
             "`taste_motor` (%d nodes, %d edges, mean degree %.1f) the landscape returns "
             "%d composition-dominated cells of %d, against %d of %d on the in-star "
             "`named` cut. The composition-dominated majority is a property of the "
-            "substrate, not of receptor perturbation on connectomes."
+            "tested cut and runtime, not a general result about connectomes."
             % (
                 ctx.get("taste_nodes") or 0,
                 ctx.get("taste_edges") or 0,
@@ -2596,7 +2598,7 @@ def step_dependence(ctx: Ctx) -> None:
     ax2.set_xticks(range(len(labels)))
     ax2.set_xticklabels(labels)
     ax2.set_xlabel("planted loop strength")
-    ax2.set_ylabel("|drug effect| on the synthetic cut (Hz)")
+    ax2.set_ylabel("|drug effect| on the synthetic cut (rate-model units)")
     ax2.set_title(
         f"Ground-truth recovery at n = {rec['n']}\n"
         f"{rec['n_detected']} of {rec['n_positive']} planted effects recovered, "
@@ -2777,8 +2779,8 @@ def step_dose(ctx: Ctx) -> None:
     ctx.put("ic50_hi_M", float(ci["ic50"][1]), text=_fmt_M(ci["ic50"][1]))
     ctx.put("ic50_slope", float(fit["slope"]))
     ctx.put("ic50_r2", float(fit["r2"]), text=f"{fit['r2']:.4f}")
-    ctx.put("ic50_top_hz", float(fit["top"]), unit="Hz")
-    ctx.put("ic50_bottom_hz", float(fit["bottom"]), unit="Hz")
+    ctx.put("ic50_top_hz", float(fit["top"]), unit="rate-model units")
+    ctx.put("ic50_bottom_hz", float(fit["bottom"]), unit="rate-model units")
     ctx.put("ic50_in_range", bool(fit["in_range"]))
     ctx.put("ic50_readout", ic["readout"])
     ctx.put(
@@ -2790,14 +2792,14 @@ def step_dose(ctx: Ctx) -> None:
     tor = sensitivity("subgraph", "imidacloprid", PAPER_CONC, readout="mean_hz", seed=ctx.seed)
     tor = sorted(tor, key=lambda r: abs(float(r["span"])), reverse=True)
     for r in tor:
-        ctx.put(f"tornado_span_{r['param']}", float(r["span"]), unit="Hz")
+        ctx.put(f"tornado_span_{r['param']}", float(r["span"]), unit="rate-model units")
     ctx.put("tornado_top_param", tor[0]["param"])
     zero_span = [r["param"] for r in tor if abs(float(r["span"])) < 1e-9]
     ctx.put("tornado_zero_span_params", zero_span, text=", ".join(zero_span) or "none")
     if "ec50" in zero_span:
         ctx.note(
             "at 1 uM imidacloprid the model is exactly insensitive to a 2x change in "
-            "the insect_nAChR EC50 and in the Hill coefficient (span 0 Hz): occupancy "
+            "the insect_nAChR EC50 and in the Hill coefficient (span 0 rate-model units): occupancy "
             "is saturated, so the gain-rule coefficient is the only parameter that "
             "still moves the readout. A dose-response experiment, not a single high "
             "dose, is what constrains the EC50."
@@ -2816,7 +2818,7 @@ def step_dose(ctx: Ctx) -> None:
     ax.axvline(fit["ic50"], color=CRIT, lw=1, ls="--")
     ax.set_xscale("log")
     ax.set_xlabel("imidacloprid concentration (M)")
-    ax.set_ylabel(f"network {ic['readout']} (Hz)")
+    ax.set_ylabel(f"network {ic['readout']} (rate-model units)")
     ax.set_title(
         f"Model IC50 = {_fmt_M(fit['ic50'])}\n"
         f"[{_fmt_M(ci['ic50'][0])}, {_fmt_M(ci['ic50'][1])}], slope {fit['slope']:.2f}, r2 {fit['r2']:.4f}"
@@ -2836,7 +2838,7 @@ def step_dose(ctx: Ctx) -> None:
     ax2.axvline(base, color=TEXT1, lw=1)
     ax2.set_yticks(y)
     ax2.set_yticklabels(names)
-    ax2.set_xlabel(f"network mean rate (Hz); treated baseline at 1 uM = {base:.2f} Hz")
+    ax2.set_xlabel(f"network mean output (rate-model units); treated baseline at 1 uM = {base:.2f}")
     ax2.set_title("One-at-a-time sensitivity\n(each parameter halved and doubled)")
     ax2.grid(axis="x", lw=0.5)
     ax2.set_axisbelow(True)
@@ -3427,11 +3429,11 @@ def step_expression(ctx: Ctx) -> None:
 
     nb = run_weighted_subgraph_assay("imidacloprid", PAPER_CONC)
     r = nb["readouts"]
-    ctx.put("expr_mn9_uniform_hz", float(r["uniform"]["mn9_hz"]), unit="Hz")
-    ctx.put("expr_mn9_weighted_hz", float(r["mn9_hz"]), unit="Hz")
-    ctx.put("expr_mn9_delta_hz", float(r["delta_vs_uniform"]["mn9_hz"]), unit="Hz")
-    ctx.put("expr_mean_uniform_hz", float(r["uniform"]["mean_hz"]), unit="Hz")
-    ctx.put("expr_mean_weighted_hz", float(r["mean_hz"]), unit="Hz")
+    ctx.put("expr_mn9_uniform_hz", float(r["uniform"]["mn9_hz"]), unit="rate-model units")
+    ctx.put("expr_mn9_weighted_hz", float(r["mn9_hz"]), unit="rate-model units")
+    ctx.put("expr_mn9_delta_hz", float(r["delta_vs_uniform"]["mn9_hz"]), unit="rate-model units")
+    ctx.put("expr_mean_uniform_hz", float(r["uniform"]["mean_hz"]), unit="rate-model units")
+    ctx.put("expr_mean_weighted_hz", float(r["mean_hz"]), unit="rate-model units")
 
 
 def step_ablation(ctx: Ctx) -> None:
@@ -3528,7 +3530,7 @@ def step_ablation(ctx: Ctx) -> None:
     paper = tab["information_gain"][f"{1e-6:.3e}"]
     by_name = {lvl["level"]: lvl for lvl in paper["levels"]}
     ctx.put("abl_rho_topology_paper", _f(by_name["C_topology_only"].get("spearman_rho_vs_full")))
-    ctx.put("abl_rms_topology_hz", _f(by_name["C_topology_only"].get("residual_rms_hz")), unit="Hz")
+    ctx.put("abl_rms_topology_hz", _f(by_name["C_topology_only"].get("residual_rms_hz")), unit="rate-model units")
     ctx.put("abl_rho_composition_paper", _f(by_name["B_composition_only"].get("spearman_rho_vs_full")))
     ctx.put("abl_rho_receptor_paper", _f(by_name["A_receptor_only"].get("spearman_rho_vs_full")))
     paper_cmp = paper.get("generic_rule_comparison") or {}
@@ -3584,7 +3586,7 @@ def step_ablation(ctx: Ctx) -> None:
 
     if (ctx.get("abl_rho_topology_paper") or 0) >= (ctx.get("abl_rho_topology_floor_paper") or 0) + 0.3:
         ctx.note(
-            "the level-C conclusion is withdrawn: with a direction-aware generic rule "
+            "the level-C rank comparison depends on the generic rule: with a direction-aware rule "
             "the topology-only baseline's rank correlation with the full model at 1 uM "
             "rises from %s (depression-only floor, which cannot express disinhibition "
             "and whose every entry is at most zero) to %s. 'The connectome without the "
@@ -3623,7 +3625,7 @@ def step_ablation(ctx: Ctx) -> None:
     if cond["shuffled_compound_assignment"]["identical_to_observed"]:
         ctx.note(
             "the composition-versus-full correlation carries no compound-level "
-            "information: shuffling the compound-to-gain assignment leaves it "
+            "evidence from a label shuffle: shuffling the compound-to-gain assignment leaves it "
             "identically %s, and pharmacology-free pseudo-compounds whose gain vectors "
             "have the shape the mechanism rules produce already reach a median of %s. "
             "Both levels are functions of the same gain vector, so the number is a "
@@ -3674,11 +3676,11 @@ def step_ablation(ctx: Ctx) -> None:
         "Reference distribution for the composition-versus-full rank correlation. The "
         "composition level and the full model are not independent models: both are "
         "functions of the same gain vector, so the correlation has a large structural "
-        "floor and a bare value near 0.99 is not interpretable. The matched reference "
+        "floor and the observed value must be compared with a matched reference. The latter "
         "draws pseudo-compounds with the shape the shipped mechanism rules produce "
         "(one receptor, one transmitter, one gain moved) and no pharmacology at all; "
         "shuffling the compound labels leaves the observed value unchanged, which is a "
-        "proof rather than a coincidence.",
+        "consequence of moving the paired B and D values together.",
         md_fields=["condition", "spearman_rho", "n_compounds", "draws"],
     )
 
@@ -3722,7 +3724,7 @@ def step_ablation(ctx: Ctx) -> None:
             "the composition verdict is not robust to the engine's row normalisation: "
             "the B-versus-D rank correlation at 1 uM is %s under the shipped `row_abs` "
             "mode and %s under a degree-corrected one. The normalisation is an "
-            "undocumented modelling choice that makes each cell's recurrent input a "
+            "documented modelling choice that makes each cell's recurrent input a "
             "composition-weighted average of its presynaptic gains."
             % (
                 ctx.text("abl_rho_composition_row_abs"),
@@ -3784,8 +3786,8 @@ def step_ablation(ctx: Ctx) -> None:
         "compound-concentration cell from a model that has been denied one layer of "
         "information: receptor engagement only (dimensionless), mechanism gains on the "
         "graph's transmitter composition only (excitation index), the real cut with one "
-        "generic multiplier instead of mechanism-specific gains (Hz), and the full "
-        "model (Hz). The generic multiplier is direction-aware: generic in magnitude, "
+        "generic multiplier instead of mechanism-specific gains (rate-model units), "
+        "and the full model (rate-model units). The generic multiplier is direction-aware: generic in magnitude, "
         "with one bit of sign taken from the mechanism table, which is the minimum a "
         "connectome-without-pharmacology model needs to order a library containing "
         "disinhibitors. `C_topology_only_floor` is the historical depression-only rule, "
@@ -3862,13 +3864,13 @@ def step_ablation(ctx: Ctx) -> None:
         fig,
         "F13_ablation",
         f"Each level predicts the same {len(tab['compounds'])} compounds with one layer "
-        "of information removed, and is scored by how well it reproduces the full "
+        "of information removed, and is scored by rank agreement with the full "
         "model's *ordering* of the library (levels have different units, so values are "
         "not comparable; the correlation is signed, so a perfect inversion scores -1 "
         "rather than 1). Crosses mark the historical depression-only level-C rule, "
         "which applied a multiplier of at most 1.0 to every transmitter alike and so "
-        "could not express disinhibition: its poor correlation was structural, not a "
-        "finding about connectomes, and the conclusion drawn from it is withdrawn. "
+        "could not express disinhibition: its poor correlation follows partly from "
+        "that restriction. "
         f"With a direction-aware rule level C rises to "
         f"{ctx.text('abl_rho_topology_paper')} at 1 uM from "
         f"{ctx.text('abl_rho_topology_floor_paper')}. The short green interval at B "
@@ -3936,8 +3938,8 @@ def step_stability(ctx: Ctx) -> None:
             "the C3 retention rate is no longer vacuous and is no longer uniform: at "
             "n_shuffles = %d (resolution %.4f, against the previous 6 at which p <= "
             "0.05 was arithmetically unattainable) the conclusion is retained by %d of "
-            "%d specifications, but only %d of those reach equivalence within the "
-            "prespecified margin; %d are merely indeterminate."
+            "%d specifications, but only %d of those pass the descriptive point-gap "
+            "rule; %d are indeterminate."
             % (
                 int(res["n_shuffles"]),
                 float(res["shuffle_resolution"]),
@@ -3971,8 +3973,8 @@ def step_stability(ctx: Ctx) -> None:
             with mechanism_spec(spec):
                 nb = run_subgraph_assay("imidacloprid", PAPER_CONC)
             r = nb["readouts"]
-            ctx.put(f"stab_{label}_treated_hz", _f(r.get("mean_hz")), unit="Hz")
-            ctx.put(f"stab_{label}_vehicle_hz", _f((r.get("vehicle") or {}).get("mean_hz")), unit="Hz")
+            ctx.put(f"stab_{label}_treated_hz", _f(r.get("mean_hz")), unit="rate-model units")
+            ctx.put(f"stab_{label}_vehicle_hz", _f((r.get("vehicle") or {}).get("mean_hz")), unit="rate-model units")
             ctx.put(f"stab_{label}_g_ach", _f((nb.get("gains") or {}).get("g_ach")))
         t, v = ctx.get("stab_monotone_treated_hz"), ctx.get("stab_monotone_vehicle_hz")
         if t and v:
@@ -3980,7 +3982,7 @@ def step_stability(ctx: Ctx) -> None:
         ctx.note(
             "the suppression conclusion is specification-dependent: %d of %d "
             "prespecified specifications reverse it. Under %s the same compound at the "
-            "same engagement EXCITES the network (%s Hz treated vs %s Hz vehicle) "
+            "same engagement raises the model readout (%s treated vs %s vehicle, rate-model units) "
             "instead of suppressing it. Suppression is a property of the biphasic "
             "desensitisation term, not of the pharmacology-connectome integration."
             % (
@@ -4286,21 +4288,20 @@ def step_stability(ctx: Ctx) -> None:
         ctx,
         fig,
         "F14_conclusion_stability",
-        "Each row is a conclusion this paper could state; each column is one "
-        "prespecified, admissible way of turning receptor engagement into synaptic "
-        "gain. Green retains the conclusion, red reverses it, amber means the readout "
+        "Each row is a model-output predicate; each column is one tested way of "
+        "turning receptor engagement into synaptic gain, with transmitter signs "
+        "and synapse assignment fixed. Green retains the predicate, red reverses it, "
+        "and amber means the readout "
         "does not exist under that specification. The topology rows are decided on "
         f"{res['n_shuffles']} permutations per specification and on Benjamini-Hochberg "
         f"adjusted probabilities across the {res['n_structural_tests']} structural "
-        "tests of the run; until v0.6.1 the specification never reached the engine "
-        "those rows were computed on, so their uniformity was guaranteed by "
-        "construction rather than measured. Retained by every specification: "
+        "component tests of the run; this is not a cell-level FDR guarantee. "
+        "Retained by every tested specification: "
         + (", ".join(r["conclusion"] for r in res["rows"] if not r["fragile"]) or "none")
-        + ". The nicotinic suppression conclusion is reversed by every monotone rule, "
-        "which is how a result that depends on a modelling choice looks when it is "
-        "tested rather than asserted; and for a conclusion shaped as a failure to "
-        "reject, the fraction retained is only as strong as the equivalence behind it "
-        "(T14's `n_equivalent_within_tolerance` against `n_indeterminate`).",
+        + ". The nicotinic suppression predicate reverses under every monotone rule "
+        "in this family. For a predicate based on non-rejection, T14 separates "
+        "descriptive point-gap passes from indeterminate cases; neither is a formal "
+        "equivalence result.",
     )
 
 
@@ -4326,8 +4327,8 @@ def step_uncertainty(ctx: Ctx) -> None:
     ctx.put("unc_n_factors", int(res["n_factors"]))
     ctx.put("unc_evaluations", int(res["n_evaluations"]))
     ctx.put("unc_estimator", str(res["estimator"]))
-    ctx.put("unc_output_mean", _f(res["output_mean"]), unit="Hz")
-    ctx.put("unc_variance", _f(res["output_variance"]), unit="Hz^2")
+    ctx.put("unc_output_mean", _f(res["output_mean"]), unit="rate-model units")
+    ctx.put("unc_variance", _f(res["output_variance"]), unit="rate-model units^2")
     ctx.put("unc_interaction_share", _f(res["interaction_share"]))
     ctx.put("unc_interaction_share_clipped", _f(res["interaction_share_clipped"]))
     ctx.put("unc_sum_first_order", _f(res["sum_first_order"]))
@@ -4437,10 +4438,10 @@ def step_uncertainty(ctx: Ctx) -> None:
     )
 
     v = voi(result=res)
-    ctx.put("voi_var_total", _f(v["output_variance"]), unit="Hz^2")
+    ctx.put("voi_var_total", _f(v["output_variance"]), unit="rate-model units^2")
     for i, r in enumerate(v["rows"][:3], 1):
         ctx.put(f"voi_rank{i}_factor", r["factor"])
-        ctx.put(f"voi_rank{i}_var", _f(r["voi_var"]), unit="Hz^2")
+        ctx.put(f"voi_rank{i}_var", _f(r["voi_var"]), unit="rate-model units^2")
         ctx.put(f"voi_rank{i}_fraction", _f(r["voi_fraction"]))
         ctx.put(f"voi_rank{i}_experiment", r["experiment"])
         ctx.put(f"voi_rank{i}_cost", r["cost"])
@@ -4494,16 +4495,16 @@ def step_uncertainty(ctx: Ctx) -> None:
             "cost",
             "blocking_gate",
         ],
-        "Value of information. VOI_j = S_j x Var(Y) is the model variance that would "
-        "disappear if assumption j were resolved exactly while everything else stayed "
-        "as uncertain as it is; the upper bound uses the total-order index and is what "
-        "resolving j *last* would buy. A value of information cannot be negative, so a "
+        "Author-defined variance-priority heuristic. H_j = max(0, S_j) × Var(Y) "
+        "ranks variance associated with factor j under assumed input ranges; it is "
+        "not a formal expected value of information. The upper-bound column uses "
+        "the total-order index. The heuristic cannot be negative, so a "
         "negative first-order estimate is clipped to zero for the decision value and "
         "kept unclipped in `voi_fraction_raw`. `state` says whether the sample could "
         "resolve the factor at all: an unresolved factor carries no ranking claim, "
         "which is a statement about the sample size rather than about the factor. This "
-        "is variance of a model output under assumed input ranges, not an expected gain "
-        "in accuracy about a living fly.",
+        "uses squared rate-model units, despite legacy column names ending in hz2; "
+        "it is not an expected gain in accuracy about a living fly.",
         md_fields=["rank", "factor", "state", "voi_fraction_of_var", "voi_var_hz2", "experiment", "cost"],
     )
 
@@ -4553,8 +4554,8 @@ def step_uncertainty(ctx: Ctx) -> None:
     ax2.barh(y2, [r["voi_var"] for r in top], color=[GOOD if r.get("cost") == "none (compute only)" else SEQ[2] for r in top])
     ax2.set_yticks(y2)
     ax2.set_yticklabels([r["factor"] for r in top], fontsize=8)
-    ax2.set_xlabel("model variance an exact answer would remove (Hz$^2$)")
-    ax2.set_title(f"Value of information (Var(Y) = {res['output_variance']:.3g} Hz$^2$)", fontsize=10)
+    ax2.set_xlabel("variance-priority score (rate-model units$^2$)")
+    ax2.set_title(f"Priority heuristic (Var(Y) = {res['output_variance']:.3g} model units$^2$)", fontsize=10)
     ax2.grid(axis="x", lw=0.5)
     ax2.set_axisbelow(True)
     fig.tight_layout()

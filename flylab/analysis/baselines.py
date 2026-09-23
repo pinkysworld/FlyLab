@@ -1125,14 +1125,14 @@ def _statements(gain: dict[str, Any], scope: str) -> list[str]:
                 else ""
             )
             out.append(
-                f"{lvl} REPRODUCES the full model {scope}{unit_note}: "
+                f"{lvl} meets the declared rank-agreement threshold {scope}{unit_note}: "
                 f"rho = {rho:.3f}, r = {r:.3f} over {row['n_compounds']} "
-                "compounds. The layers above it add no ordering information "
-                "for this readout."
+                "compounds. This is agreement in the tested library, not independent "
+                "validation of either model."
             )
         elif row["reproduces_full_ordering"]:
             out.append(
-                f"{lvl} reproduces the full model's ORDERING but not its values "
+                f"{lvl} meets the rank threshold but not the value-agreement threshold "
                 f"{scope}: rho = {rho:.3f} (>= {REPRODUCES_RHO}) with r = "
                 f"{r:.3f} (< {REPRODUCES_R}) over {row['n_compounds']} compounds."
             )
@@ -1144,8 +1144,8 @@ def _statements(gain: dict[str, Any], scope: str) -> list[str]:
             )
         else:
             out.append(
-                f"{lvl} does NOT reproduce the full model {scope}: rho = "
-                f"{rho:.3f}, r = {r:.3f}; the layers above it are doing real work."
+                f"{lvl} is below the declared rank threshold {scope}: rho = "
+                f"{rho:.3f}, r = {r:.3f}."
             )
     cmp_block = gain.get("generic_rule_comparison")
     if cmp_block and cmp_block.get("delta_rho") is not None:
@@ -1401,23 +1401,16 @@ def composition_reference_distribution(
             f"{sq['median']:.3f}, 5th-95th percentile [{sq['p05']:.3f}, "
             f"{sq['p95']:.3f}] over {sq['n']} draws. The observed "
             f"{observed:.3f} is at the {sparse_pct:.0f}th percentile - "
-            f"{verdict}. A rank correlation of this size between levels B and D "
-            "is therefore close to an algebraic identity: both are functions of "
+            f"{verdict}. A high correlation between levels B and D can arise "
+            "because both are functions of "
             "the same gain vector, one through a fixed census and one through a "
             "row-normalised matrix whose cells average their presynaptic gains."
         )
         statements.append(
-            "WHAT WOULD HAVE BEEN EVIDENCE AGAINST THE CLAIM that composition "
-            "carries the ordering: an observed rho below the matched "
-            f"reference's 5th percentile ({sq['p05']:.3f}), i.e. the census "
-            "ordering the REAL library worse than it orders pseudo-compounds "
-            "with no pharmacology in them. Evidence that the agreement was a "
-            "substantive finding about this connectome would need the matched "
-            "reference to sit well below the observed value - a median near "
-            "zero, so that reproducing the ordering was a priori unlikely. "
-            f"Here the matched reference median is {sq['median']:.3f}, so the "
-            "quoted 0.99 should be read as the structural floor plus a small "
-            "excess, not as a measurement of what the connectome contributes."
+            "The observed value should be read against the matched reference "
+            f"interval [{sq['p05']:.3f}, {sq['p95']:.3f}], whose median is "
+            f"{sq['median']:.3f}. A large B-versus-D correlation alone does not "
+            "measure a compound-specific contribution of the connectome."
         )
     if shuffled is not None and observed is not None:
         statements.append(
@@ -1426,9 +1419,8 @@ def composition_reference_distribution(
             f"(difference {shuffled - observed:+.3g}). Both levels are "
             "functions of the gain vector alone, so a permutation of the labels "
             "moves the (B, D) pairs as a block and cannot change the rank "
-            "correlation. The comparison therefore carries no compound-level "
-            "information: it is a statement about the map from gains to "
-            "readouts, not about which compound is which."
+            "correlation. This label shuffle supplies no independent "
+            "compound-level evidence; it tests the shared gain-to-readout map."
         )
     return {
         "conc_M": float(conc_M),
@@ -1548,7 +1540,7 @@ def composition_dominance_under_normalisations(
             else f"survives only under {survives or 'none'}"
         )
         + f" (threshold rho >= {REPRODUCES_RHO}); the shipped engine is "
-        f"{ref!r}, and the row normalisation is an undocumented modelling "
+        f"{ref!r}, and the row normalisation is a documented modelling "
         "choice, not a measurement."
     )
     return {

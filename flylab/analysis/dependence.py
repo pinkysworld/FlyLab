@@ -1432,7 +1432,7 @@ def _assemble_profile(
             "confirmatory tests (" + ", ".join(CONFIRMATORY_COMPOUNDS)
             + f" at n >= {PAPER_N}) and carries no multiplicity correction of "
             "its own. Counting verdicts over many such profiles needs the "
-            "FDR-controlled dependence_landscape instead."
+            "component-test-adjusted dependence_landscape instead."
         )
     profile = {
         "compound": compound,
@@ -1977,7 +1977,7 @@ def dependence_landscape(
     n_jobs: int = 1,
     **kw: Any,
 ) -> dict[str, Any]:
-    """The compound x concentration dependence landscape, FDR-controlled.
+    """The compound x concentration dependence landscape with component-test BH adjustment.
 
     One cell per ``(compound, conc_M)``: its real effect, the per-mode
     permutation p and z, the three-way verdict, the dependence class and the
@@ -2540,17 +2540,19 @@ def _landscape_result(
     topo_raw = sorted({r["compound"] for r in table if r["class_raw"] == "topology-dependent"})
     comp = sorted({r["compound"] for r in table if r["class"] == "composition-dominated"})
     statement = (
-        "exploratory screen, FDR-controlled: "
+        "exploratory screen with BH-adjusted structural component tests: "
         f"{n_topo} of {len(cells)} cells are topology-dependent after "
         f"Benjamini-Hochberg at fdr_alpha = {q_alpha} across {bh['m']} structural "
-        f"tests ({n_topo_raw} before correction)."
+        f"tests ({n_topo_raw} before correction). The derived cell classes have "
+        "no separate cell-level FDR guarantee."
         if not confirmatory
         else (
-            f"confirmatory-resolution landscape: {n_topo} of {len(cells)} cells "
+            f"higher-resolution landscape: {n_topo} of {len(cells)} cells "
             f"are topology-dependent after Benjamini-Hochberg at fdr_alpha = "
             f"{q_alpha} across {bh['m']} structural tests ({n_topo_raw} before "
             "correction); the permutation resolution supports the adjusted "
-            "threshold for a single isolated test."
+            "threshold for a single isolated test. The derived cell classes have "
+            "no separate cell-level FDR guarantee."
         )
     )
     if not bh["can_reject"]:
