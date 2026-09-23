@@ -281,7 +281,7 @@ Every source used across the six files, once each.
 - Chen W, Gu X, Yang YT, Batterham P, Perry T (2022) Dual nicotinic acetylcholine receptor subunit gene knockouts reveal limits to functional redundancy. *Pestic Biochem Physiol* 184:105118. DOI 10.1016/j.pestbp.2022.105118. PMID 35715057.
 - French AS, Sellier MJ, Ali Agha M, Guigue A, Chabaud MA, Reeb PD, Mitra A, Grau Y, Soustelle L, Marion-Poll F (2015) Dual mechanism for bitter avoidance in *Drosophila*. *J Neurosci* 35(9):3990–4004. DOI 10.1523/JNEUROSCI.1312-14.2015. PMID 25740527.
 - Gargano JW, Martin I, Bhandari P, Grotewiel MS (2005) Rapid iterative negative geotaxis (RING): a new method for assessing age-related locomotor decline in *Drosophila*. *Exp Gerontol* 40(5):386–395. DOI 10.1016/j.exger.2005.02.005. PMID 15919590.
-- Lee HY, Zhou L, Ghanta S, Asplund M, Zhu C, et al. (2014) Mechanisms of naturally evolved ethanol resistance in *Drosophila melanogaster*. *J Exp Biol*. DOI 10.1242/jeb.110510. *(cited only as the source of a null in `fly_pharmacokinetics.yaml`)*
+- Fry JD (2014) Mechanisms of naturally evolved ethanol resistance in *Drosophila melanogaster*. *J Exp Biol* 217(22):3996–4003. DOI 10.1242/jeb.110510. *(cited only as the source of a null in `fly_pharmacokinetics.yaml`)*
 - Martelli F, Zhongyuan Z, Wang J, Wong CO, Karagas NE, Roessner U, Rupasinghe T, Venkatachalam K, Perry T, Bellen HJ, Batterham P (2020) Low doses of the neonicotinoid insecticide imidacloprid induce ROS triggering neurological and metabolic impairments in *Drosophila*. *Proc Natl Acad Sci USA* 117(41):25840–25850. DOI 10.1073/pnas.2011828117. PMID 32989137.
 
 ### Cited in `flylab/pharm/library.yaml` and re-checked here

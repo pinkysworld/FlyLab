@@ -25,7 +25,7 @@ Internal review history lives in `papers/reviews/`. It is archived critique, not
 | Title, author block, affiliations | **missing** — authors are "FlyLab contributors" | needs real names, ORCIDs, affiliations, a corresponding author and an email |
 | Abstract | done — computing problem first, the methodological headline, the central limitation | draft §Abstract |
 | Index terms / keywords | done | draft §Index terms |
-| Numbered IEEE-style references with DOIs | done — 77 entries | draft §References |
+| Numbered references | 76 entries after removing an unverifiable citation; full source-by-source audit remains open | draft §References |
 | In-text citation of every reference | check with the grep in §D | — |
 | Figures, 300 dpi, captions | done — 16 figures (F16 is the instrument validation) | `papers/figures/`, `figures/captions.md` |
 | Tables | done — T0–T27 as CSV and Markdown | `papers/tables/` |

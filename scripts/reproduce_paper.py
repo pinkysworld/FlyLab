@@ -1745,13 +1745,13 @@ def step_dependence(ctx: Ctx) -> None:
         ctx.put(
             f"dep_{tag}_{compound}_effect",
             _f(prof["real_effect"]),
-            unit="Hz" if assay == "subgraph" else None,
+            unit="rate-model units" if assay == "subgraph" else None,
         )
         ctx.put(f"dep_{tag}_{compound}_vehicle", _f(prof.get("real_vehicle")))
         ctx.put(f"dep_{tag}_{compound}_class", cls["class"])
         ctx.put(f"dep_{tag}_{compound}_level", lvl.get("level"))
         ctx.put(f"dep_{tag}_{compound}_level_verdict", lvl.get("verdict"))
-        ctx.put(f"dep_{tag}_{compound}_delta", _f(prof.get("delta")), unit="Hz")
+        ctx.put(f"dep_{tag}_{compound}_delta", _f(prof.get("delta")), unit="rate-model units")
         ctx.put(
             f"dep_{tag}_{compound}_delta_frac",
             _f(prof.get("delta_frac")),
@@ -2233,8 +2233,8 @@ def step_dependence(ctx: Ctx) -> None:
         for v, k in verdicts.items():
             ctx.put(f"dep_{tag}_verdicts_{v}", int(k))
         deltas = land.get("delta_range") or [None, None]
-        ctx.put(f"dep_{tag}_delta_min", _f(deltas[0]), unit="Hz")
-        ctx.put(f"dep_{tag}_delta_max", _f(deltas[1]), unit="Hz")
+        ctx.put(f"dep_{tag}_delta_min", _f(deltas[0]), unit="rate-model units")
+        ctx.put(f"dep_{tag}_delta_max", _f(deltas[1]), unit="rate-model units")
         # the cells the paper names one by one
         for cell in land["cells"]:
             if abs(cell["conc_M"] - PAPER_CONC) > 1e-18:
@@ -2420,7 +2420,17 @@ def step_dependence(ctx: Ctx) -> None:
             if col == 0:
                 ax.set_ylabel(f"{compound}\nshuffles")
             if row == 1:
-                ax.set_xlabel("effect on mean rate (Hz)")
+                ax.set_xlabel("effect on mean rate (model units)")
+            if col == len(MODES) - 1 and vals.size:
+                # The Erdős–Rényi null concentrates near zero. Show its shape
+                # without hiding the real-cut contrast on the main axis.
+                lo, hi = np.quantile(vals, [0.005, 0.995])
+                if hi > lo:
+                    inset = ax.inset_axes([0.49, 0.47, 0.47, 0.42])
+                    inset.hist(vals, bins=25, color=SEQ[1], edgecolor="white", linewidth=0.2)
+                    inset.set_xlim(float(lo), float(hi))
+                    inset.tick_params(labelsize=5)
+                    inset.set_title("null detail", fontsize=6)
     axes[0, 0].legend(fontsize=7)
     fig.suptitle(
         f"Connectome-dependence profile, {n} permutations per mode "
@@ -2436,10 +2446,11 @@ def step_dependence(ctx: Ctx) -> None:
         f"rate) measured on {n} degraded copies of the 1-hop MN9/DNp01 `named` cut; the "
         "red line is the same contrast on the real cut. Columns run in increasing order "
         "of destruction: transmitter labels permuted, synapse weights permuted, "
-        "degree-preserving double-edge rewiring, Erdos-Renyi. Titles carry the "
+        "degree-preserving double-edge rewiring, Erdős–Rényi. Insets show the "
+        "central 99% of the concentrated Erdős–Rényi null distributions. Titles carry the "
         "empirical two-sided permutation p and the three-way verdict against the "
         f"prespecified equivalence margin (delta = "
-        f"{ctx.text('dep_named_imidacloprid_delta')} Hz, 5 % of the vehicle readout): "
+        f"{ctx.text('dep_named_imidacloprid_delta')} model rate units, 5 % of the vehicle readout): "
         "`distinguishable` means the test rejected, `equivalent within tolerance` means "
         "the gap from the null median is below the margin, and `indeterminate` means "
         "neither -- a failure to reject is not evidence that the degraded graph gives "
@@ -3782,7 +3793,7 @@ def step_ablation(ctx: Ctx) -> None:
 
     fig, ax = plt.subplots(figsize=(7.4, 4.0))
     xs = list(range(len(LEVELS)))
-    for i, conc_key in enumerate(sorted(tab["information_gain"])):
+    for i, conc_key in enumerate(sorted(tab["information_gain"], key=float)):
         gain = tab["information_gain"][conc_key]
         by = {lvl["level"]: lvl for lvl in gain["levels"]}
         ys = [by[lvl].get("spearman_rho_vs_full") for lvl in LEVELS]
@@ -3799,17 +3810,19 @@ def step_ablation(ctx: Ctx) -> None:
                 color=SEQ[min(i + 1, 4)], ms=9, mew=2,
             )
     ax.axhline(0.0, color=TEXT2, lw=1)
-    ax.axhline(REPRODUCES_RHO, color=GOOD, lw=1, ls="--")
-    ax.text(
-        0.02, REPRODUCES_RHO + 0.02, "reproduces the full ordering", fontsize=7,
-        color=GOOD, transform=ax.get_yaxis_transform(),
-    )
+    if sparse.get("p05") is not None and sparse.get("p95") is not None:
+        ax.axhspan(float(sparse["p05"]), float(sparse["p95"]), color=GOOD,
+                   alpha=0.15, label="matched reference 5th–95th percentile")
+    if sparse.get("median") is not None:
+        ax.axhline(float(sparse["median"]), color=GOOD, lw=1, ls="--",
+                   label="matched reference median")
     ax.set_xticks(xs)
-    ax.set_xticklabels([short.get(lvl, lvl).replace("_", " ") for lvl in LEVELS])
-    ax.set_ylabel("signed Spearman rho of the library ordering vs the full model")
-    ax.set_xlabel("information the level is allowed")
+    ax.set_xticklabels([lvl.split("_", 1)[0] for lvl in LEVELS])
+    ax.set_ylabel("Signed Spearman ρ vs full model")
+    ax.set_xlabel("Ablation level")
     ax.set_title(f"Ablation ladder over the {len(tab['compounds'])}-compound library")
-    ax.legend(fontsize=7.5, title="concentration", title_fontsize=7.5)
+    ax.legend(fontsize=7.5, title="concentration", title_fontsize=7.5,
+              loc="lower right")
     ax.grid(lw=0.5)
     ax.set_axisbelow(True)
     fig.tight_layout()
@@ -3827,9 +3840,10 @@ def step_ablation(ctx: Ctx) -> None:
         "finding about connectomes, and the conclusion drawn from it is withdrawn. "
         f"With a direction-aware rule level C rises to "
         f"{ctx.text('abl_rho_topology_paper')} at 1 uM from "
-        f"{ctx.text('abl_rho_topology_floor_paper')}. The composition level's agreement "
-        "with the full model must be read against the matched reference distribution "
-        "of T24, not on its own.",
+        f"{ctx.text('abl_rho_topology_floor_paper')}. The green band shows the "
+        "5th–95th percentile of the matched one-gain-per-pseudo-compound reference "
+        "distribution (T24), with its median dashed. The composition level's "
+        "agreement with the full model must be read against that distribution.",
     )
 
 def step_stability(ctx: Ctx) -> None:
