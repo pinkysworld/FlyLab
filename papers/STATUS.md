@@ -3,12 +3,16 @@
 **Files:** `papers/IJRC_FlyLab_draft.md` and `papers/SUPPLEMENT.md` — **both generated**. Edit `papers/IJRC_FlyLab_draft.md.in` / `papers/SUPPLEMENT.md.in` and re-render; never hand-edit a number into a rendered document.
 
 **Venue:** IJRC (ijrcom.org), as a **Research Article** (Introduction, Methods, Results, Discussion, Conclusion, References).
-**State:** v0.6.1 revision complete, responding to the **second-round** referee report (`papers/reviews/round2_referee_report.md`). Not submitted. Point-by-point response, by the report's own item numbers: `papers/SUBMISSION_CHECKLIST.md` §R.
+**State:** additional internal-review and readability revision of main `38cad67`. Not submitted. Review decisions: `papers/reviews/current_revision_decisions.md` and `papers/reviews/round4_editorial_decisions.md`. Author details are supplied; an editable Word preparation copy is in `papers/submission/`.
 
-**The paper is framed for a computing venue, and the central empirical claim reversed in this round.** IJRC is a computing journal, so the manuscript leads with the general problem — a network simulation cannot say which of its inputs a prediction depends on — and treats the fly pharmacology as the domain the method is demonstrated on. The headline is methodological: a dependence verdict obtained on one extract of a network can invert on another extract of the same network, and the extract's **recurrence, not its size**, predicts which way. "Most predictions do not need the connectome" and "exactly the chloride-channel blockers" are withdrawn.
+**Current internal-review update:** the denser-cut study, synthetic recovery cases, corrected evidence propagation and specification fixes are retained. The current revision narrows the remaining claims: extract sensitivity is observed, recurrence is not isolated causally, the legacy equivalence label is only a median-gap diagnostic, and the small synthetic detection grid does not establish endpoint-specific power. Review reports and decisions are in `papers/reviews/`.
+
+**This review's verification:** the existing default-effort numerical record is retained. The attempted full rerun was interrupted during dependence analysis. `scripts/paper_review_metadata.py` refreshes interpretation and captions while asserting that numerical value payloads and table CSV bytes are unchanged; `results.json.review_metadata` distinguishes this replay from a completed rerun. See `papers/reviews/current_verification.md` for completed checks.
+
+**Reproduction boundary:** the standard pipeline recomputes core committed-cut analyses but imports the previously computed `papers/scale_study.json`. Only `scale_1k` is committed; large-rung results require upstream cuts to recompute and the saved study lacks source/input hashes. Re-rendering its table is not an independent rerun.
 
 ```bash
-python scripts/reproduce_paper.py                # regenerate every figure, table and number (~35-45 min)
+python scripts/reproduce_paper.py                # recompute core analyses and replay the cached scale table
 python scripts/reproduce_paper.py --only paper   # re-render both documents from results.json
 python -m pytest -q                              # must be green
 ```
@@ -18,47 +22,46 @@ python -m pytest -q                              # must be green
 | Part | State |
 |---|---|
 | Abstract (architecture + one topology result + one reproducibility result + the central limitation; individual numbers stripped) | done |
-| §1 Introduction — the four research questions, related work, and the narrow novelty claim with a comparison table | done |
+| §1 Introduction: three research questions, related work, and the narrow novelty claim with a comparison table | done; reproduction is supporting evidence rather than RQ4 |
 | §2 Methods — typed evidence, the circuit substrate, connectome-dependence analysis, the ablation ladder and specification family, the evaluation taxonomy, global uncertainty and VOI | done (6 subsections) |
 | §3 Results — the instruments evaluated first (ground truth and power, then the inversion and the scale ladder), with the domain readouts as supporting material; every number from `results.json` | done (7 subsections) |
 | §4 **Discussion** — what was learned computationally (including the substrate dependence of the method's own verdict, and two instruments that were broken in ways that flattered the conclusions); model-generated vs encoded; adjacent work; **what the software cannot support**; five model-specific caveats, at length in §S9; prospective-not-pre-registered | done |
 | §5 Conclusion | done |
 | Statements — precise AI declaration, animal research, data/code availability, competing interests, funding | done |
-| References — 77 entries with DOIs/PMIDs, including FlyBrainLab [68], the receptor-map whole-brain models [69], [70] and the *Drosophila* binding constant [77] | done |
+| References — 76 entries with DOIs/PMIDs, including FlyBrainLab [67], the receptor-map whole-brain models [68], [69] and the *Drosophila* binding constant [76] | done |
 | Supplement — mechanism rationale and the level-C rule (S1), the specification family and why the previous matrix was vacuous (S1.1), null-model definitions with the weight-matched transmitter null (S2), the three-way verdict and the equivalence margin (S2.1), effect floor and multiplicity (S2.2), ground-truth recovery and power (S2.3), the scale ladder and where the verdict settles (S2.4), runtimes and the row normalisation (S3), supporting capabilities (S4), prospective predictions with the H2/H3 caveat (S5), evidence-typing rules and the soundness invariant (S6), reproduction knobs (S7), notebook warnings (S8), model-specific caveats in full (S9), and the domain readouts, selectivity and literature concordance moved out of the body (S10) | done |
 | 16 figures (F16 is the instrument validation) + T0–T25, regenerated at 300 dpi | done |
 
-**Body word count is generated, not estimated**, and a test fails if it leaves the 5000–7000 target: `papers/results.json → values.paper_words_body`.
+**Body word count is generated, not estimated**: `papers/results.json → values.paper_words_body`. The editorial test guard is 5000–8000. The concise revision is below the journal's typical Research Articles 6000–8000 range but within its general 5000–10000 guidance. Confirm the length rather than pad the text. Final format and blind-review packaging remain author checks.
 
-## True in the repo today (all reproducible with committed artifacts)
+## Implemented capabilities and committed artifacts
 
-- Typed evidence: 102 rows / 21 compounds / 15 receptor keys; 34 EC50, 10 IC50, **2 Kd**, 56 not modelled and returning N/A, enforced by the type system and by a soundness invariant checked over every row and every entry point. Evidence distance E0–E4: 10 / 15 / 10 / 11 / 56.
+- Typed evidence: 102 rows / 21 compounds / 15 receptor keys; 34 EC50, 10 IC50, **2 Kd**, 56 not modelled and returning N/A, enforced by a tagged-record dispatch discipline and regression checks across all shipped rows and enumerated pipeline paths. Evidence distance E0–E4: 10 / 15 / 10 / 11 / 56.
 - Two committed MaleCNS v1.0 cuts (1126/1360 and 1841/19 066) plus a 165 122-cell census fallback; all 16 labellar `LB*` types proven present.
-- Connectome-dependence analysis at n = 1000 with three-way equivalence verdicts, a weight-matched transmitter null, a permutation-count sweep, ground-truth validation of the ladder, and an FDR-corrected landscape over 21 compounds × 4 concentrations **on both committed cuts**.
+- Connectome-dependence analysis at n = 1000 with three-way descriptive tolerance diagnostics, a weight-matched transmitter null, a permutation-count sweep, synthetic positive-control checks of the ladder, and a landscape classified using BH-adjusted component tests over 21 compounds × 4 concentrations **on both committed cuts**.
 - Ablation ladder, conclusion-stability matrix over 25 gain specifications, a 3×3 threshold grid, a Sobol' budget (11 264 evaluations) with Ishigami validation, and a VOI ranking.
 - Map-extracted GRN → MN9 path with a complete bitter veto in vehicle and partial relief under fipronil, on both engines.
-- Everything above regenerated by one command in about 35–45 minutes with no downloads, and a test asserts the committed record was produced at the shipped statistical effort.
+- Core committed-cut analyses regenerated by the standard command; scale profiles are imported from the saved study, and a test asserts the committed record was produced at the shipped statistical effort.
 
-## Honest negatives the draft reports as results
+## Interpretation limits
 
-These are in the manuscript on purpose and must not be removed to make it look better:
-
-- **The central RQ2 claim reversed, and the scaling study says what it tracks.** On the in-star `named` cut the landscape gives 11 topology-dependent / 42 composition-dominated / 31 no-effect of 84; repeated unchanged on `taste_motor` it gives 54 / 0 / 30. Across a ladder of 7 extracts (`scale_1k` … `scale_50k` plus the two committed cuts) the composition-dominated verdict survives on **exactly one** — the in-star — and `scale_1k` has *fewer* nodes (1000 vs 1126) with mean degree 22.9 vs 1.21 and is already topology-dependent. **Recurrence, not size, predicts the inversion.** At the denser middle rungs (5k, 10k) imidacloprid is distinguishable from *every* null. The top rungs run at n = 20 (resolution 0.048), so they confirm rather than establish the settled verdict.
-- Imidacloprid's `named` mean-rate effect is **composition-dominated** at n = 1000 — equivalent within tolerance for rewire_degree_preserving, sign_permute_weight_matched, weight_permute and merely indeterminate for sign_permute against a margin of 0.332 Hz. Fipronil is topology-dependent there (p = 0.006) but does **not** survive correction inside the exploratory landscape (q = 0.050).
-- The fipronil bitter-veto arm is a **properly powered negative** at n = 300 (all p > 0.05, |z| < 0.25).
-- **The suppression conclusion is specification-dependent**: retained by 15/25 specifications, reversed by all 10 monotone ones. And the previous 25/25 topology result was **vacuous** — 6 shuffles could not reject, and the specification never reached the null engine.
-- The composition-only baseline tracks the full model's ordering (ρ 0.988 at 1 µM), but pharmacology-free pseudo-compounds reach 0.847 and a degree-corrected engine gives 0.666; the direction-aware topology-only level reaches 0.961, against 0.242 for the sign-broken rule whose conclusion is withdrawn.
-- The amplify/buffer split is **not** stable across the threshold grid.
-- At a saturating dose the model is blind to potency and Hill *n*; only gain_transform, weight_threshold have a first-order interval excluding zero, and the estimator's noise floor is 0.046 (set by gain_coef, not by the null factor).
-- There is **no independent out-of-sample validation** of the circuit model, and the rank comparisons that share a source with the library are labelled as such.
-- The rate and LIF engines agree on **direction only** (≈0.29 Hz vs ≈105 Hz).
+- Dependence labels change between extracts. Current evidence does not select recurrence over density, extraction recipe or correlated structural properties.
+- `equivalent_within_tolerance` is a legacy name for non-rejection plus a small point gap from the null median, not a confidence-bounded equivalence test.
+- BH-adjusted values are reported; shared shuffles alone do not prove the required dependence assumptions.
+- The taste-motor veto-ratio non-rejection has no endpoint-specific power analysis.
+- The six-network-per-setting synthetic grid is an initial recovery check with imprecise detection rates.
+- Top scale rungs use 20 permutations and report probabilities at the resolution floor. Matching labels are not proof of convergence.
+- High ablation correlation depends on shared assumptions; its observed value also exceeds the reported reference 95th percentile, so the reference does not explain it away entirely.
+- Nicotinic suppression reverses under monotone gain rules.
+- Rate-model units and LIF spikes/s are not interchangeable measured firing rates.
+- No independent circuit-level or live-animal validation exists.
 
 ## Still missing for a **results** paper
 
 1. One live PER or climbing table in `live_lab` (climbing first — the control statistics exist; the PER baseline does not).
 2. The one allowed fit — and the uncertainty budget now names it without argument: the engagement→gain transformation, not a potency value.
 3. Expression coverage above 0.205, with adult motor neurons resolved.
-4. An externally archived, timestamped release, without which the predictions stay *prospective* rather than pre-registered.
+4. A source-pinned archival release and, for preregistration, a frozen experimental protocol dated before data collection.
 
 ## Submit when
 

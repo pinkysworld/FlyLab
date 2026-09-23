@@ -307,12 +307,17 @@ def test_full_fast_pipeline(tmp_path: Path) -> None:
 # --------------------------------------------------------------------------
 @pytest.mark.skipif(not COMMITTED_RESULTS.exists(), reason="papers/results.json not built yet")
 def test_body_word_count_is_inside_the_venue_target() -> None:
-    """IJRC asks for 5000-7000 body words; the pipeline counts them."""
+    """Editorial length guard, not a certification of journal format compliance.
+
+    IJRC gives a general 5000-10000 range and a typical Research Articles
+    range of 6000-8000. Keep the concise draft between 5000 and 8000; final
+    article-specific length remains an editorial submission check.
+    """
     values = json.loads(COMMITTED_RESULTS.read_text())["values"]
     row = values.get("paper_words_body")
     if row is None:
         pytest.skip("paper step has not run")
-    assert 5000 <= row["value"] <= 7000, f"body word count {row['value']} is outside 5000-7000"
+    assert 5000 <= row["value"] <= 8000, f"body word count {row['value']} is outside the editorial 5000-8000 guard"
 
 
 #: framings the peer review asked to have removed, and that must not creep back
@@ -357,3 +362,24 @@ def test_manuscript_cites_the_adjacent_tools_it_is_positioned_against() -> None:
     text = TEMPLATE.read_text()
     for needle in ("FlyBrainLab", "10.7554/eLife.62362", "10.1038/s42003-024-06852-9"):
         assert needle in text, f"the manuscript no longer cites {needle}"
+
+
+@pytest.mark.parametrize("cached", [False, True])
+def test_scale_renderer_records_descriptive_status_with_or_without_cache(tmp_path, cached):
+    """Both branches must emit the keyed record without rerunning large cuts."""
+    from scripts.reproduce_paper import Ctx, step_scale
+    if cached:
+        (tmp_path / "scale_study.json").write_bytes(
+            (PAPERS / "scale_study.json").read_bytes()
+        )
+    ctx = Ctx(outdir=tmp_path, quiet=True)
+    ctx._step = "scale"
+    step_scale(ctx)
+    row = ctx.values["scale_study_statement"]
+    assert row["step"] == "scale"
+    if cached:
+        assert row["value"]
+        assert "observed cuts share the label" in row["text"]
+    else:
+        assert row["value"] is None
+        assert "not been measured" in row["text"]

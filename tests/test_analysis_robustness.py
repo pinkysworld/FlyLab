@@ -394,6 +394,20 @@ def test_the_stated_readout_is_what_the_predicate_computed(tiny_stability):
             )
 
 
+def test_c4_audit_language_matches_its_thresholded_rejection_predicate(tiny_stability):
+    res = tiny_stability
+    c4 = CONCLUSIONS["C4_fipronil_topology_exceeds"]
+    assert "at least one" in c4["readout"]
+    assert "thresholded OR rejection" in c4["kind"]
+    warning_blob = " ".join(res["warnings"])
+    assert "C4 is a thresholded OR predicate" in warning_blob
+    assert "effect-size contrast with no threshold" not in warning_blob
+    assert res["topology_multiplicity_scope"] == "structural_component_tests"
+    assert res["cell_level_fdr_controlled"] is False
+    assert res["bh_dependence_assumptions_verified"] is False
+    assert "does not verify the positive-dependence conditions" in warning_blob
+
+
 def test_the_specification_actually_reaches_the_permutation_engine():
     """Regression guard for a silent defect: `mechanism_spec` rebinds
     `compute_gains` on the assay modules only, so the null-model engine never

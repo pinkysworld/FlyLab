@@ -62,7 +62,7 @@ The dependence framework uses degraded graph ensembles and empirical permutation
 flylab/analysis/dependence.py reports one of three verdicts per null mode, and the safe interpretation follows them:
 
 - a small empirical p means the real-graph effect is **distinguishable** from that null ensemble at the chosen permutation effort,
-- a non-rejection whose gap from the null ensemble's median is below the prespecified margin is reported as **equivalent within tolerance**; the margin is declared in advance, not fitted, and defaults to a small fraction of the vehicle readout,
+- a non-rejection whose gap from the null ensemble's median is below the configured margin is reported as **equivalent within tolerance**; the margin is a reporting convention, not an externally registered equivalence bound, and defaults to a small fraction of the vehicle readout,
 - any other non-rejection is **indeterminate**: consistent with a difference this study cannot resolve, and not evidence of equality or biological equivalence.
 
 Accordingly, prefer:
@@ -73,19 +73,19 @@ over:
 
 > "The degree-preserving graph reproduces the effect."
 
-Only the equivalent-within-tolerance verdict licenses the word "reproduces", and even then it means "within the prespecified margin", never "the shuffle gave the same effect". Check the verdict against a run rather than assuming: for imidacloprid at the headline dose and n = 1000, the weight, degree-preserving and weight-matched transmitter modes fall inside the margin and report **equivalent_within_tolerance**, while the plain transmitter permutation reports **indeterminate** (gap 2.65 Hz against a margin of 0.33 Hz) and the Erdos-Renyi control is **distinguishable**.
+The legacy equivalent-within-tolerance label is only a non-rejection plus a small point gap. It is not a confidence-bounded equivalence test and does not license the word "reproduces". Check the verdict against a run rather than assuming: for imidacloprid at the headline dose and n = 1000, the weight, degree-preserving and weight-matched transmitter modes fall inside the margin and report **equivalent_within_tolerance**, while the plain transmitter permutation reports **indeterminate** (gap 2.65 Hz against a margin of 0.33 Hz) and the Erdos-Renyi control is **distinguishable**.
 
-### The verdict depends on the extract, recurrence predicts it, and that is now the result
+### The verdict depends on the extract
 
 The single most important thing to know before writing any dependence sentence: **the same analysis, with the same instrument and no parameter changed, gives opposite answers on different extracts of one connectome.** On the sparse 1-hop `named` cut — an in-star, most of whose edges terminate on four seed cells and most of whose nodes receive no input — most cells come back composition-dominated. On the denser `taste_motor` cut, none does.
 
-The scaling study (`flylab.analysis.scale.dependence_vs_scale`, T27) then says what the inversion tracks, and the answer is **not** size. Across seven extracts the composition-dominated verdict survives on exactly one — the in-star — while `scale_1k` has *fewer* nodes than `named` (1000 against 1126) and a mean degree of 22.9 against 1.21, and is already topology-dependent. At the 5k and 10k rungs the prediction is distinguishable from every null on the ladder. A degree-preserving rewire of an in-star is close to the identity, so a negative topology verdict there is weak evidence rather than a finding. Three consequences:
+The scaling study (`flylab.analysis.scale.dependence_vs_scale`, T27) shows that node count alone does not order the observed classes. It does not separate recurrence from density, composition or extraction recipe. Across seven extracts the composition-dominated verdict survives on exactly one — the in-star — while `scale_1k` has *fewer* nodes than `named` (1000 against 1126) and a mean degree of 22.9 against 1.21, and is already topology-dependent. At the 5k and 10k rungs the prediction is distinguishable from every null on the ladder. A degree-preserving rewire of an in-star is close to the identity, so a negative topology verdict there is weak evidence rather than a finding. Three consequences:
 
 1. **Never state a dependence class without the extract it was measured on**, and quote `flylab.analysis.dependence.cut_census` (mean degree, share of edges onto seeds, share of nodes with any input, recurrence budget) beside it.
-2. **"Most predictions do not need the connectome" is withdrawn**, along with "the topology-dependent set is exactly the chloride-channel blockers". What replaces them is a methodological claim: the dependence verdict is a joint property of the prediction and the extract, **recurrence rather than size predicts which way it goes**, and that is the transferable result.
-3. **Do not quote the top of the ladder as strong evidence.** The 25k and 50k rungs run at n = 20, where the smallest attainable probability is 0.048 against α = 0.05; they confirm a verdict settled at better-powered rungs rather than establishing it.
+2. **"Most predictions do not need the connectome" is withdrawn**, along with "the topology-dependent set is exactly the chloride-channel blockers". What replaces them is a methodological claim: the dependence verdict is a joint property of the prediction and the extract, **node count alone does not order the observed classifications**, and that is the transferable result.
+3. **Do not quote the top of the ladder as strong evidence.** The 25k and 50k rungs run at n = 20, where the smallest attainable probability is 0.048 against α = 0.05; their matching labels do not establish convergence or independently confirm the lower-rung result.
 
-The instrument itself is not in doubt here: `ladder_recovery` and `ladder_power` plant a recurrent loop of known strength in a synthetic graph of matched size, density and composition, recover it, and give an empirical false-positive rate on the unplanted control. The reversal is therefore about the graphs, not about power.
+The synthetic recovery grid is a limited positive-control check, with six networks per setting and broad uncertainty. The unplanted control also differs in cycle edges and transmitter labels. It neither validates all null models nor establishes power for the taste-motor ratio endpoint.
 
 ## Current headline comparisons
 
@@ -111,7 +111,7 @@ Do **not** summarize it as:
 
 That statement is biologically inaccurate and too categorical for the current exploratory classification. The topology-sensitive set is chlorpyrifos_oxon, dieldrin, fipronil, gaba, ivermectin and picrotoxin, and three of those are not chloride-channel blockers: gaba is an RDL agonist, ivermectin a GluCl opener, and chlorpyrifos_oxon an AChE inhibitor that appears at one concentration only.
 
-Multiplicity is handled rather than pending. The landscape applies Benjamini-Hochberg across its structural tests, records p_adjusted, q_value and fdr_alpha per cell, classifies on the adjusted values while keeping the raw ones beside them, and labels the run **confirmatory** or **exploratory** according to whether it was prespecified and whether its permutation resolution can support a rejection at the adjusted threshold at all. Any count taken from the landscape must be quoted with that label.
+The exploratory landscape applies Benjamini-Hochberg across two structural mode tests per cell and retains both raw and adjusted probabilities. Classes based on adjusted component tests are not themselves guaranteed cell-level FDR control. The dependence conditions for BH have not been established. Permutation effort does not turn a retrospective analysis into a confirmatory study.
 
 Describe the landscape as:
 
