@@ -41,7 +41,7 @@ The answers are: yes, by grading the evidence, refusing invalid transformations 
 
 ### 1.1 Related work and what is new here
 
-**Network runtimes without parameterised perturbation.** Teaching simulators [1]–[4] model dose–response with no network at all. At the other extreme, FlyWire [5] and MaleCNS v1.0 [6] publish netlists with per-node annotations [9], [11]; Shiu *et al.* [7] show a literature-parameterised model over such a netlist reproduces a sensorimotor control, and downstream ports repeat the exercise with varying rigour [10]. FlyBrainLab [67] builds executable circuits directly from connectome data, but a perturbation, where present, enters as a hand-set multiplier with nothing behind it — exactly the case typed propagation is meant to replace.
+**Network runtimes without parameterised perturbation.** RatCVS [1] and Virtual Rat Web [2] lack connectomes; PharmVR [3] is a preprint; [4] evaluates teaching. At the other extreme, FlyWire [5] and MaleCNS v1.0 [6] publish netlists with per-node annotations [9], [11]; Shiu *et al.* [7] show a literature-parameterised model over such a netlist reproduces a sensorimotor control, and downstream ports repeat the exercise with varying rigour [10]. FlyBrainLab [67] builds executable circuits directly from connectome data, but a perturbation, where present, enters as a hand-set multiplier with nothing behind it — exactly the case typed propagation is meant to replace.
 
 **Parameter-map-informed network models.** On human structural connectomes, intervention is simulated by scaling regional responses with PET density maps [68], [69] — the closest published relative, whose most relevant result is also a negative one: in Mindlin *et al.* [68] the simulated improvement tracked the *mean* density of the activated receptors rather than where they sit. Methodologically, §2.4 is a multiverse analysis [73], [74] applied to a simulation, and §2.6 uses Saltelli cross-sampling [70] with Jansen estimators [71] validated on Ishigami [72] and ranked by value of information [75].
 
@@ -225,7 +225,7 @@ What would change the picture is short and specific, and the variance budget rat
 
 **Animal research.** No animal experiments were performed and no live-animal data are reported. The `live_lab` field of every notebook produced by this pipeline is `null`. The protocols in `protocols/` are unexecuted drafts.
 
-**Data and code availability.** Code: https://github.com/pinkysworld/FlyLab (MIT). Connectome data: official MaleCNS v1.0 and FlyWire releases, CC-BY 4.0, downloaded and not redistributed; derived cuts are committed under `data/derived/` with their citation strings. Literature datasets: `data/literature/`, each value carrying a DOI or PMID.
+**Data and code availability.** Code: https://github.com/pinkysworld/FlyLab (MIT). Connectome data: official MaleCNS v1.0 and FlyWire releases, CC-BY 4.0, downloaded and not redistributed; derived cuts are committed under `data/derived/` with their citation strings. Literature datasets: `data/literature/`. The receptor library carries source descriptions for all rows, but many numeric rows still lack a directly recorded DOI or PMID; source-to-parameter attribution remains under audit.
 
 **Competing interests.** None declared. **Funding.** None.
 
@@ -233,25 +233,25 @@ What would change the picture is short and specific, and the variance budget rat
 
 [1] J. Dempster, *RatCVS: Rat Cardiovascular System Simulation*, GitHub repository. [Online]. Available: https://github.com/johndempster/RatCVS (accessed 23 Sep. 2026).
 
-[2] S. Okabe *et al.*, "A web-based simulation of cardiovascular pharmacology for undergraduate teaching," *Eur. J. Pharmacol.*, vol. 997, art. 177618, 2025.
+[2] S. Okabe, T. Goto, D. Hirayama and Y. Nishimura, "Virtual rat web: A versatile simulation tool for pharmacology education in a variety of settings," *Eur. J. Pharmacol.*, vol. 997, art. 177618, 2025. DOI 10.1016/j.ejphar.2025.177618.
 
-[3] *PharmVR*: immersive virtual-reality pharmacology training, preprint, 2025.
+[3] K. Thiyagarajan, "PharmVR—Immersive Virtual Reality based Animal Simulator Software," *Preprints.org*, concept paper, 2025. DOI 10.20944/preprints202507.0959.v1. Not peer reviewed.
 
-[4] "Virtual simulation in pharmacology and physiology education: an evaluation," *J. Educ. Eval. Health Prof.*, 2020.
+[4] C. C. Ezeala, "Integration of computer-simulated practical exercises into undergraduate medical pharmacology education at Mulungushi University, Zambia," *J. Educ. Eval. Health Prof.*, vol. 17, art. 8, 2020. DOI 10.3352/jeehp.2020.17.8.
 
 [5] S. Dorkenwald *et al.*, "Neuronal wiring diagram of an adult brain," *Nature*, vol. 634, pp. 124–138, 2024. DOI 10.1038/s41586-024-07558-y.
 
-[6] *MaleCNS v1.0* dataset, 2026, https://male-cns.janelia.org/download/, CC-BY 4.0; see also "Sexual dimorphism in the complete Drosophila male central nervous system connectome," *Cell*, 2026. DOI 10.1016/j.cell.2026.08.015.
+[6] S. Berg *et al.*, "Sexual dimorphism in the complete *Drosophila* male central nervous system connectome," *Cell*, vol. 189, no. 18, pp. 5504–5526.e15, 2026. DOI 10.1016/j.cell.2026.08.015. Associated dataset: MaleCNS v1.0, https://male-cns.janelia.org/download/ (CC-BY 4.0).
 
 [7] P. K. Shiu, G. R. Sterne, N. Spiller *et al.*, "A *Drosophila* computational brain model reveals sensorimotor processing," *Nature*, vol. 634, pp. 210–219, 2024. DOI 10.1038/s41586-024-07763-9.
 
 [8] H. Dederer, M. Werr and T. Ilg, "Differential sensitivity of *Ctenocephalides felis* and *Drosophila melanogaster* nicotinic acetylcholine receptor α1 and α2 subunits in recombinant hybrid receptors to nicotinoids and neonicotinoid insecticides," *Insect Biochem. Mol. Biol.*, vol. 41, no. 1, pp. 51–61, 2011. DOI 10.1016/j.ibmb.2010.09.012.
 
-[9] FlyConnectome, *Neurotransmitter ground-truth repository for* Drosophila *connectomes*, 2024.
+[9] FlyConnectome, *Drosophila Neurotransmitters: Neurotransmitter Ground Truth*, GitHub repository, 2024. [Online]. Available: https://github.com/flyconnectome/drosophila_neurotransmitters (accessed 23 Sep. 2026).
 
-[10] P. Mineault, "Deconstructing viral fly simulations," technical note, 2026.
+[10] P. Mineault, "Deconstructing viral fly sims," *The NeuroAI Archive*, 14 Sep. 2026. [Online]. Available: https://www.neuroai.science/p/are-flies-playing-beat-saber. Newsletter essay, not peer reviewed.
 
-[11] Y. Deng *et al.*, "Chemoconnectomics: mapping chemical transmission in *Drosophila*," *Neuron*, vol. 101, pp. 876–893, 2019.
+[11] B. Deng *et al.*, "Chemoconnectomics: Mapping Chemical Transmission in *Drosophila*," *Neuron*, vol. 101, no. 5, pp. 876–893.e4, 2019. DOI 10.1016/j.neuron.2019.01.045.
 
 [12] C. Bass, A. M. Puinean, M. Andrews *et al.*, "Mutation of a nicotinic acetylcholine receptor β subunit is associated with resistance to neonicotinoid insecticides in the aphid *Myzus persicae*," *BMC Neurosci.*, vol. 12, art. 51, 2011. DOI 10.1186/1471-2202-12-51. PMID 21627790.
 
@@ -283,7 +283,7 @@ What would change the picture is short and specific, and the variance budget rat
 
 [26] L. M. Cole, R. A. Nicholson and J. E. Casida, "Action of phenylpyrazole insecticides at the GABA-gated chloride channel," *Pestic. Biochem. Physiol.*, vol. 46, no. 1, pp. 47–54, 1993. DOI 10.1006/pest.1993.1035.
 
-[27] G. R. Dawson, K. A. Wafford, A. Smith *et al.*, "Anticonvulsant and adverse effects of avermectin analogs in mice are mediated through the γ-aminobutyric acid A receptor," *J. Pharmacol. Exp. Ther.*, vol. 295, no. 3, pp. 1051–1060, 2000. PMID 11082440.
+[27] G. R. Dawson, K. A. Wafford, A. Smith *et al.*, "Anticonvulsant and adverse effects of avermectin analogs in mice are mediated through the γ-aminobutyric acid A receptor," *J. Pharmacol. Exp. Ther.*, vol. 295, no. 3, pp. 1051–1060, 2000. PMID 11082440. DOI 10.1016/S0022-3565(24)39005-6.
 
 [28] K. Lees, M. Musgaard, S. Suwanmanee *et al.*, "Actions of agonists, fipronil and ivermectin on the predominant in vivo splice and edit variant (RDLbd, I/V) of the *Drosophila* GABA receptor expressed in *Xenopus laevis* oocytes," *PLoS ONE*, vol. 9, no. 5, art. e97468, 2014. DOI 10.1371/journal.pone.0097468.
 
@@ -337,7 +337,7 @@ What would change the picture is short and specific, and the variance budget rat
 
 [53] R. Fusetto, S. Denecke, T. Perry, R. A. J. O'Hair and P. Batterham, "Partitioning the roles of CYP6G1 and gut microbes in the metabolism of the insecticide imidacloprid in *Drosophila melanogaster*," *Sci. Rep.*, vol. 7, art. 11339, 2017. DOI 10.1038/s41598-017-09800-2. PMID 28900131.
 
-[54] N. Joußen, D. G. Heckel, M. Haas, I. Schuphan and B. Schmidt, "Metabolism of imidacloprid and DDT by P450 CYP6G1 expressed in cell cultures of *Nicotiana tabacum*," *Pest Manag. Sci.*, vol. 64, no. 1, pp. 65–73, 2008. DOI 10.1002/ps.1472. PMID 17912692.
+[54] N. Joußen, D. G. Heckel, M. Haas, I. Schuphan and B. Schmidt, "Metabolism of imidacloprid and DDT by P450 CYP6G1 expressed in cell cultures of *Nicotiana tabacum* suggests detoxification of these insecticides in *Cyp6g1*-overexpressing strains of *Drosophila melanogaster*, leading to resistance," *Pest Manag. Sci.*, vol. 64, no. 1, pp. 65–73, 2008. DOI 10.1002/ps.1472. PMID 17912692.
 
 [55] S. C. Piyankarage, H. Augustin, Y. Grosjean, D. E. Featherstone and S. A. Shippy, "Hemolymph amino acid analysis of individual *Drosophila* larvae," *Anal. Chem.*, vol. 80, no. 4, pp. 1201–1207, 2008. DOI 10.1021/ac701785z.
 

@@ -1,18 +1,18 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-20T15:48:02+00:00",
+  "generated_utc": "2026-09-23T09:51:56+00:00",
   "fast": false,
   "seed": 0,
   "jobs": 4,
-  "runtime_s": 3824.39,
+  "runtime_s": 2431.3,
   "provenance": {
     "flylab_version": "0.6.0",
-    "git_sha": "f95fd88a2165e66d5203db6c6fa8c6a020c5a8e0",
-    "library_sha256": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8",
+    "git_sha": "d07c67e79846aabf4787260aea4e43a81d801f71",
+    "library_sha256": "eaabb95655971cfa051d2957fde2477f946d45fb84346b9722cbd9299fc9dc8c",
     "library_version": "0.6",
     "library_schema_version": 3,
     "notebook_schema_version": "0.3",
-    "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39 python-3.11.15",
+    "platform": "macOS-26.7-x86_64-i386-64bit python-3.11.15",
     "map_id": "male-cns:v1.0",
     "map_citation": "MaleCNS v1.0, HHMI Janelia FlyEM / Cambridge / MRC LMB / Google Research. CC-BY 4.0.",
     "graphs": {
@@ -37,6 +37,14 @@
     "fast": false
   },
   "steps": {
+    "provenance": {
+      "status": "ok",
+      "runtime_s": 0.3,
+      "description": "versions, hashes, map ids, graph sizes",
+      "figures": 0,
+      "tables": 0,
+      "values": 11
+    },
     "census": {
       "status": "ok",
       "runtime_s": 0.0,
@@ -47,7 +55,7 @@
     },
     "scorecard": {
       "status": "ok",
-      "runtime_s": 3.39,
+      "runtime_s": 0.7,
       "description": "insect vs vertebrate panel + library table (F2, T1)",
       "figures": 1,
       "tables": 2,
@@ -55,7 +63,7 @@
     },
     "evidence": {
       "status": "ok",
-      "runtime_s": 2.41,
+      "runtime_s": 0.21,
       "description": "typed evidence census, schema v3 (F11, T10)",
       "figures": 1,
       "tables": 4,
@@ -63,7 +71,7 @@
     },
     "curves": {
       "status": "ok",
-      "runtime_s": 6.43,
+      "runtime_s": 0.92,
       "description": "engagement curves and selectivity windows (F3)",
       "figures": 1,
       "tables": 0,
@@ -71,7 +79,7 @@
     },
     "mechanisms": {
       "status": "ok",
-      "runtime_s": 0.01,
+      "runtime_s": 0.0,
       "description": "mechanism -> gain rules (T2)",
       "figures": 0,
       "tables": 4,
@@ -79,7 +87,7 @@
     },
     "graph": {
       "status": "ok",
-      "runtime_s": 7.26,
+      "runtime_s": 0.88,
       "description": "taste-motor graph and GRN->MN9 paths (F4, T7)",
       "figures": 1,
       "tables": 4,
@@ -87,7 +95,7 @@
     },
     "veto": {
       "status": "ok",
-      "runtime_s": 26.8,
+      "runtime_s": 4.23,
       "description": "map-based bitter veto, rate vs LIF (F5)",
       "figures": 1,
       "tables": 0,
@@ -95,7 +103,7 @@
     },
     "dependence": {
       "status": "ok",
-      "runtime_s": 3610.41,
+      "runtime_s": 2308.49,
       "description": "connectome dependence + landscape (F6, F12, T6, T11, T12)",
       "figures": 3,
       "tables": 12,
@@ -103,7 +111,7 @@
     },
     "ablation": {
       "status": "ok",
-      "runtime_s": 77.87,
+      "runtime_s": 31.65,
       "description": "ablation ladder over the library (F13, T13, T13b)",
       "figures": 1,
       "tables": 8,
@@ -111,7 +119,7 @@
     },
     "landscape": {
       "status": "ok",
-      "runtime_s": 63.87,
+      "runtime_s": 55.13,
       "description": "receptor vs circuit selectivity (F7, T8)",
       "figures": 1,
       "tables": 2,
@@ -119,7 +127,7 @@
     },
     "dose": {
       "status": "ok",
-      "runtime_s": 6.94,
+      "runtime_s": 4.92,
       "description": "model dose-response + sensitivity tornado (F8)",
       "figures": 1,
       "tables": 0,
@@ -127,7 +135,7 @@
     },
     "genotype": {
       "status": "ok",
-      "runtime_s": 0.51,
+      "runtime_s": 0.88,
       "description": "resistance-allele panels (F9, T9)",
       "figures": 1,
       "tables": 2,
@@ -135,7 +143,7 @@
     },
     "validation": {
       "status": "ok",
-      "runtime_s": 0.89,
+      "runtime_s": 0.95,
       "description": "rank comparison vs published orders (F10, T4)",
       "figures": 1,
       "tables": 2,
@@ -143,7 +151,7 @@
     },
     "predictions": {
       "status": "ok",
-      "runtime_s": 15.08,
+      "runtime_s": 19.99,
       "description": "prospective predictions (T3)",
       "figures": 0,
       "tables": 2,
@@ -151,7 +159,7 @@
     },
     "mixtures": {
       "status": "ok",
-      "runtime_s": 0.36,
+      "runtime_s": 0.22,
       "description": "binary mixtures vs published verdicts (T5)",
       "figures": 0,
       "tables": 2,
@@ -159,7 +167,7 @@
     },
     "expression": {
       "status": "ok",
-      "runtime_s": 0.19,
+      "runtime_s": 0.2,
       "description": "expression-weighted sensitivity coverage",
       "figures": 0,
       "tables": 0,
@@ -167,7 +175,7 @@
     },
     "stability": {
       "status": "ok",
-      "runtime_s": 0.62,
+      "runtime_s": 0.51,
       "description": "specification robustness + threshold grid (F14, T14, T14b, T15)",
       "figures": 1,
       "tables": 6,
@@ -175,7 +183,7 @@
     },
     "uncertainty": {
       "status": "ok",
-      "runtime_s": 0.6,
+      "runtime_s": 0.62,
       "description": "global uncertainty budget + VOI (F15, T16, T17)",
       "figures": 1,
       "tables": 4,
@@ -189,29 +197,21 @@
       "tables": 2,
       "values": 15
     },
-    "architecture": {
-      "status": "ok",
-      "runtime_s": 0.42,
-      "description": "architecture schematic (F1)",
-      "figures": 2,
-      "tables": 0,
-      "values": 0
-    },
-    "provenance": {
-      "status": "ok",
-      "runtime_s": 0.26,
-      "description": "versions, hashes, map ids, graph sizes",
-      "figures": 0,
-      "tables": 0,
-      "values": 11
-    },
     "scale": {
       "status": "ok",
-      "runtime_s": 0.05,
+      "runtime_s": 0.12,
       "description": "where the dependence verdict settles with the cut (T26, T27 when the study exists)",
       "figures": 0,
       "tables": 4,
       "values": 38
+    },
+    "architecture": {
+      "status": "ok",
+      "runtime_s": 0.36,
+      "description": "architecture schematic (F1)",
+      "figures": 2,
+      "tables": 0,
+      "values": 0
     },
     "paper": {
       "status": "ok",
@@ -223,6 +223,76 @@
     }
   },
   "values": {
+    "flylab_version": {
+      "value": "0.6.0",
+      "text": "0.6.0",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "git_sha": {
+      "value": "d07c67e79846aabf4787260aea4e43a81d801f71",
+      "text": "d07c67e79846",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "library_sha256": {
+      "value": "eaabb95655971cfa051d2957fde2477f946d45fb84346b9722cbd9299fc9dc8c",
+      "text": "eaabb9565597",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "map_id": {
+      "value": "male-cns:v1.0",
+      "text": "male-cns:v1.0",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_nodes": {
+      "value": 1126,
+      "text": "1126",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_edges": {
+      "value": 1360,
+      "text": "1360",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_nodes": {
+      "value": 1841,
+      "text": "1841",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_edges": {
+      "value": 19066,
+      "text": "19\u202f066",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_min_weight": {
+      "value": 5,
+      "text": "5",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_closure_min_weight": {
+      "value": 10,
+      "text": "10",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
     "census_traced": {
       "value": 165122,
       "text": "165\u202f122",
@@ -781,7 +851,7 @@
       "step": "curves"
     },
     "window_log10_deltamethrin": {
-      "value": 2.0655015487564325,
+      "value": 2.065501548756432,
       "text": "2.07",
       "unit": null,
       "note": null,
@@ -1247,7 +1317,7 @@
       "step": "graph"
     },
     "veto_rate_vehicle_sugar": {
-      "value": 0.2931028813192072,
+      "value": 0.29310288131920725,
       "text": "0.293",
       "unit": "Hz",
       "note": null,
@@ -1275,14 +1345,14 @@
       "step": "veto"
     },
     "veto_rate_fipronil_sugar_bitter": {
-      "value": 1.7236839300867062,
+      "value": 1.723683930086706,
       "text": "1.724",
       "unit": "Hz",
       "note": null,
       "step": "veto"
     },
     "veto_rate_fipronil_ratio": {
-      "value": 0.412615812319255,
+      "value": 0.4126158123192549,
       "text": "0.413",
       "unit": null,
       "note": null,
@@ -1611,7 +1681,7 @@
     "dep_named_imidacloprid_effect": {
       "value": -6.17278216613422,
       "text": "-6.173",
-      "unit": "Hz",
+      "unit": "rate-model units",
       "note": null,
       "step": "dependence"
     },
@@ -1646,7 +1716,7 @@
     "dep_named_imidacloprid_delta": {
       "value": 0.33156221429633564,
       "text": "0.332",
-      "unit": "Hz",
+      "unit": "rate-model units",
       "note": null,
       "step": "dependence"
     },
@@ -2016,7 +2086,7 @@
     "dep_named_fipronil_effect": {
       "value": 0.8996076235547861,
       "text": "0.900",
-      "unit": "Hz",
+      "unit": "rate-model units",
       "note": null,
       "step": "dependence"
     },
@@ -2051,7 +2121,7 @@
     "dep_named_fipronil_delta": {
       "value": 0.33156221429633564,
       "text": "0.332",
-      "unit": "Hz",
+      "unit": "rate-model units",
       "note": null,
       "step": "dependence"
     },
@@ -2454,7 +2524,7 @@
     "dep_taste_fipronil_delta": {
       "value": null,
       "text": "n/a",
-      "unit": "Hz",
+      "unit": "rate-model units",
       "note": null,
       "step": "dependence"
     },
@@ -3329,14 +3399,14 @@
     "dep_land_delta_min": {
       "value": 0.33156221429633564,
       "text": "0.332",
-      "unit": "Hz",
+      "unit": "rate-model units",
       "note": null,
       "step": "dependence"
     },
     "dep_land_delta_max": {
       "value": 0.33156221429633564,
       "text": "0.332",
-      "unit": "Hz",
+      "unit": "rate-model units",
       "note": null,
       "step": "dependence"
     },
@@ -3824,14 +3894,14 @@
     "dep_land_taste_delta_min": {
       "value": 0.7172853704242903,
       "text": "0.717",
-      "unit": "Hz",
+      "unit": "rate-model units",
       "note": null,
       "step": "dependence"
     },
     "dep_land_taste_delta_max": {
       "value": 0.7172853704242903,
       "text": "0.717",
-      "unit": "Hz",
+      "unit": "rate-model units",
       "note": null,
       "step": "dependence"
     },
@@ -4475,7 +4545,7 @@
       "step": "landscape"
     },
     "landscape_amplify_mean_gap": {
-      "value": 0.2864971832082256,
+      "value": 0.2864971832082257,
       "text": "0.286",
       "unit": null,
       "note": null,
@@ -4489,7 +4559,7 @@
       "step": "landscape"
     },
     "landscape_gap_split": {
-      "value": 1.1563562211532965,
+      "value": 1.1563562211532967,
       "text": "1.156",
       "unit": null,
       "note": null,
@@ -4541,7 +4611,7 @@
       "step": "dose"
     },
     "ic50_hi_M": {
-      "value": 7.15055024256253e-08,
+      "value": 7.15055024856943e-08,
       "text": "71.5 nM",
       "unit": null,
       "note": null,
@@ -6004,7 +6074,7 @@
       "step": "stability"
     },
     "stab_monotone_treated_hz": {
-      "value": 10.103618005735553,
+      "value": 10.103618005735555,
       "text": "10.1",
       "unit": "Hz",
       "note": null,
@@ -6025,7 +6095,7 @@
       "step": "stability"
     },
     "stab_monotone_pct_change": {
-      "value": 52.36383354445493,
+      "value": 52.36383354445496,
       "text": "+52%",
       "unit": null,
       "note": null,
@@ -6039,7 +6109,7 @@
       "step": "stability"
     },
     "stab_mean_gap_nicotinic_monotone": {
-      "value": -0.8929449323721664,
+      "value": -0.8929449323721661,
       "text": "-0.893",
       "unit": null,
       "note": null,
@@ -6053,7 +6123,7 @@
       "step": "stability"
     },
     "stab_mean_gap_nicotinic_monotone_min": {
-      "value": -1.7336718357793948,
+      "value": -1.7336718357793934,
       "text": "-1.734",
       "unit": null,
       "note": null,
@@ -6253,21 +6323,21 @@
       "step": "stability"
     },
     "thr_nicotinic_gap_max": {
-      "value": -0.362108493778807,
+      "value": -0.36210849377880716,
       "text": "-0.362",
       "unit": null,
       "note": null,
       "step": "stability"
     },
     "thr_nav_ache_gap_min": {
-      "value": -0.0752461538175645,
+      "value": -0.07524615381756439,
       "text": "-0.075",
       "unit": null,
       "note": null,
       "step": "stability"
     },
     "thr_nav_ache_gap_max": {
-      "value": 0.8131579176045398,
+      "value": 0.8131579176045399,
       "text": "0.813",
       "unit": null,
       "note": null,
@@ -6316,7 +6386,7 @@
       "step": "uncertainty"
     },
     "unc_interaction_share": {
-      "value": 0.3442830879951747,
+      "value": 0.3442830879951748,
       "text": "0.344",
       "unit": null,
       "note": null,
@@ -6330,7 +6400,7 @@
       "step": "uncertainty"
     },
     "unc_sum_first_order": {
-      "value": 0.6557169120048253,
+      "value": 0.6557169120048252,
       "text": "0.656",
       "unit": null,
       "note": null,
@@ -6375,7 +6445,7 @@
       "step": "uncertainty"
     },
     "unc_ST_weight_threshold": {
-      "value": 0.5424303725151057,
+      "value": 0.5424303725151058,
       "text": "0.542",
       "unit": null,
       "note": null,
@@ -6408,7 +6478,7 @@
     "unc_CI_drive": {
       "value": [
         -0.0716609947161836,
-        0.11220171357678527
+        0.11220171357678516
       ],
       "text": "(-0.072, +0.112)",
       "unit": null,
@@ -6432,7 +6502,7 @@
     "unc_CI_gain_coef": {
       "value": [
         -0.10739018244206512,
-        0.02765398020264121
+        0.027653980202641208
       ],
       "text": "(-0.107, +0.028)",
       "unit": null,
@@ -6455,7 +6525,7 @@
     },
     "unc_CI_transmitter": {
       "value": [
-        -0.05210207681142646,
+        -0.05210207681142619,
         0.06965580923052817
       ],
       "text": "(-0.052, +0.070)",
@@ -6495,7 +6565,7 @@
       "step": "uncertainty"
     },
     "unc_ST_potency": {
-      "value": 0.0006784194893530697,
+      "value": 0.0006784194893530694,
       "text": "6.78e-04",
       "unit": null,
       "note": null,
@@ -6512,14 +6582,14 @@
       "step": "uncertainty"
     },
     "unc_S_expression": {
-      "value": -0.005809124285986339,
+      "value": -0.00580912428598648,
       "text": "-0.006",
       "unit": null,
       "note": null,
       "step": "uncertainty"
     },
     "unc_ST_expression": {
-      "value": 0.00012806053442048645,
+      "value": 0.0001280605344204865,
       "text": "1.28e-04",
       "unit": null,
       "note": null,
@@ -6528,7 +6598,7 @@
     "unc_CI_expression": {
       "value": [
         -0.058783087902346,
-        0.044256230041565946
+        0.04425623004156553
       ],
       "text": "(-0.059, +0.044)",
       "unit": null,
@@ -6551,8 +6621,8 @@
     },
     "unc_CI_lif_seed": {
       "value": [
-        -0.06185506580751919,
-        0.043437093161159034
+        -0.06185506580751933,
+        0.04343709316115891
       ],
       "text": "(-0.062, +0.043)",
       "unit": null,
@@ -6979,76 +7049,6 @@
       "note": null,
       "step": "claims"
     },
-    "flylab_version": {
-      "value": "0.6.0",
-      "text": "0.6.0",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "git_sha": {
-      "value": "f95fd88a2165e66d5203db6c6fa8c6a020c5a8e0",
-      "text": "f95fd88a2165",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "library_sha256": {
-      "value": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8",
-      "text": "594b8d32c5e6",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "map_id": {
-      "value": "male-cns:v1.0",
-      "text": "male-cns:v1.0",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_nodes": {
-      "value": 1126,
-      "text": "1126",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_edges": {
-      "value": 1360,
-      "text": "1360",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_nodes": {
-      "value": 1841,
-      "text": "1841",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_edges": {
-      "value": 19066,
-      "text": "19\u202f066",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_min_weight": {
-      "value": 5,
-      "text": "5",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_closure_min_weight": {
-      "value": 10,
-      "text": "10",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
     "scale_ladder_sizes": {
       "value": [
         1000,
@@ -7064,27 +7064,28 @@
     },
     "scale_rungs_on_disk": {
       "value": [
-        "scale_1k",
-        "scale_5k",
-        "scale_10k",
-        "scale_25k",
-        "scale_50k"
+        "scale_1k"
       ],
-      "text": "scale_1k, scale_5k, scale_10k, scale_25k, scale_50k",
+      "text": "scale_1k",
       "unit": null,
       "note": null,
       "step": "scale"
     },
     "scale_rungs_missing": {
-      "value": [],
-      "text": "none",
+      "value": [
+        "scale_5k",
+        "scale_10k",
+        "scale_25k",
+        "scale_50k"
+      ],
+      "text": "scale_5k, scale_10k, scale_25k, scale_50k",
       "unit": null,
       "note": null,
       "step": "scale"
     },
     "scale_n_rungs_on_disk": {
-      "value": 5,
-      "text": "5",
+      "value": 1,
+      "text": "1",
       "unit": null,
       "note": null,
       "step": "scale"
@@ -7448,15 +7449,15 @@
       "step": "scale"
     },
     "paper_words_body": {
-      "value": 6971,
-      "text": "6971",
+      "value": 7000,
+      "text": "7000",
       "unit": "words",
       "note": null,
       "step": "paper"
     },
     "paper_words": {
-      "value": 10424,
-      "text": "10\u202f424",
+      "value": 10591,
+      "text": "10\u202f591",
       "unit": null,
       "note": null,
       "step": "paper"
@@ -7469,8 +7470,8 @@
       "step": "paper"
     },
     "supplement_words": {
-      "value": 6676,
-      "text": "6676",
+      "value": 6680,
+      "text": "6680",
       "unit": "words",
       "note": null,
       "step": "paper"
@@ -7485,12 +7486,12 @@
     "_provenance": {
       "value": {
         "flylab_version": "0.6.0",
-        "git_sha": "f95fd88a2165e66d5203db6c6fa8c6a020c5a8e0",
-        "library_sha256": "594b8d32c5e61ebd4de31cc77441aeb82503a0275a7a6ef951ec7a86a48732a8",
+        "git_sha": "d07c67e79846aabf4787260aea4e43a81d801f71",
+        "library_sha256": "eaabb95655971cfa051d2957fde2477f946d45fb84346b9722cbd9299fc9dc8c",
         "library_version": "0.6",
         "library_schema_version": 3,
         "notebook_schema_version": "0.3",
-        "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39 python-3.11.15",
+        "platform": "macOS-26.7-x86_64-i386-64bit python-3.11.15",
         "map_id": "male-cns:v1.0",
         "map_citation": "MaleCNS v1.0, HHMI Janelia FlyEM / Cambridge / MRC LMB / Google Research. CC-BY 4.0.",
         "graphs": {
@@ -7524,7 +7525,7 @@
     {
       "name": "F2_dual_scorecard.png",
       "path": "figures/F2_dual_scorecard.png",
-      "bytes": 293669,
+      "bytes": 240894,
       "step": "scorecard",
       "figure": "F2_dual_scorecard",
       "caption": "Dual scorecard for imidacloprid and fipronil at 1 \u00b5M. Bars are Hill occupancy of the insect target (blue) and its vertebrate counterpart (orange) for each of the five receptor pairs declared in `library.yaml:selectivity_pairs`. Hatched bars rest on a class placeholder: the compound has no sourced EC50 at that pair and the row is inert. Imidacloprid reaches 0.991 at insect nAChR against 0.091 at vertebrate a4b2; fipronil reaches 0.985 at insect RDL against 0.476 at native heteromeric vertebrate GABA-A. Teaching-tier EC50s: these are literature-order values, not measured constants."
@@ -7532,7 +7533,7 @@
     {
       "name": "F11_evidence_types.png",
       "path": "figures/F11_evidence_types.png",
-      "bytes": 180063,
+      "bytes": 149474,
       "step": "evidence",
       "figure": "F11_evidence_types",
       "caption": "What the compound library rests on, row by row. Left: the parameter each cited source actually measured. Middle: the ordered evidence distance between that source and this compound at this receptor in this species. Right: the transformation the type system then permits, which is a function of the two. Green marks the 10 on-target (E0) rows and the 1 of them that may use a physical binding-occupancy model; amber marks the proxy models, where the same Hill expression is computed but reported as a transfer with a warning naming the gap; red marks rows that carry no modellable evidence and return N/A rather than a small number. The type system, not a convention, enforces this: asking for an engagement from an untyped row raises rather than returning a value, and a soundness invariant is checked exhaustively over every row and every entry point."
@@ -7540,7 +7541,7 @@
     {
       "name": "F3_occupancy_curves.png",
       "path": "figures/F3_occupancy_curves.png",
-      "bytes": 399837,
+      "bytes": 348943,
       "step": "curves",
       "figure": "F3_occupancy_curves",
       "caption": "Hill occupancy against free concentration for the four-compound panel, one insect target (solid, blue) and its vertebrate counterpart (dashed, orange) per compound. The shaded band is the selectivity window between the two EC50s, annotated in log10 units; the dotted vertical line is the 1 \u00b5M working concentration used elsewhere in the paper. Ivermectin's window is the GluCl/GlyR pair, deltamethrin's the Nav pair. Curves are the teaching library, not measured concentration-response data."
@@ -7548,7 +7549,7 @@
     {
       "name": "F4_taste_motor_graph.png",
       "path": "figures/F4_taste_motor_graph.png",
-      "bytes": 1325154,
+      "bytes": 1361827,
       "step": "graph",
       "figure": "F4_taste_motor_graph",
       "caption": "Left: the committed MaleCNS v1.0 taste-motor cut (1841 cells, 19066 edges; 1 hop around MN9, DNp01 and the labellar GRN types, plus induced partner-partner edges of at least 10 synapses). Node and edge colour is the predicted consensus transmitter; layout is the deterministic superclass-column layout from `flylab.analysis.layout`. Seeds are marked: sweet GRNs (LB3b/c, up triangles), bitter GRNs (LB1a-d, down triangles), DNp01 (squares) and MN9 (stars). Right: the five strongest sweet and five strongest bitter paths of at most 3 synapses from a labellar GRN to MN9, ranked by the absolute product of signed synapse weights; there are 2595 such sweet and 2372 such bitter paths in total. The sweet/bitter assignment of LB types is a working hypothesis, not a MaleCNS annotation."
@@ -7556,7 +7557,7 @@
     {
       "name": "F5_bitter_veto.png",
       "path": "figures/F5_bitter_veto.png",
-      "bytes": 145962,
+      "bytes": 119831,
       "step": "veto",
       "figure": "F5_bitter_veto",
       "caption": "MN9 firing on the map-extracted labellar-GRN path, driven through the real MaleCNS sweet (34) and bitter (38) GRN body IDs at 150 Hz, never by driving MN9 directly. Left: leaky rate engine. Right: Shiu-style LIF engine with a background Poisson drive. In vehicle, adding bitter drive takes MN9 to zero on both engines (veto ratio 0.00). Fipronil at 1 \u00b5M blocks RDL, raises the sugar-only rate and partially relieves the veto (ratio 0.41 rate, 0.16 LIF). Imidacloprid silences MN9 altogether, so its ratio is undefined rather than zero. Absolute rates differ between engines by construction and are not calibrated to any recording."
@@ -7564,15 +7565,15 @@
     {
       "name": "F6_dependence_profile.png",
       "path": "figures/F6_dependence_profile.png",
-      "bytes": 334549,
+      "bytes": 280618,
       "step": "dependence",
       "figure": "F6_dependence_profile",
-      "caption": "Histograms are the drug effect (treated minus vehicle on the network mean rate) measured on 1000 degraded copies of the 1-hop MN9/DNp01 `named` cut; the red line is the same contrast on the real cut. Columns run in increasing order of destruction: transmitter labels permuted, synapse weights permuted, degree-preserving double-edge rewiring, Erdos-Renyi. Titles carry the empirical two-sided permutation p and the three-way verdict against the prespecified equivalence margin (delta = 0.332 Hz, 5 % of the vehicle readout): `distinguishable` means the test rejected, `equivalent within tolerance` means the gap from the null median is below the margin, and `indeterminate` means neither -- a failure to reject is not evidence that the degraded graph gives the same effect. Plain label permutation is shown because it is informative, but it moves the weighted excitation/inhibition balance as well as transmitter identity (T23), so it is a joint null and not a rung of the ladder. Imidacloprid is composition-dominated (necessary level: degree_sequence, equivalent_within_tolerance); fipronil is topology-dependent (necessary level: wiring_with_weighted_transmitter_balance)."
+      "caption": "Histograms are the drug effect (treated minus vehicle on the network mean rate) measured on 1000 degraded copies of the 1-hop MN9/DNp01 `named` cut; the red line is the same contrast on the real cut. Columns run in increasing order of destruction: transmitter labels permuted, synapse weights permuted, degree-preserving double-edge rewiring, Erd\u0151s\u2013R\u00e9nyi. Insets show the central 99% of the concentrated Erd\u0151s\u2013R\u00e9nyi null distributions. Titles carry the empirical two-sided permutation p and the three-way verdict against the prespecified equivalence margin (delta = 0.332 model rate units, 5 % of the vehicle readout): `distinguishable` means the test rejected, `equivalent within tolerance` means the gap from the null median is below the margin, and `indeterminate` means neither -- a failure to reject is not evidence that the degraded graph gives the same effect. Plain label permutation is shown because it is informative, but it moves the weighted excitation/inhibition balance as well as transmitter identity (T23), so it is a joint null and not a rung of the ladder. Imidacloprid is composition-dominated (necessary level: degree_sequence, equivalent_within_tolerance); fipronil is topology-dependent (necessary level: wiring_with_weighted_transmitter_balance)."
     },
     {
       "name": "F12_dependence_landscape.png",
       "path": "figures/F12_dependence_landscape.png",
-      "bytes": 207481,
+      "bytes": 193056,
       "step": "dependence",
       "figure": "F12_dependence_landscape",
       "caption": "Every compound of the library at four concentrations, on both committed cuts, classified by the weakest graph model the permutation test could **not** distinguish from the real cut -- never by a model that reproduces the effect. Classes are decided on Benjamini-Hochberg adjusted probabilities across each landscape's structural tests, with a prespecified relative effect floor of 1 % of the vehicle readout. Left, the 1-hop `named` cut: 11 of 84 cells need the wiring pattern, 42 are not distinguishable from any structure-preserving degradation, and 31 do not move the readout at all. Right, the denser `taste_motor` cut: 54 topology-dependent, 0 composition-dominated, 30 no-effect. The composition-dominated majority does not survive the change of substrate, and the `named` cut is an in-star whose degree-preserving rewire is close to the identity (T19)."
@@ -7580,7 +7581,7 @@
     {
       "name": "F16_instrument_validation.png",
       "path": "figures/F16_instrument_validation.png",
-      "bytes": 203094,
+      "bytes": 190727,
       "step": "dependence",
       "figure": "F16_instrument_validation",
       "caption": "The dependence ladder pointed at a graph whose answer is known in advance. A recurrent cholinergic cycle of known strength is planted in a synthetic cut of the same size, density and transmitter composition as the `named` cut; a gain patch that collapses `g_ach` then removes an amplification that exists only while the cycle is intact, so the drug contrast depends on the wiring by construction. Left: the share of independently generated graphs the ladder classifies topology-dependent, against planted strength and permutation count. Right: the recovery experiment itself, with red marking the strengths the ladder recovered. The unplanted control is the empirical false-positive rate (0 of 18). Without this panel, a negative from the ladder would be indistinguishable from an under-powered test."
@@ -7588,15 +7589,15 @@
     {
       "name": "F13_ablation.png",
       "path": "figures/F13_ablation.png",
-      "bytes": 185319,
+      "bytes": 171137,
       "step": "ablation",
       "figure": "F13_ablation",
-      "caption": "Each level predicts the same 21 compounds with one layer of information removed, and is scored by how well it reproduces the full model's *ordering* of the library (levels have different units, so values are not comparable; the correlation is signed, so a perfect inversion scores -1 rather than 1). Crosses mark the historical depression-only level-C rule, which applied a multiplier of at most 1.0 to every transmitter alike and so could not express disinhibition: its poor correlation was structural, not a finding about connectomes, and the conclusion drawn from it is withdrawn. With a direction-aware rule level C rises to 0.961 at 1 uM from 0.242. The composition level's agreement with the full model must be read against the matched reference distribution of T24, not on its own."
+      "caption": "Each level predicts the same 21 compounds with one layer of information removed, and is scored by how well it reproduces the full model's *ordering* of the library (levels have different units, so values are not comparable; the correlation is signed, so a perfect inversion scores -1 rather than 1). Crosses mark the historical depression-only level-C rule, which applied a multiplier of at most 1.0 to every transmitter alike and so could not express disinhibition: its poor correlation was structural, not a finding about connectomes, and the conclusion drawn from it is withdrawn. With a direction-aware rule level C rises to 0.961 at 1 uM from 0.242. The green band shows the 5th\u201395th percentile of the matched one-gain-per-pseudo-compound reference distribution (T24), with its median dashed. The composition level's agreement with the full model must be read against that distribution."
     },
     {
       "name": "F7_selectivity_landscape.png",
       "path": "figures/F7_selectivity_landscape.png",
-      "bytes": 248793,
+      "bytes": 239312,
       "step": "landscape",
       "figure": "F7_selectivity_landscape",
       "caption": "Each point is one compound on one committed graph. The x axis is the receptor selectivity index from the library alone; the y axis is the circuit index, the log10 width of the window between the concentration that moves the simulated network mean rate by 50% and the concentration at which the most potent vertebrate target reaches 20% occupancy. Points below the dashed identity line are buffered by the circuit, points above are amplified. The split is by mechanism, not by potency: chlorpyrifos_oxon, ddt, deltamethrin, permethrin (Nav modulators and the AChE inhibitor) amplify, mean gap +0.29 log10 units, while the nAChR-acting set (acetamiprid, acetylcholine, clothianidin, imidacloprid, nicotine, nitenpyram) buffers, mean gap -0.87. Compounds with no circuit index (chlordimeform, dieldrin, fipronil, gaba, ivermectin, picrotoxin, spinosad, sulfoxaflor, thiamethoxam) never reach the 50% threshold on this cut and are omitted."
@@ -7604,7 +7605,7 @@
     {
       "name": "F8_dose_response_sensitivity.png",
       "path": "figures/F8_dose_response_sensitivity.png",
-      "bytes": 182736,
+      "bytes": 172492,
       "step": "dose",
       "figure": "F8_dose_response_sensitivity",
       "caption": "Left: the model's own dose-response for imidacloprid on the 1-hop MN9/DNp01 cut. Points are 4 replicates per concentration with log-normal EC50 jitter (sd 0.3 log10 units) and drive jitter; the curve is a 4-parameter Hill fit, and the band is a 200-resample bootstrap CI on the fitted IC50 (34.7 nM). This is the *model's* circuit IC50, not a receptor IC50 and not an animal IC50. Right: one-at-a-time sensitivity of the same readout at 1 \u00b5M, each parameter halved and doubled. The gain-rule coefficient dominates; the EC50 and Hill coefficient have zero span because occupancy is already saturated at this dose."
@@ -7612,7 +7613,7 @@
     {
       "name": "F9_genotype_panel.png",
       "path": "figures/F9_genotype_panel.png",
-      "bytes": 179353,
+      "bytes": 156482,
       "step": "genotype",
       "figure": "F9_genotype_panel",
       "caption": "Target-receptor occupancy at 1 uM for wild type and each published resistance allele that has a sourced fold-shift for that compound. Grey bars are alleles with no sourced number for the compound: they are left identical to wild type and reported, never extrapolated. Left and centre: fipronil and imidacloprid. Right: the specificity check that motivates the per-compound rule. *para* M918T (super-kdr) shifts deltamethrin 100-fold but leaves DDT at 1-fold, and *Rdl* A301S shifts GABA 33.9-fold while leaving fipronil at 1.1-fold. A toggle that shifted a whole receptor uniformly would be wrong in both cases."
@@ -7620,7 +7621,7 @@
     {
       "name": "F10_rank_validation.png",
       "path": "figures/F10_rank_validation.png",
-      "bytes": 250459,
+      "bytes": 249653,
       "step": "validation",
       "figure": "F10_rank_validation",
       "caption": "Left: the model's compound ordering against each published ordering that the teaching library can cover, with Spearman's rho per entry and the number of compounds it orders. 8 entry-assay combinations are evaluable and 16 are skipped because the library cannot cover them; 4 of the evaluable ones order exactly two compounds, where rho can only be +-1, so no bare mean is quoted: over the 4 entries with more than two compounds the mean is 0.756, and as a concordance count the result is 8 concordant against 0 discordant orderings (two-sided binomial p = 0.008). Right: the two inversions the validation module records rather than fixes. Nitenpyram sits near the top of the library's insect nAChR potency ordering and is the least potent neonicotinoid in *Drosophila* whole-animal bioassays, and clothianidin/imidacloprid are ordered the opposite way from the bioassays. Both are receptor-EC50 versus whole-animal-potency differences: the whole-animal number contains uptake, penetration and metabolism, which FlyLab does not model."
@@ -7628,7 +7629,7 @@
     {
       "name": "F14_conclusion_stability.png",
       "path": "figures/F14_conclusion_stability.png",
-      "bytes": 263855,
+      "bytes": 173342,
       "step": "stability",
       "figure": "F14_conclusion_stability",
       "caption": "Each row is a conclusion this paper could state; each column is one prespecified, admissible way of turning receptor engagement into synaptic gain. Green retains the conclusion, red reverses it, amber means the readout does not exist under that specification. The topology rows are decided on 100 permutations per specification and on Benjamini-Hochberg adjusted probabilities across the 100 structural tests of the run; until v0.6.1 the specification never reached the engine those rows were computed on, so their uniformity was guaranteed by construction rather than measured. Retained by every specification: C2_rdl_disinhibition, C3_imidacloprid_topology_not_distinguishable, C4_fipronil_topology_exceeds, C7_map_bitter_veto. The nicotinic suppression conclusion is reversed by every monotone rule, which is how a result that depends on a modelling choice looks when it is tested rather than asserted; and for a conclusion shaped as a failure to reject, the fraction retained is only as strong as the equivalence behind it (T14's `n_equivalent_within_tolerance` against `n_indeterminate`)."
@@ -7636,7 +7637,7 @@
     {
       "name": "F15_uncertainty_voi.png",
       "path": "figures/F15_uncertainty_voi.png",
-      "bytes": 192844,
+      "bytes": 162341,
       "step": "uncertainty",
       "figure": "F15_uncertainty_voi",
       "caption": "Left: the share of the variance of the neighbourhood mean rate attributable to each assumption, first-order and total-order, from a Saltelli cross-sample with Jansen estimators, with bootstrap first-order confidence intervals. A factor is **resolved** only when its interval excludes zero; the starred rows are not, and a factor's index exceeding the noise floor does not resolve it. The dashed line is that floor, defined as the largest magnitude among the *negative* first-order estimates: a true first-order index cannot be negative, so that magnitude is a measured lower bound on the estimator's error, and on this run it is several times the declared null factor's own draw (0.046 set by gain_coef, against lif_seed at -0.007). Right: the same shares scaled back into the readout's variance and mapped onto the experiment that would resolve each assumption; a negative estimate is clipped to zero for the decision value, because a value of information cannot be negative. Green marks a factor that needs no experiment at all, only a re-analysis of data already held."
@@ -7644,7 +7645,7 @@
     {
       "name": "F1_architecture.png",
       "path": "figures/F1_architecture.png",
-      "bytes": 288705,
+      "bytes": 314341,
       "step": "architecture",
       "figure": "F1_architecture",
       "caption": "FlyLab dataflow. A compound and a free concentration enter the occupancy engine, which reads the sourced library (optionally shifted by a genotype, combined with a mixture partner, or driven by an exposure profile). Occupancy splits into two scorecards. The insect side passes through the mechanism table to a gain patch on transmitter classes of a named MaleCNS cut; the vertebrate side is scored at the same dose and never touches a circuit. The circuit runtime (rate or LIF) produces named-cell readouts, which the analysis and validation layers turn into empirical permutation probabilities with their three-way verdicts, selectivity indices, rank correlations and prospective predictions. Everything lands in one notebook JSON with a provenance block."
@@ -7652,7 +7653,7 @@
     {
       "name": "F1_architecture.svg",
       "path": "figures/F1_architecture.svg",
-      "bytes": 128097,
+      "bytes": 128235,
       "step": "architecture",
       "figure": "F1_architecture",
       "caption": null
@@ -7676,7 +7677,7 @@
     {
       "name": "T1_library.csv",
       "path": "tables/T1_library.csv",
-      "bytes": 32505,
+      "bytes": 32221,
       "rows": 102,
       "step": "scorecard"
     },
@@ -7704,7 +7705,7 @@
     {
       "name": "T10_evidence_types.csv",
       "path": "tables/T10_evidence_types.csv",
-      "bytes": 29136,
+      "bytes": 28852,
       "rows": 102,
       "step": "evidence"
     },
@@ -7872,7 +7873,7 @@
     {
       "name": "T25_engine_normalisation.csv",
       "path": "tables/T25_engine_normalisation.csv",
-      "bytes": 1121,
+      "bytes": 1123,
       "rows": 14,
       "step": "ablation"
     },
@@ -7900,7 +7901,7 @@
     {
       "name": "T13b_ablation_information.csv",
       "path": "tables/T13b_ablation_information.csv",
-      "bytes": 2322,
+      "bytes": 2327,
       "rows": 20,
       "step": "ablation"
     },
@@ -7914,7 +7915,7 @@
     {
       "name": "T8_landscape.csv",
       "path": "tables/T8_landscape.csv",
-      "bytes": 6960,
+      "bytes": 6956,
       "rows": 42,
       "step": "landscape"
     },
@@ -7956,7 +7957,7 @@
     {
       "name": "T3_predictions.csv",
       "path": "tables/T3_predictions.csv",
-      "bytes": 2566,
+      "bytes": 2565,
       "rows": 7,
       "step": "predictions"
     },
@@ -7970,7 +7971,7 @@
     {
       "name": "T5_mixtures.csv",
       "path": "tables/T5_mixtures.csv",
-      "bytes": 1097,
+      "bytes": 1096,
       "rows": 3,
       "step": "mixtures"
     },
@@ -7984,14 +7985,14 @@
     {
       "name": "T14b_specification_diagnostics.csv",
       "path": "tables/T14b_specification_diagnostics.csv",
-      "bytes": 2183,
+      "bytes": 2180,
       "rows": 25,
       "step": "stability"
     },
     {
       "name": "T14b_specification_diagnostics.md",
       "path": "tables/T14b_specification_diagnostics.md",
-      "bytes": 2071,
+      "bytes": 2072,
       "rows": 25,
       "step": "stability"
     },
@@ -8012,7 +8013,7 @@
     {
       "name": "T15_threshold_grid.csv",
       "path": "tables/T15_threshold_grid.csv",
-      "bytes": 752,
+      "bytes": 753,
       "rows": 9,
       "step": "stability"
     },
@@ -8026,7 +8027,7 @@
     {
       "name": "T16_uncertainty_budget.csv",
       "path": "tables/T16_uncertainty_budget.csv",
-      "bytes": 1286,
+      "bytes": 1284,
       "rows": 10,
       "step": "uncertainty"
     },
@@ -8040,7 +8041,7 @@
     {
       "name": "T17_value_of_information.csv",
       "path": "tables/T17_value_of_information.csv",
-      "bytes": 2466,
+      "bytes": 2465,
       "rows": 9,
       "step": "uncertainty"
     },
