@@ -81,7 +81,7 @@ jobs:
       # small enough to belong in git; the rest are artifacts.
       # ------------------------------------------------------------------
       - name: Build the scale ladder
-        if: ${{ github.event.inputs.ladder_sizes != '' }}
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.ladder_sizes != '' }}
         env:
           SIZES: ${{ github.event.inputs.ladder_sizes || '1000,5000,10000,25000,50000' }}
           MINW: ${{ github.event.inputs.min_weight || '5' }}
@@ -125,7 +125,7 @@ jobs:
           name: malecns-neighborhoods
           path: data/derived/malecns_*_neighborhood.json
       - name: Upload the scale ladder (every rung, including the large ones)
-        if: ${{ github.event.inputs.ladder_sizes != '' }}
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.ladder_sizes != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: malecns-scale-ladder

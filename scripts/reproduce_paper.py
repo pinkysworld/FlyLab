@@ -361,13 +361,20 @@ def save_table(
     fields: Iterable[str],
     caption: str,
     md_fields: Iterable[str] | None = None,
+    *,
+    lineterminator: str = "\r\n",
 ) -> None:
     """Write ``name.csv`` (all fields) and ``name.md`` (a readable subset)."""
     ctx.ensure_dirs()
     fields = list(fields)
     csv_path = ctx.tabdir / f"{name}.csv"
     with csv_path.open("w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore")
+        w = csv.DictWriter(
+            fh,
+            fieldnames=fields,
+            extrasaction="ignore",
+            lineterminator=lineterminator,
+        )
         w.writeheader()
         for r in rows:
             w.writerow({k: _csv_cell(r.get(k)) for k in fields})
@@ -3421,7 +3428,7 @@ def step_expression(ctx: Ctx) -> None:
     from flylab.pharm.expression import coverage, expression_table, run_weighted_subgraph_assay
 
     cov = coverage()
-    ctx.put("expr_coverage_overall", float(cov["fraction_known_overall"]))
+    ctx.put("expr_coverage_overall", float(cov["fraction_cell_receptor_pairs_annotated"]))
     for receptor, d in cov["graphs"]["named"].items():
         if isinstance(d, dict) and "fraction_known" in d:
             ctx.put(f"expr_cov_named_{receptor}", float(d["fraction_known"]))
@@ -4513,6 +4520,7 @@ def step_uncertainty(ctx: Ctx) -> None:
         "uses squared rate-model units, despite legacy column names ending in hz2; "
         "it is not an expected gain in accuracy about a living fly.",
         md_fields=["rank", "factor", "state", "voi_fraction_of_var", "voi_var_hz2", "experiment", "cost"],
+        lineterminator="\n",
     )
 
     import numpy as np
@@ -4669,6 +4677,7 @@ def step_claims(ctx: Ctx) -> None:
         "FlyLab; `COMPUTED` is arithmetic on the links above it. The same function "
         "splits the result into facts, model inference and unknowns.",
         md_fields=["step", "label", "classification", "contributes"],
+        lineterminator="\n",
     )
 
 
@@ -4797,9 +4806,9 @@ def step_scale(ctx: Ctx) -> None:
 
         # --- the paper-quotable shape of the result -------------------
         # Rows, smallest cut first.  The key methodological point is that the
-        # inversion does NOT track node count: `scale_1k` has fewer nodes than
-        # `named` and a mean degree twenty times higher, and it already comes
-        # out topology-dependent.  What separates them is recurrence.
+        # The saved extracts associate the verdict change more with recurrence
+        # than node count, but their differing construction and structure do not
+        # isolate recurrence as a cause.
         rows_by_size = sorted(study["rows"], key=lambda r: (int(r["n_nodes"]), int(r["n_edges"])))
         ns = [int(r["n"]) for r in rows_by_size]
         ctx.put("scale_study_n_range", [min(ns), max(ns)], text=f"{min(ns)}-{max(ns)}")
@@ -4808,11 +4817,17 @@ def step_scale(ctx: Ctx) -> None:
         comp_cuts = sorted({r["cut"] for r in rows_by_size if r.get("class") == "composition-dominated"})
         ctx.put("scale_study_composition_dominated_cuts", comp_cuts, text=", ".join(comp_cuts) or "none")
         ctx.put("scale_study_n_composition_dominated", len(comp_cuts))
-        every_null = sorted(
+        real_connectome_ladder_cuts = sorted(
             {r["cut"] for r in rows_by_size if r.get("necessary_information_level") == "real_connectome"},
             key=lambda c: next(int(x["n_nodes"]) for x in rows_by_size if x["cut"] == c),
         )
-        ctx.put("scale_study_every_null_cuts", every_null, text=", ".join(every_null) or "none")
+        # This necessary-information ladder ranks the three edge/wiring modes;
+        # transmitter-label shuffles are orthogonal checks and are not included.
+        ctx.put(
+            "scale_study_every_null_cuts",
+            real_connectome_ladder_cuts,
+            text=", ".join(real_connectome_ladder_cuts) or "none",
+        )
         # Rungs whose permutation budget is so small that the smallest
         # attainable probability is within a factor of two of alpha: a
         # rejection there is the smallest the test can express, not a strong

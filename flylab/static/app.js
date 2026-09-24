@@ -402,6 +402,233 @@
     };
   }
 
+  /* Keep the primary bench controls and the saved experiment design together.
+     Editing one setting must not silently discard the experiment specification. */
+  function persistDesign(extra) {
+    const saved = store("design") || {};
+    store("design", Object.assign({}, saved, design(), extra || {}));
+  }
+
+  const PRESET_FORMAT = "flylab.design-preset";
+  const PRESET_VERSION = 1;
+
+  function optionHas(select, value) {
+    return Array.from(select.options).some((option) => option.value === value);
+  }
+
+  function selectedOptions(id, fallback) {
+    const values = $$("#" + id + " option:checked").map((option) => option.value);
+    return values.length ? values : fallback.slice();
+  }
+
+  function experimentSettings() {
+    const d = design();
+    return {
+      assay: $("#f-exp-assay").value,
+      compounds: selectedOptions("f-exp-compounds", [d.compound].filter(Boolean)),
+      ladder_start_M: Number($("#f-exp-start").value),
+      ladder_stop_M: Number($("#f-exp-stop").value),
+      points_per_decade: Number($("#f-exp-ppd").value),
+      replicates: Number($("#f-exp-reps").value),
+      readouts: selectedOptions("f-exp-readouts", ["mn9_hz", "mean_hz"]),
+      randomize: $("#f-exp-randomize").checked,
+      blind: $("#f-exp-blind").checked,
+      include_vehicle: $("#f-exp-vehicle").checked,
+    };
+  }
+
+  function validateExperimentSettings(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("experiment settings must be an object");
+    const assaySelect = $("#f-exp-assay");
+    const compoundsSelect = $("#f-exp-compounds");
+    const readoutsSelect = $("#f-exp-readouts");
+    if (typeof value.assay !== "string" || !optionHas(assaySelect, value.assay)) {
+      throw new Error("experiment assay is not available in this FlyLab build");
+    }
+    const validList = (items, select, label) => {
+      if (!Array.isArray(items) || items.length === 0 || items.some((item) => typeof item !== "string" || !optionHas(select, item))) {
+        throw new Error("experiment " + label + " contains an unavailable value");
+      }
+      if (new Set(items).size !== items.length) throw new Error("experiment " + label + " must not contain duplicates");
+      return items.slice();
+    };
+    const compounds = validList(value.compounds, compoundsSelect, "compounds");
+    const readouts = validList(value.readouts, readoutsSelect, "readouts");
+    const positive = (v) => typeof v === "number" && Number.isFinite(v) && v > 0;
+    if (!positive(value.ladder_start_M) || !positive(value.ladder_stop_M)) {
+      throw new Error("concentration ladder start and stop must be positive finite numbers");
+    }
+    if (!Number.isInteger(value.points_per_decade) || value.points_per_decade < 1 || value.points_per_decade > 10) {
+      throw new Error("points per decade must be an integer from 1 to 10");
+    }
+    if (!Number.isInteger(value.replicates) || value.replicates < 1 || value.replicates > 64) {
+      throw new Error("replicates must be an integer from 1 to 64");
+    }
+    ["randomize", "blind", "include_vehicle"].forEach((key) => {
+      if (typeof value[key] !== "boolean") throw new Error("experiment " + key + " must be true or false");
+    });
+    const decades = Math.abs(Math.log10(value.ladder_stop_M) - Math.log10(value.ladder_start_M));
+    const concentrationCount = Math.max(1, Math.round(decades * value.points_per_decade)) + 1;
+    if (compounds.length * concentrationCount * value.replicates > 2000) {
+      throw new Error("experiment preset exceeds the 2,000-row design limit");
+    }
+    return {
+      assay: value.assay,
+      compounds: compounds,
+      ladder_start_M: value.ladder_start_M,
+      ladder_stop_M: value.ladder_stop_M,
+      points_per_decade: value.points_per_decade,
+      replicates: value.replicates,
+      readouts: readouts,
+      randomize: value.randomize,
+      blind: value.blind,
+      include_vehicle: value.include_vehicle,
+    };
+  }
+
+  function validatePreset(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("preset file must contain a JSON object");
+    if (value.format !== PRESET_FORMAT) throw new Error("file is not a FlyLab design preset");
+    if (value.version !== PRESET_VERSION) throw new Error("unsupported preset version; expected version " + PRESET_VERSION);
+    const raw = value.design;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("preset is missing its main design settings");
+    if (typeof raw.compound !== "string" || !optionHas($("#f-compound"), raw.compound)) {
+      throw new Error("preset compound is not available in this FlyLab build");
+    }
+    if (typeof raw.conc_M !== "number" || !Number.isFinite(raw.conc_M) || raw.conc_M <= 0 || raw.conc_M > 1) {
+      throw new Error("preset concentration must be greater than 0 and at most 1 M");
+    }
+    if (!["named", "taste_motor"].includes(raw.graph) || !optionHas($("#f-graph"), raw.graph)) {
+      throw new Error("preset graph is not available in this FlyLab build");
+    }
+    if (!["rate", "lif"].includes(raw.engine) || !optionHas($("#f-engine"), raw.engine)) {
+      throw new Error("preset engine is not available in this FlyLab build");
+    }
+    ["sugar_hz", "bitter_hz"].forEach((key) => {
+      if (typeof raw[key] !== "number" || !Number.isFinite(raw[key]) || raw[key] < 0 || raw[key] > 1000) {
+        throw new Error(key.replace("_hz", " drive") + " must be between 0 and 1,000 Hz");
+      }
+    });
+    if (!Number.isSafeInteger(raw.seed) || raw.seed < 0 || raw.seed > 2147483647) {
+      throw new Error("RNG seed must be an integer from 0 to 2,147,483,647");
+    }
+    if (raw.genotype !== null && typeof raw.genotype !== "string") throw new Error("genotype must be a string or null");
+    if (raw.genotype !== null && (!$("#genotype-field") || $("#genotype-field").hidden || !optionHas($("#f-genotype"), raw.genotype))) {
+      throw new Error("preset genotype is not available in this FlyLab build");
+    }
+    return {
+      design: {
+        compound: raw.compound,
+        conc_M: raw.conc_M,
+        sugar_hz: raw.sugar_hz,
+        bitter_hz: raw.bitter_hz,
+        engine: raw.engine,
+        graph: raw.graph,
+        seed: raw.seed,
+        genotype: raw.genotype,
+      },
+      experiment: validateExperimentSettings(value.experiment),
+    };
+  }
+
+  function applyExperimentSettings(settings) {
+    $("#f-exp-assay").value = settings.assay;
+    $("#f-exp-start").value = String(settings.ladder_start_M);
+    $("#f-exp-stop").value = String(settings.ladder_stop_M);
+    $("#f-exp-ppd").value = String(settings.points_per_decade);
+    $("#f-exp-reps").value = String(settings.replicates);
+    $$("#f-exp-compounds option").forEach((option) => {
+      option.selected = settings.compounds.includes(option.value);
+    });
+    $$("#f-exp-readouts option").forEach((option) => {
+      option.selected = settings.readouts.includes(option.value);
+    });
+    $("#f-exp-randomize").checked = settings.randomize;
+    $("#f-exp-blind").checked = settings.blind;
+    $("#f-exp-vehicle").checked = settings.include_vehicle;
+    updateLadderHint();
+  }
+
+  function presetForExport() {
+    const preset = { format: PRESET_FORMAT, version: PRESET_VERSION, design: design(), experiment: experimentSettings() };
+    validatePreset(preset);
+    return preset;
+  }
+
+  function presetStatus(message) {
+    const node = $("#preset-status");
+    if (node) node.textContent = message;
+  }
+
+  function applyPreset(preset) {
+    const validated = validatePreset(preset);
+    const main = validated.design;
+    $("#f-compound").value = main.compound;
+    setConc(main.conc_M);
+    $("#f-sugar").value = String(main.sugar_hz);
+    $("#f-bitter").value = String(main.bitter_hz);
+    $("#f-engine").value = main.engine;
+    $("#f-graph").value = main.graph;
+    $("#f-seed").value = String(main.seed);
+    if (!$("#genotype-field").hidden) $("#f-genotype").value = main.genotype || "";
+    updateCompoundBadges();
+    updateGraphHint();
+    const minw = $("#f-cy-minw");
+    if (minw) minw.value = main.graph === "taste_motor" ? 12 : 5;
+    applyExperimentSettings(validated.experiment);
+
+    state.experiment = null;
+    state.runOrder = null;
+    state.blindKey = null;
+    state.revealed = false;
+    $("#btn-exp-csv").disabled = true;
+    $("#btn-exp-json").disabled = true;
+    $("#btn-exp-reveal").disabled = true;
+    $("#btn-exp-reveal").textContent = "Reveal codes";
+    invalidate();
+    renderExperiment();
+    persistDesign({ experiment: experimentDesign(), experimentSettings: experimentSettings() });
+  }
+
+  function restoreExperimentSettings(saved) {
+    if (saved.experimentSettings) {
+      try {
+        applyExperimentSettings(validateExperimentSettings(saved.experimentSettings));
+        return;
+      } catch (err) {
+        /* Invalid or stale browser storage falls back to the older saved design below. */
+      }
+    }
+    const previous = saved.experiment;
+    if (previous) {
+      if (typeof previous.assay === "string" && optionHas($("#f-exp-assay"), previous.assay)) {
+        $("#f-exp-assay").value = previous.assay;
+      }
+      if (Number.isInteger(previous.replicates) && previous.replicates >= 1 && previous.replicates <= 64) {
+        $("#f-exp-reps").value = String(previous.replicates);
+      }
+      $$("#f-exp-compounds option").forEach((option) => {
+        option.selected = Array.isArray(previous.compounds) && previous.compounds.includes(option.value);
+      });
+      const concentrations = Array.isArray(previous.concs_M) ? previous.concs_M.filter((value) => Number.isFinite(value) && value > 0) : [];
+      if (concentrations.length > 1) {
+        $("#f-exp-start").value = String(Math.min.apply(null, concentrations));
+        $("#f-exp-stop").value = String(Math.max.apply(null, concentrations));
+      }
+      if (Array.isArray(previous.readouts)) {
+        $$("#f-exp-readouts option").forEach((option) => {
+          option.selected = previous.readouts.includes(option.value);
+        });
+      }
+      if (typeof previous.include_vehicle === "boolean") $("#f-exp-vehicle").checked = previous.include_vehicle;
+      updateLadderHint();
+    } else {
+      $$("#f-exp-compounds option").forEach((option) => {
+        option.selected = option.value === $("#f-compound").value || option.value === "nicotine";
+      });
+    }
+  }
+
   function setNotebook(nb, label) {
     if (!nb || typeof nb !== "object") return;
     state.notebook = nb;
@@ -536,9 +763,18 @@
     const saved = store("design") || {};
     if (saved.compound && meta.compounds.some((c) => c.key === saved.compound)) sel.value = saved.compound;
     else if (meta.compounds.some((c) => c.key === "imidacloprid")) sel.value = "imidacloprid";
-    if (saved.graph) $("#f-graph").value = saved.graph;
-    if (saved.engine) $("#f-engine").value = saved.engine;
-    if (saved.conc_M) setConc(Number(saved.conc_M));
+    if (["named", "taste_motor"].includes(saved.graph)) $("#f-graph").value = saved.graph;
+    if (["rate", "lif"].includes(saved.engine)) $("#f-engine").value = saved.engine;
+    if (Number.isFinite(Number(saved.sugar_hz)) && Number(saved.sugar_hz) >= 0) {
+      $("#f-sugar").value = Math.min(1000, Number(saved.sugar_hz));
+    }
+    if (Number.isFinite(Number(saved.bitter_hz)) && Number(saved.bitter_hz) >= 0) {
+      $("#f-bitter").value = Math.min(1000, Number(saved.bitter_hz));
+    }
+    if (Number.isSafeInteger(Number(saved.seed)) && Number(saved.seed) >= 0) {
+      $("#f-seed").value = Number(saved.seed);
+    }
+    if (Number.isFinite(Number(saved.conc_M)) && Number(saved.conc_M) > 0) setConc(Number(saved.conc_M));
 
     // re-apply the current concentration so the dashboard rail and its ladder
     // buttons show the right value on the first paint, saved design or not
@@ -566,6 +802,9 @@
             })
             .join("");
         $("#genotype-field").hidden = false;
+        if (saved.genotype && Array.from($("#f-genotype").options).some((o) => o.value === saved.genotype)) {
+          $("#f-genotype").value = saved.genotype;
+        }
       }
     } catch (err) {
       /* genotype module has not landed: the control stays hidden, by design */
@@ -1774,7 +2013,7 @@
     const spec = experimentDesign();
     const rows = spec.compounds.length * spec.concs_M.length * spec.replicates;
     if (rows > 2000) throw new Error(`design would make ${rows} rows; the server limit is 2000`);
-    store("design", Object.assign({}, design(), { experiment: spec }));
+    persistDesign({ experiment: spec, experimentSettings: experimentSettings() });
     const out = await post("/api/experiment", spec);
     state.experiment = out;
     state.revealed = false;
@@ -1811,7 +2050,17 @@
 
   function renderExperiment() {
     const out = state.experiment;
-    if (!out) return;
+    if (!out) {
+      table(
+        "tbl-experiment",
+        [{ label: "compound" }, { label: "conc (M)", num: true }, { label: "n", num: true }],
+        [],
+        { empty: "Run the design to fill this grid." }
+      );
+      draw("plot-exp-heat", [], { height: 220 });
+      $("#exp-status").textContent = "Preset loaded; run the design to calculate these settings.";
+      return;
+    }
     const c = colors();
     const readouts = (out.design && out.design.readouts) || ["mn9_hz"];
     const primary = readouts[0];
@@ -3653,8 +3902,8 @@
     notebook: { run: async () => { renderNotebook(); renderHistory(); return null; }, render: renderNotebook },
   };
 
-  /* Tabs that cost minutes of circuit time never start on their own. */
-  const MANUAL_TABS = ["controls"];
+  /* Expensive analyses and user-authored experiment designs never start on tab selection. */
+  const MANUAL_TABS = ["controls", "experiment"];
 
   let running = false;
   async function runTab(name) {
@@ -3686,6 +3935,8 @@
 
   function activate(name) {
     state.activeTab = name;
+    const mobilePicker = $("#mobile-panel-picker");
+    if (mobilePicker) mobilePicker.value = name;
     $$('[role="tab"]').forEach((b) => b.setAttribute("aria-selected", String(b.id === "tab-" + name)));
     $$(".panel").forEach((p) => p.classList.toggle("active", p.id === "panel-" + name));
     const panel = document.getElementById("panel-" + name);
@@ -3742,36 +3993,73 @@
     $$('[role="tab"]').forEach((b) =>
       b.addEventListener("click", () => activate(b.id.replace("tab-", "")))
     );
+    const mobilePicker = $("#mobile-panel-picker");
+    if (mobilePicker) mobilePicker.addEventListener("change", () => activate(mobilePicker.value));
     $$("button[data-run]").forEach((b) =>
       b.addEventListener("click", () => runTab(b.getAttribute("data-run")))
     );
     $("#btn-run").addEventListener("click", () => runTab(state.activeTab));
 
+    $("#btn-preset-export").addEventListener("click", () => {
+      try {
+        const preset = presetForExport();
+        download("flylab_design_preset_v1.json", JSON.stringify(preset, null, 2), "application/json;charset=utf-8");
+        presetStatus("Exported FlyLab design preset version 1.");
+      } catch (err) {
+        presetStatus("Could not export: " + err.message);
+        toast("preset: " + err.message, "error");
+      }
+    });
+    $("#btn-preset-import").addEventListener("click", () => $("#f-preset-file").click());
+    $("#f-preset-file").addEventListener("change", async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      try {
+        if (file.size > 1024 * 1024) throw new Error("preset file is larger than 1 MB");
+        const parsed = JSON.parse(await file.text());
+        applyPreset(parsed);
+        presetStatus("Imported preset. Open Experiment and choose Run design to calculate results.");
+        toast("design preset imported", "ok");
+      } catch (err) {
+        const message = (err && err.message) || "could not read preset file";
+        presetStatus("Import failed: " + message);
+        toast("preset: " + message, "error");
+      } finally {
+        event.target.value = "";
+      }
+    });
+
     $("#f-logconc").addEventListener("input", (e) => {
       setConc(Math.pow(10, Number(e.target.value)));
       invalidate();
     });
+    $("#f-logconc").addEventListener("change", () => persistDesign());
     $("#f-conc").addEventListener("change", (e) => {
       const v = Number(e.target.value);
-      if (Number.isFinite(v) && v > 0) setConc(v);
-      else toast("concentration must be a positive number in molar", "error");
+      if (Number.isFinite(v) && v > 0) {
+        setConc(v);
+        persistDesign();
+      } else {
+        toast("concentration must be a positive number in molar", "error");
+        setConc(Math.pow(10, Number($("#f-logconc").value)));
+      }
       invalidate();
     });
     $("#f-compound").addEventListener("change", () => {
       updateCompoundBadges();
       invalidate();
-      store("design", design());
+      persistDesign();
     });
     $("#f-graph").addEventListener("change", () => {
       updateGraphHint();
       $("#f-cy-minw").value = $("#f-graph").value === "taste_motor" ? 12 : 5;
       invalidate();
-      store("design", design());
+      persistDesign();
     });
     ["#f-engine", "#f-seed", "#f-sugar", "#f-bitter", "#f-genotype"].forEach((sel) =>
       $(sel).addEventListener("change", () => {
         invalidate();
-        store("design", design());
+        persistDesign();
       })
     );
 
@@ -3787,7 +4075,7 @@
       rail.addEventListener("change", (e) => {
         setConc(Math.pow(10, Number(e.target.value)));
         invalidate();
-        store("design", design());
+        persistDesign();
         runTab(state.activeTab);
       });
     }
@@ -3795,7 +4083,7 @@
       b.addEventListener("click", () => {
         setConc(Number(b.getAttribute("data-conc")));
         invalidate();
-        store("design", design());
+        persistDesign();
         runTab(state.activeTab);
       })
     );
@@ -3912,17 +4200,23 @@
       }
     });
 
-    ["#f-exp-start", "#f-exp-stop", "#f-exp-ppd"].forEach((sel) =>
-      $(sel).addEventListener("input", updateLadderHint)
-    );
+    ["#f-exp-start", "#f-exp-stop", "#f-exp-ppd"].forEach((sel) => {
+      $(sel).addEventListener("input", updateLadderHint);
+      $(sel).addEventListener("change", () => persistDesign({ experimentSettings: experimentSettings() }));
+    });
+    ["#f-exp-compounds", "#f-exp-readouts", "#f-exp-assay", "#f-exp-reps", "#f-exp-vehicle"].forEach((sel) => {
+      $(sel).addEventListener("change", () => persistDesign({ experimentSettings: experimentSettings() }));
+    });
     $("#f-exp-blind").addEventListener("change", () => {
       state.revealed = false;
       $("#btn-exp-reveal").disabled = !$("#f-exp-blind").checked || !state.experiment;
       renderExperiment();
+      persistDesign({ experimentSettings: experimentSettings() });
     });
     $("#f-exp-randomize").addEventListener("change", () => {
       state.runOrder = null;
       renderExperiment();
+      persistDesign({ experimentSettings: experimentSettings() });
     });
     $("#btn-exp-reveal").addEventListener("click", () => {
       state.revealed = !state.revealed;
@@ -4317,19 +4611,8 @@
       return;
     }
 
-    const saved = (store("design") || {}).experiment;
-    if (saved) {
-      if (saved.assay) $("#f-exp-assay").value = saved.assay;
-      if (saved.replicates) $("#f-exp-reps").value = saved.replicates;
-      $$("#f-exp-compounds option").forEach((o) => {
-        o.selected = (saved.compounds || []).indexOf(o.value) >= 0;
-      });
-      updateLadderHint();
-    } else {
-      $$("#f-exp-compounds option").forEach((o) => {
-        o.selected = o.value === $("#f-compound").value || o.value === "nicotine";
-      });
-    }
+    const saved = store("design") || {};
+    restoreExperimentSettings(saved);
     $("#f-exp-reps").value = $("#f-exp-reps").value || 2;
 
     estimateCompare().catch(() => {});

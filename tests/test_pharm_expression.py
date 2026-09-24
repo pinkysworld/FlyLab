@@ -27,13 +27,24 @@ def test_expression_table_rows_and_warning():
         assert row["mapping"] == "cross_atlas_inference"
     assert EXPRESSION_WARNING in table["warnings"]
     assert table["motor_neuron_gap"]["status"] == "not_sourced"
+    public_lead = table["motor_neuron_gap"]["public_data_lead"]
+    assert public_lead["accession"] == "GSE141807"
+    assert public_lead["status"] == "reanalyzed_vnc_wide_cell_classes_unresolved"
+    assert public_lead["summary_file"] == "vnc_receptor_detection_GSE141807.yaml"
+    assert "not the brain subesophageal zone" in public_lead["scope"]
 
 
 def test_coverage_is_reported_and_incomplete():
     cov = expression_table()["coverage"]
-    assert 0.0 < cov["fraction_known_overall"] < 1.0
+    pair_fraction = cov["fraction_cell_receptor_pairs_annotated"]
+    assert 0.0 < pair_fraction < 1.0
+    assert cov["coverage_unit"] == "graph_node_x_receptor_key_pair"
+    assert cov["fraction_known_overall"] == pair_fraction  # legacy alias
+    assert cov["n_annotated_cell_receptor_pairs"] / cov["n_cell_receptor_pairs"] == pytest.approx(pair_fraction)
+    assert 0.0 < cov["fraction_graph_nodes_with_any_class_annotation"] < 1.0
     named = cov["graphs"]["named"]
     assert named["n_cells"] > 1000
+    assert 0 <= named["n_cells_with_any_class_annotation"] <= named["n_cells"]
     for receptor in ("insect_nAChR", "insect_RDL", "insect_GluCl"):
         block = named[receptor]
         assert block["n_known"] + block["n_unknown"] == named["n_cells"]

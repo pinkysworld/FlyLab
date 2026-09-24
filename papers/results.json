@@ -1,13 +1,13 @@
 {
   "schema": "flylab-paper-results/1",
-  "generated_utc": "2026-09-23T15:52:45+00:00",
+  "generated_utc": "2026-09-24T13:53:45+00:00",
   "fast": false,
   "seed": 0,
   "jobs": 4,
-  "runtime_s": 2365.77,
+  "runtime_s": 293.94,
   "provenance": {
     "flylab_version": "0.6.0",
-    "git_sha": "6a89ac920744ac6b890bf29c50d15581d730cbc8",
+    "git_sha": "50f5465b2df028a6cb2b93926cfbd14d7c746c9b",
     "library_sha256": "359096467b33242174dcc5d787a6b7fc6d37573f8daf4771efd159b64ca95e05",
     "library_version": "0.6",
     "library_schema_version": 3,
@@ -37,14 +37,6 @@
     "fast": false
   },
   "steps": {
-    "provenance": {
-      "status": "ok",
-      "runtime_s": 0.25,
-      "description": "versions, hashes, map ids, graph sizes",
-      "figures": 0,
-      "tables": 0,
-      "values": 11
-    },
     "census": {
       "status": "ok",
       "runtime_s": 0.0,
@@ -165,14 +157,6 @@
       "tables": 2,
       "values": 6
     },
-    "expression": {
-      "status": "ok",
-      "runtime_s": 0.1,
-      "description": "expression-weighted sensitivity coverage",
-      "figures": 0,
-      "tables": 0,
-      "values": 14
-    },
     "stability": {
       "status": "ok",
       "runtime_s": 0.27,
@@ -180,22 +164,6 @@
       "figures": 1,
       "tables": 6,
       "values": 117
-    },
-    "uncertainty": {
-      "status": "ok",
-      "runtime_s": 0.32,
-      "description": "global uncertainty budget + VOI (F15, T16, T17)",
-      "figures": 1,
-      "tables": 4,
-      "values": 76
-    },
-    "claims": {
-      "status": "ok",
-      "runtime_s": 0.01,
-      "description": "claim provenance chain (T18)",
-      "figures": 0,
-      "tables": 2,
-      "values": 15
     },
     "scale": {
       "status": "ok",
@@ -213,6 +181,38 @@
       "tables": 0,
       "values": 0
     },
+    "provenance": {
+      "status": "ok",
+      "runtime_s": 0.34,
+      "description": "versions, hashes, map ids, graph sizes",
+      "figures": 0,
+      "tables": 0,
+      "values": 11
+    },
+    "expression": {
+      "status": "ok",
+      "runtime_s": 0.37,
+      "description": "expression-weighted sensitivity coverage",
+      "figures": 0,
+      "tables": 0,
+      "values": 14
+    },
+    "uncertainty": {
+      "status": "ok",
+      "runtime_s": 293.14,
+      "description": "global uncertainty budget + VOI (F15, T16, T17)",
+      "figures": 1,
+      "tables": 4,
+      "values": 76
+    },
+    "claims": {
+      "status": "ok",
+      "runtime_s": 0.02,
+      "description": "claim provenance chain (T18)",
+      "figures": 0,
+      "tables": 2,
+      "values": 15
+    },
     "paper": {
       "status": "ok",
       "runtime_s": 0.01,
@@ -223,100 +223,30 @@
     }
   },
   "values": {
-    "flylab_version": {
-      "value": "0.6.0",
-      "text": "0.6.0",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "git_sha": {
-      "value": "6a89ac920744ac6b890bf29c50d15581d730cbc8",
-      "text": "6a89ac920744",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "library_sha256": {
-      "value": "359096467b33242174dcc5d787a6b7fc6d37573f8daf4771efd159b64ca95e05",
-      "text": "359096467b33",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "map_id": {
-      "value": "male-cns:v1.0",
-      "text": "male-cns:v1.0",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_nodes": {
-      "value": 1126,
-      "text": "1126",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_edges": {
-      "value": 1360,
-      "text": "1360",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_nodes": {
-      "value": 1841,
-      "text": "1841",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_edges": {
-      "value": 19066,
-      "text": "19 066",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "named_min_weight": {
-      "value": 5,
-      "text": "5",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
-    "taste_closure_min_weight": {
-      "value": 10,
-      "text": "10",
-      "unit": null,
-      "note": null,
-      "step": "provenance"
-    },
     "census_traced": {
       "value": 165122,
-      "text": "165 122",
+      "text": "165\u202f122",
       "unit": null,
       "note": null,
       "step": "census"
     },
     "census_ach": {
       "value": 103718,
-      "text": "103 718",
+      "text": "103\u202f718",
       "unit": null,
       "note": null,
       "step": "census"
     },
     "census_glu": {
       "value": 29296,
-      "text": "29 296",
+      "text": "29\u202f296",
       "unit": null,
       "note": null,
       "step": "census"
     },
     "census_gaba": {
       "value": 22055,
-      "text": "22 055",
+      "text": "22\u202f055",
       "unit": null,
       "note": null,
       "step": "census"
@@ -436,7 +366,7 @@
     },
     "imi_vert_ec50": {
       "value": 1e-05,
-      "text": "10 µM",
+      "text": "10 \u00b5M",
       "unit": null,
       "note": null,
       "step": "scorecard"
@@ -471,7 +401,7 @@
     },
     "fip_vert_ec50": {
       "value": 1.1e-06,
-      "text": "1.1 µM",
+      "text": "1.1 \u00b5M",
       "unit": null,
       "note": null,
       "step": "scorecard"
@@ -3303,7 +3233,7 @@
         "thiamethoxam@1e-07",
         "thiamethoxam@1e-06"
       ],
-      "text": "acetylcholine 10 nM (0.000761 rate-model units), acetylcholine 100 nM (0.0118 rate-model units), ddt 10 nM (0.00309 rate-model units), ddt 100 nM (0.0309 rate-model units), gaba 100 nM (-2.74e-05 rate-model units), gaba 1 µM (-0.000864 rate-model units), gaba 10 µM (-0.025 rate-model units), ivermectin 10 nM (-0.0125 rate-model units), ivermectin 100 nM (-0.0312 rate-model units), ivermectin 1 µM (-0.0367 rate-model units), ivermectin 10 µM (-0.0373 rate-model units), picrotoxin 10 nM (0.0076 rate-model units), thiamethoxam 10 nM (0.000303 rate-model units), thiamethoxam 100 nM (0.00302 rate-model units), thiamethoxam 1 µM (0.0289 rate-model units)",
+      "text": "acetylcholine 10 nM (0.000761 rate-model units), acetylcholine 100 nM (0.0118 rate-model units), ddt 10 nM (0.00309 rate-model units), ddt 100 nM (0.0309 rate-model units), gaba 100 nM (-2.74e-05 rate-model units), gaba 1 \u00b5M (-0.000864 rate-model units), gaba 10 \u00b5M (-0.025 rate-model units), ivermectin 10 nM (-0.0125 rate-model units), ivermectin 100 nM (-0.0312 rate-model units), ivermectin 1 \u00b5M (-0.0367 rate-model units), ivermectin 10 \u00b5M (-0.0373 rate-model units), picrotoxin 10 nM (0.0076 rate-model units), thiamethoxam 10 nM (0.000303 rate-model units), thiamethoxam 100 nM (0.00302 rate-model units), thiamethoxam 1 \u00b5M (0.0289 rate-model units)",
       "unit": null,
       "note": null,
       "step": "dependence"
@@ -3709,7 +3639,7 @@
         "thiamethoxam@1e-07",
         "thiamethoxam@1e-06"
       ],
-      "text": "acetylcholine 10 nM (0.0018 rate-model units), acetylcholine 100 nM (0.028 rate-model units), ddt 10 nM (0.00656 rate-model units), ddt 100 nM (0.0656 rate-model units), gaba 10 nM (-4.27e-06 rate-model units), gaba 100 nM (-0.000135 rate-model units), gaba 1 µM (-0.00426 rate-model units), gaba 10 µM (-0.122 rate-model units), ivermectin 10 nM (-0.02 rate-model units), ivermectin 100 nM (-0.0454 rate-model units), ivermectin 1 µM (-0.0523 rate-model units), ivermectin 10 µM (-0.0532 rate-model units), picrotoxin 10 nM (0.0375 rate-model units), thiamethoxam 10 nM (0.000717 rate-model units), thiamethoxam 100 nM (0.00714 rate-model units), thiamethoxam 1 µM (0.0683 rate-model units)",
+      "text": "acetylcholine 10 nM (0.0018 rate-model units), acetylcholine 100 nM (0.028 rate-model units), ddt 10 nM (0.00656 rate-model units), ddt 100 nM (0.0656 rate-model units), gaba 10 nM (-4.27e-06 rate-model units), gaba 100 nM (-0.000135 rate-model units), gaba 1 \u00b5M (-0.00426 rate-model units), gaba 10 \u00b5M (-0.122 rate-model units), ivermectin 10 nM (-0.02 rate-model units), ivermectin 100 nM (-0.0454 rate-model units), ivermectin 1 \u00b5M (-0.0523 rate-model units), ivermectin 10 \u00b5M (-0.0532 rate-model units), picrotoxin 10 nM (0.0375 rate-model units), thiamethoxam 10 nM (0.000717 rate-model units), thiamethoxam 100 nM (0.00714 rate-model units), thiamethoxam 1 \u00b5M (0.0683 rate-model units)",
       "unit": null,
       "note": null,
       "step": "dependence"
@@ -3812,7 +3742,7 @@
         "picrotoxin@1e-05",
         "thiamethoxam@1e-05"
       ],
-      "text": "acetamiprid 10 nM, acetamiprid 100 nM, acetamiprid 1 µM, acetamiprid 10 µM, acetylcholine 1 µM, acetylcholine 10 µM, clothianidin 10 nM, clothianidin 100 nM, clothianidin 1 µM, clothianidin 10 µM, ddt 1 µM, ddt 10 µM, deltamethrin 10 nM, deltamethrin 100 nM, deltamethrin 1 µM, deltamethrin 10 µM, dieldrin 10 nM, dieldrin 100 nM, dieldrin 1 µM, dieldrin 10 µM, fipronil 10 nM, fipronil 100 nM, fipronil 1 µM, fipronil 10 µM, imidacloprid 10 nM, imidacloprid 100 nM, imidacloprid 1 µM, imidacloprid 10 µM, nicotine 10 nM, nicotine 100 nM, nicotine 1 µM, nicotine 10 µM, nitenpyram 10 nM, nitenpyram 100 nM, nitenpyram 1 µM, nitenpyram 10 µM, permethrin 10 nM, permethrin 100 nM, permethrin 1 µM, permethrin 10 µM, picrotoxin 100 nM, picrotoxin 1 µM, picrotoxin 10 µM, thiamethoxam 10 µM",
+      "text": "acetamiprid 10 nM, acetamiprid 100 nM, acetamiprid 1 \u00b5M, acetamiprid 10 \u00b5M, acetylcholine 1 \u00b5M, acetylcholine 10 \u00b5M, clothianidin 10 nM, clothianidin 100 nM, clothianidin 1 \u00b5M, clothianidin 10 \u00b5M, ddt 1 \u00b5M, ddt 10 \u00b5M, deltamethrin 10 nM, deltamethrin 100 nM, deltamethrin 1 \u00b5M, deltamethrin 10 \u00b5M, dieldrin 10 nM, dieldrin 100 nM, dieldrin 1 \u00b5M, dieldrin 10 \u00b5M, fipronil 10 nM, fipronil 100 nM, fipronil 1 \u00b5M, fipronil 10 \u00b5M, imidacloprid 10 nM, imidacloprid 100 nM, imidacloprid 1 \u00b5M, imidacloprid 10 \u00b5M, nicotine 10 nM, nicotine 100 nM, nicotine 1 \u00b5M, nicotine 10 \u00b5M, nitenpyram 10 nM, nitenpyram 100 nM, nitenpyram 1 \u00b5M, nitenpyram 10 \u00b5M, permethrin 10 nM, permethrin 100 nM, permethrin 1 \u00b5M, permethrin 10 \u00b5M, picrotoxin 100 nM, picrotoxin 1 \u00b5M, picrotoxin 10 \u00b5M, thiamethoxam 10 \u00b5M",
       "unit": null,
       "note": null,
       "step": "dependence"
@@ -4167,7 +4097,7 @@
         "1e-06": "A_receptor_only",
         "1e-05": "A_receptor_only"
       },
-      "text": "10 nM: A_receptor_only (0.095); 100 nM: A_receptor_only (-0.519); 1 µM: A_receptor_only (-0.564); 10 µM: A_receptor_only (-0.579)",
+      "text": "10 nM: A_receptor_only (0.095); 100 nM: A_receptor_only (-0.519); 1 \u00b5M: A_receptor_only (-0.564); 10 \u00b5M: A_receptor_only (-0.579)",
       "unit": null,
       "note": null,
       "step": "ablation"
@@ -4179,7 +4109,7 @@
         "1e-06": "A_receptor_only",
         "1e-05": "A_receptor_only"
       },
-      "text": "10 nM: C_topology_only; 100 nM: A_receptor_only; 1 µM: A_receptor_only; 10 µM: A_receptor_only",
+      "text": "10 nM: C_topology_only; 100 nM: A_receptor_only; 1 \u00b5M: A_receptor_only; 10 \u00b5M: A_receptor_only",
       "unit": null,
       "note": null,
       "step": "ablation"
@@ -5304,104 +5234,6 @@
       "note": null,
       "step": "mixtures"
     },
-    "expr_coverage_overall": {
-      "value": 0.2053252443545669,
-      "text": "0.205",
-      "unit": null,
-      "note": null,
-      "step": "expression"
-    },
-    "expr_cov_named_insect_nAChR": {
-      "value": 0.458259325044405,
-      "text": "0.458",
-      "unit": null,
-      "note": null,
-      "step": "expression"
-    },
-    "expr_cov_named_insect_RDL": {
-      "value": 0.6563055062166963,
-      "text": "0.656",
-      "unit": null,
-      "note": null,
-      "step": "expression"
-    },
-    "expr_cov_named_insect_GluCl": {
-      "value": 0.0719360568383659,
-      "text": "0.072",
-      "unit": null,
-      "note": null,
-      "step": "expression"
-    },
-    "expr_cov_named_insect_OctR": {
-      "value": 0.0,
-      "text": "0.000",
-      "unit": null,
-      "note": null,
-      "step": "expression"
-    },
-    "expr_cov_named_insect_AChE": {
-      "value": 0.0,
-      "text": "0.000",
-      "unit": null,
-      "note": null,
-      "step": "expression"
-    },
-    "expr_rows": {
-      "value": 50,
-      "text": "50",
-      "unit": null,
-      "note": null,
-      "step": "expression"
-    },
-    "expr_motor_gap": {
-      "value": true,
-      "text": "yes",
-      "unit": null,
-      "note": null,
-      "step": "expression"
-    },
-    "expr_motor_gap_note": {
-      "value": "motor-neuron receptor expression is a confirmed gap",
-      "text": "motor-neuron receptor expression is a confirmed gap",
-      "unit": null,
-      "note": null,
-      "step": "expression"
-    },
-    "expr_mn9_uniform_hz": {
-      "value": 39.40567922340328,
-      "text": "39.4",
-      "unit": "rate-model units",
-      "note": null,
-      "step": "expression"
-    },
-    "expr_mn9_weighted_hz": {
-      "value": 36.78411732719066,
-      "text": "36.8",
-      "unit": "rate-model units",
-      "note": null,
-      "step": "expression"
-    },
-    "expr_mn9_delta_hz": {
-      "value": -2.6215618962126257,
-      "text": "-2.622",
-      "unit": "rate-model units",
-      "note": null,
-      "step": "expression"
-    },
-    "expr_mean_uniform_hz": {
-      "value": 0.45846211979249263,
-      "text": "0.458",
-      "unit": "rate-model units",
-      "note": null,
-      "step": "expression"
-    },
-    "expr_mean_weighted_hz": {
-      "value": 0.8585976869666511,
-      "text": "0.859",
-      "unit": "rate-model units",
-      "note": null,
-      "step": "expression"
-    },
     "stab_family_size": {
       "value": 25,
       "text": "25",
@@ -6289,6 +6121,573 @@
       "note": null,
       "step": "stability"
     },
+    "scale_ladder_sizes": {
+      "value": [
+        1000,
+        5000,
+        10000,
+        25000,
+        50000
+      ],
+      "text": "1k, 5k, 10k, 25k, 50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_rungs_on_disk": {
+      "value": [
+        "scale_1k"
+      ],
+      "text": "scale_1k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_rungs_missing": {
+      "value": [
+        "scale_5k",
+        "scale_10k",
+        "scale_25k",
+        "scale_50k"
+      ],
+      "text": "scale_5k, scale_10k, scale_25k, scale_50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_n_rungs_on_disk": {
+      "value": 1,
+      "text": "1",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_name": {
+      "value": "scale_1k",
+      "text": "scale_1k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_nodes": {
+      "value": 1000,
+      "text": "1000",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_edges": {
+      "value": 22857,
+      "text": "22\u202f857",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_mean_degree": {
+      "value": 22.857,
+      "text": "22.9",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_share_onto_seeds": {
+      "value": 0.06501290633066456,
+      "text": "7%",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_1k_in_star": {
+      "value": false,
+      "text": "no",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_frontier_n_paper": {
+      "value": 1000,
+      "text": "1000",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_largest_feasible_profile": {
+      "value": "scale_50k",
+      "text": "scale_50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_largest_feasible_lif": {
+      "value": "scale_50k",
+      "text": "scale_50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_top_rung": {
+      "value": "50k",
+      "text": "50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_top_profile_hours": {
+      "value": 21.13708841666667,
+      "text": "21.1",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_top_landscape_days": {
+      "value": 7.397980945833334,
+      "text": "7",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_whole_cns_profile_hours": {
+      "value": 59.427331277777775,
+      "text": "59",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_source": {
+      "value": "papers/scale_study.json",
+      "text": "papers/scale_study.json",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_status": {
+      "value": "reported",
+      "text": "reported",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_cuts": {
+      "value": [
+        "scale_1k",
+        "named",
+        "taste_motor",
+        "scale_5k",
+        "scale_10k",
+        "scale_25k",
+        "scale_50k"
+      ],
+      "text": "scale_1k, named, taste_motor, scale_5k, scale_10k, scale_25k, scale_50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_n_cuts": {
+      "value": 7,
+      "text": "7",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_compounds": {
+      "value": [
+        "imidacloprid",
+        "fipronil"
+      ],
+      "text": "imidacloprid, fipronil",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_settled": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_settled_clean_ladder": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_statement": {
+      "value": [
+        "imidacloprid: the verdict is 'topology-dependent' on the largest 5 of 7 cuts tested, first reached at 'taste_motor'.",
+        "fipronil: the verdict is 'topology-dependent' on the largest 7 of 7 cuts tested, first reached at 'scale_1k'."
+      ],
+      "text": "imidacloprid: the verdict is 'topology-dependent' on the largest 5 of 7 cuts tested, first reached at 'taste_motor'. fipronil: the verdict is 'topology-dependent' on the largest 7 of 7 cuts tested, first reached at 'scale_1k'.",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_sequences": {
+      "value": [
+        "imidacloprid: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent)",
+        "fipronil: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent)"
+      ],
+      "text": "imidacloprid: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent); fipronil: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent)",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_n_range": {
+      "value": [
+        20,
+        1000
+      ],
+      "text": "20-1000",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_resolution_range": {
+      "value": [
+        0.000999000999000999,
+        0.047619047619047616
+      ],
+      "text": "0.0010-0.0476",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_composition_dominated_cuts": {
+      "value": [
+        "named"
+      ],
+      "text": "named",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_n_composition_dominated": {
+      "value": 1,
+      "text": "1",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_every_null_cuts": {
+      "value": [
+        "scale_5k",
+        "scale_10k"
+      ],
+      "text": "scale_5k, scale_10k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_coarse_cuts": {
+      "value": [
+        "scale_10k",
+        "scale_25k",
+        "scale_50k"
+      ],
+      "text": "scale_10k, scale_25k, scale_50k",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_coarse_note": {
+      "value": {
+        "cuts": [
+          "scale_10k",
+          "scale_25k",
+          "scale_50k"
+        ],
+        "alpha": 0.05
+      },
+      "text": "at scale_10k, scale_25k, scale_50k the permutation budget falls to n = 20, where the smallest attainable probability is 0.048 against alpha = 0.05: a rejection there is the smallest the test can express",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_imidacloprid_sequence": {
+      "value": [
+        {
+          "cut": "scale_1k",
+          "n_nodes": 1000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "named",
+          "n_nodes": 1126,
+          "class": "composition-dominated"
+        },
+        {
+          "cut": "taste_motor",
+          "n_nodes": 1841,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_5k",
+          "n_nodes": 5000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_10k",
+          "n_nodes": 10000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_25k",
+          "n_nodes": 25000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_50k",
+          "n_nodes": 50000,
+          "class": "topology-dependent"
+        }
+      ],
+      "text": "scale_1k (1000 nodes, mean degree 22.9): topology-dependent; named (1126 nodes, mean degree 1.2): composition-dominated; taste_motor (1841 nodes, mean degree 10.4): topology-dependent; scale_5k (5000 nodes, mean degree 56.0): topology-dependent; scale_10k (10000 nodes, mean degree 62.2): topology-dependent; scale_25k (25000 nodes, mean degree 54.6): topology-dependent; scale_50k (50000 nodes, mean degree 44.3): topology-dependent",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_imidacloprid_relative_range": {
+      "value": [
+        0.5198156654684973,
+        0.9308633342364611
+      ],
+      "text": "0.52-0.93",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_fipronil_sequence": {
+      "value": [
+        {
+          "cut": "scale_1k",
+          "n_nodes": 1000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "named",
+          "n_nodes": 1126,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "taste_motor",
+          "n_nodes": 1841,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_5k",
+          "n_nodes": 5000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_10k",
+          "n_nodes": 10000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_25k",
+          "n_nodes": 25000,
+          "class": "topology-dependent"
+        },
+        {
+          "cut": "scale_50k",
+          "n_nodes": 50000,
+          "class": "topology-dependent"
+        }
+      ],
+      "text": "scale_1k (1000 nodes, mean degree 22.9): topology-dependent; named (1126 nodes, mean degree 1.2): topology-dependent; taste_motor (1841 nodes, mean degree 10.4): topology-dependent; scale_5k (5000 nodes, mean degree 56.0): topology-dependent; scale_10k (10000 nodes, mean degree 62.2): topology-dependent; scale_25k (25000 nodes, mean degree 54.6): topology-dependent; scale_50k (50000 nodes, mean degree 44.3): topology-dependent",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_fipronil_relative_range": {
+      "value": [
+        0.1356619639942983,
+        0.5749207286979054
+      ],
+      "text": "0.14-0.57",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "scale_study_density_not_size": {
+      "value": {
+        "in_star": "named",
+        "dense": "scale_1k"
+      },
+      "text": "the inversion does not track the number of cells: `scale_1k` has 1000 nodes against `named`'s 1126 and a mean degree of 22.9 against 1.21, and it is already topology-dependent",
+      "unit": null,
+      "note": null,
+      "step": "scale"
+    },
+    "flylab_version": {
+      "value": "0.6.0",
+      "text": "0.6.0",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "git_sha": {
+      "value": "50f5465b2df028a6cb2b93926cfbd14d7c746c9b",
+      "text": "50f5465b2df0",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "library_sha256": {
+      "value": "359096467b33242174dcc5d787a6b7fc6d37573f8daf4771efd159b64ca95e05",
+      "text": "359096467b33",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "map_id": {
+      "value": "male-cns:v1.0",
+      "text": "male-cns:v1.0",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_nodes": {
+      "value": 1126,
+      "text": "1126",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_edges": {
+      "value": 1360,
+      "text": "1360",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_nodes": {
+      "value": 1841,
+      "text": "1841",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_edges": {
+      "value": 19066,
+      "text": "19\u202f066",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "named_min_weight": {
+      "value": 5,
+      "text": "5",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "taste_closure_min_weight": {
+      "value": 10,
+      "text": "10",
+      "unit": null,
+      "note": null,
+      "step": "provenance"
+    },
+    "expr_coverage_overall": {
+      "value": 0.2053252443545669,
+      "text": "0.205",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_cov_named_insect_nAChR": {
+      "value": 0.458259325044405,
+      "text": "0.458",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_cov_named_insect_RDL": {
+      "value": 0.6563055062166963,
+      "text": "0.656",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_cov_named_insect_GluCl": {
+      "value": 0.0719360568383659,
+      "text": "0.072",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_cov_named_insect_OctR": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_cov_named_insect_AChE": {
+      "value": 0.0,
+      "text": "0.000",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_rows": {
+      "value": 50,
+      "text": "50",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_motor_gap": {
+      "value": true,
+      "text": "yes",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_motor_gap_note": {
+      "value": "motor-neuron receptor expression is a confirmed gap",
+      "text": "motor-neuron receptor expression is a confirmed gap",
+      "unit": null,
+      "note": null,
+      "step": "expression"
+    },
+    "expr_mn9_uniform_hz": {
+      "value": 39.40567922340328,
+      "text": "39.4",
+      "unit": "rate-model units",
+      "note": null,
+      "step": "expression"
+    },
+    "expr_mn9_weighted_hz": {
+      "value": 36.78411732719066,
+      "text": "36.8",
+      "unit": "rate-model units",
+      "note": null,
+      "step": "expression"
+    },
+    "expr_mn9_delta_hz": {
+      "value": -2.6215618962126257,
+      "text": "-2.622",
+      "unit": "rate-model units",
+      "note": null,
+      "step": "expression"
+    },
+    "expr_mean_uniform_hz": {
+      "value": 0.45846211979249263,
+      "text": "0.458",
+      "unit": "rate-model units",
+      "note": null,
+      "step": "expression"
+    },
+    "expr_mean_weighted_hz": {
+      "value": 0.8585976869666511,
+      "text": "0.859",
+      "unit": "rate-model units",
+      "note": null,
+      "step": "expression"
+    },
     "unc_n_base": {
       "value": 1024,
       "text": "1024",
@@ -6305,7 +6704,7 @@
     },
     "unc_evaluations": {
       "value": 11264,
-      "text": "11 264",
+      "text": "11\u202f264",
       "unit": null,
       "note": null,
       "step": "uncertainty"
@@ -6680,7 +7079,7 @@
     },
     "ish_n_base": {
       "value": 16384,
-      "text": "16 384",
+      "text": "16\u202f384",
       "unit": null,
       "note": null,
       "step": "uncertainty"
@@ -6995,415 +7394,16 @@
       "note": null,
       "step": "claims"
     },
-    "scale_ladder_sizes": {
-      "value": [
-        1000,
-        5000,
-        10000,
-        25000,
-        50000
-      ],
-      "text": "1k, 5k, 10k, 25k, 50k",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_rungs_on_disk": {
-      "value": [
-        "scale_1k"
-      ],
-      "text": "scale_1k",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_rungs_missing": {
-      "value": [
-        "scale_5k",
-        "scale_10k",
-        "scale_25k",
-        "scale_50k"
-      ],
-      "text": "scale_5k, scale_10k, scale_25k, scale_50k",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_n_rungs_on_disk": {
-      "value": 1,
-      "text": "1",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_1k_name": {
-      "value": "scale_1k",
-      "text": "scale_1k",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_1k_nodes": {
-      "value": 1000,
-      "text": "1000",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_1k_edges": {
-      "value": 22857,
-      "text": "22 857",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_1k_mean_degree": {
-      "value": 22.857,
-      "text": "22.9",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_1k_share_onto_seeds": {
-      "value": 0.06501290633066456,
-      "text": "7%",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_1k_in_star": {
-      "value": false,
-      "text": "no",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_frontier_n_paper": {
-      "value": 1000,
-      "text": "1000",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_largest_feasible_profile": {
-      "value": "scale_50k",
-      "text": "scale_50k",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_largest_feasible_lif": {
-      "value": "scale_50k",
-      "text": "scale_50k",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_top_rung": {
-      "value": "50k",
-      "text": "50k",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_top_profile_hours": {
-      "value": 21.13708841666667,
-      "text": "21.1",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_top_landscape_days": {
-      "value": 7.397980945833334,
-      "text": "7",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_whole_cns_profile_hours": {
-      "value": 59.427331277777775,
-      "text": "59",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_source": {
-      "value": "papers/scale_study.json",
-      "text": "papers/scale_study.json",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_status": {
-      "value": "reported",
-      "text": "reported",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_cuts": {
-      "value": [
-        "scale_1k",
-        "named",
-        "taste_motor",
-        "scale_5k",
-        "scale_10k",
-        "scale_25k",
-        "scale_50k"
-      ],
-      "text": "scale_1k, named, taste_motor, scale_5k, scale_10k, scale_25k, scale_50k",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_n_cuts": {
-      "value": 7,
-      "text": "7",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_compounds": {
-      "value": [
-        "imidacloprid",
-        "fipronil"
-      ],
-      "text": "imidacloprid, fipronil",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_settled": {
-      "value": true,
-      "text": "yes",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_settled_clean_ladder": {
-      "value": true,
-      "text": "yes",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_statement": {
-      "value": [
-        "imidacloprid: the verdict is 'topology-dependent' on the largest 5 of 7 cuts tested, first reached at 'taste_motor'.",
-        "fipronil: the verdict is 'topology-dependent' on the largest 7 of 7 cuts tested, first reached at 'scale_1k'."
-      ],
-      "text": "imidacloprid: the verdict is 'topology-dependent' on the largest 5 of 7 cuts tested, first reached at 'taste_motor'. fipronil: the verdict is 'topology-dependent' on the largest 7 of 7 cuts tested, first reached at 'scale_1k'.",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_sequences": {
-      "value": [
-        "imidacloprid: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent)",
-        "fipronil: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent)"
-      ],
-      "text": "imidacloprid: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent); fipronil: scale_1k (topology-dependent) -> scale_5k (topology-dependent) -> scale_10k (topology-dependent) -> scale_25k (topology-dependent) -> scale_50k (topology-dependent)",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_n_range": {
-      "value": [
-        20,
-        1000
-      ],
-      "text": "20-1000",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_resolution_range": {
-      "value": [
-        0.000999000999000999,
-        0.047619047619047616
-      ],
-      "text": "0.0010-0.0476",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_composition_dominated_cuts": {
-      "value": [
-        "named"
-      ],
-      "text": "named",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_n_composition_dominated": {
-      "value": 1,
-      "text": "1",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_every_null_cuts": {
-      "value": [
-        "scale_5k",
-        "scale_10k"
-      ],
-      "text": "scale_5k, scale_10k",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_coarse_cuts": {
-      "value": [
-        "scale_10k",
-        "scale_25k",
-        "scale_50k"
-      ],
-      "text": "scale_10k, scale_25k, scale_50k",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_coarse_note": {
-      "value": {
-        "cuts": [
-          "scale_10k",
-          "scale_25k",
-          "scale_50k"
-        ],
-        "alpha": 0.05
-      },
-      "text": "at scale_10k, scale_25k, scale_50k the permutation budget falls to n = 20, where the smallest attainable probability is 0.048 against alpha = 0.05: a rejection there is the smallest the test can express",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_imidacloprid_sequence": {
-      "value": [
-        {
-          "cut": "scale_1k",
-          "n_nodes": 1000,
-          "class": "topology-dependent"
-        },
-        {
-          "cut": "named",
-          "n_nodes": 1126,
-          "class": "composition-dominated"
-        },
-        {
-          "cut": "taste_motor",
-          "n_nodes": 1841,
-          "class": "topology-dependent"
-        },
-        {
-          "cut": "scale_5k",
-          "n_nodes": 5000,
-          "class": "topology-dependent"
-        },
-        {
-          "cut": "scale_10k",
-          "n_nodes": 10000,
-          "class": "topology-dependent"
-        },
-        {
-          "cut": "scale_25k",
-          "n_nodes": 25000,
-          "class": "topology-dependent"
-        },
-        {
-          "cut": "scale_50k",
-          "n_nodes": 50000,
-          "class": "topology-dependent"
-        }
-      ],
-      "text": "scale_1k (1000 nodes, mean degree 22.9): topology-dependent; named (1126 nodes, mean degree 1.2): composition-dominated; taste_motor (1841 nodes, mean degree 10.4): topology-dependent; scale_5k (5000 nodes, mean degree 56.0): topology-dependent; scale_10k (10000 nodes, mean degree 62.2): topology-dependent; scale_25k (25000 nodes, mean degree 54.6): topology-dependent; scale_50k (50000 nodes, mean degree 44.3): topology-dependent",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_imidacloprid_relative_range": {
-      "value": [
-        0.5198156654684973,
-        0.9308633342364611
-      ],
-      "text": "0.52-0.93",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_fipronil_sequence": {
-      "value": [
-        {
-          "cut": "scale_1k",
-          "n_nodes": 1000,
-          "class": "topology-dependent"
-        },
-        {
-          "cut": "named",
-          "n_nodes": 1126,
-          "class": "topology-dependent"
-        },
-        {
-          "cut": "taste_motor",
-          "n_nodes": 1841,
-          "class": "topology-dependent"
-        },
-        {
-          "cut": "scale_5k",
-          "n_nodes": 5000,
-          "class": "topology-dependent"
-        },
-        {
-          "cut": "scale_10k",
-          "n_nodes": 10000,
-          "class": "topology-dependent"
-        },
-        {
-          "cut": "scale_25k",
-          "n_nodes": 25000,
-          "class": "topology-dependent"
-        },
-        {
-          "cut": "scale_50k",
-          "n_nodes": 50000,
-          "class": "topology-dependent"
-        }
-      ],
-      "text": "scale_1k (1000 nodes, mean degree 22.9): topology-dependent; named (1126 nodes, mean degree 1.2): topology-dependent; taste_motor (1841 nodes, mean degree 10.4): topology-dependent; scale_5k (5000 nodes, mean degree 56.0): topology-dependent; scale_10k (10000 nodes, mean degree 62.2): topology-dependent; scale_25k (25000 nodes, mean degree 54.6): topology-dependent; scale_50k (50000 nodes, mean degree 44.3): topology-dependent",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_fipronil_relative_range": {
-      "value": [
-        0.1356619639942983,
-        0.5749207286979054
-      ],
-      "text": "0.14-0.57",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
-    "scale_study_density_not_size": {
-      "value": {
-        "in_star": "named",
-        "dense": "scale_1k"
-      },
-      "text": "the inversion does not track the number of cells: `scale_1k` has 1000 nodes against `named`'s 1126 and a mean degree of 22.9 against 1.21, and it is already topology-dependent",
-      "unit": null,
-      "note": null,
-      "step": "scale"
-    },
     "paper_words_body": {
-      "value": 5714,
-      "text": "5714",
+      "value": 5837,
+      "text": "5837",
       "unit": "words",
       "note": null,
       "step": "paper"
     },
     "paper_words": {
-      "value": 9318,
-      "text": "9318",
+      "value": 9442,
+      "text": "9442",
       "unit": null,
       "note": null,
       "step": "paper"
@@ -7416,8 +7416,8 @@
       "step": "paper"
     },
     "supplement_words": {
-      "value": 5669,
-      "text": "5669",
+      "value": 5844,
+      "text": "5844",
       "unit": "words",
       "note": null,
       "step": "paper"
@@ -7432,7 +7432,7 @@
     "_provenance": {
       "value": {
         "flylab_version": "0.6.0",
-        "git_sha": "6a89ac920744ac6b890bf29c50d15581d730cbc8",
+        "git_sha": "50f5465b2df028a6cb2b93926cfbd14d7c746c9b",
         "library_sha256": "359096467b33242174dcc5d787a6b7fc6d37573f8daf4771efd159b64ca95e05",
         "library_version": "0.6",
         "library_schema_version": 3,
@@ -7474,7 +7474,7 @@
       "bytes": 240894,
       "step": "scorecard",
       "figure": "F2_dual_scorecard",
-      "caption": "Dual scorecard for imidacloprid and fipronil at 1 µM. Bars are Hill-form engagement of the insect target (blue) and its vertebrate counterpart (orange) for each of the five receptor pairs declared in `library.yaml:selectivity_pairs`. Hatched bars rest on a class placeholder: the compound has no sourced EC50 at that pair and the row is inert. Imidacloprid reaches 0.991 at insect nAChR against 0.091 at vertebrate a4b2; fipronil reaches 0.985 at insect RDL against 0.476 at a multi-species vertebrate GABA-related binding-site proxy. These are heterogeneous assay inputs and transfers, not measured fractional occupancy of matched receptors in living animals."
+      "caption": "Dual scorecard for imidacloprid and fipronil at 1 \u00b5M. Bars are Hill-form engagement of the insect target (blue) and its vertebrate counterpart (orange) for each of the five receptor pairs declared in `library.yaml:selectivity_pairs`. Hatched bars rest on a class placeholder: the compound has no sourced EC50 at that pair and the row is inert. Imidacloprid reaches 0.991 at insect nAChR against 0.091 at vertebrate a4b2; fipronil reaches 0.985 at insect RDL against 0.476 at a multi-species vertebrate GABA-related binding-site proxy. These are heterogeneous assay inputs and transfers, not measured fractional occupancy of matched receptors in living animals."
     },
     {
       "name": "F11_evidence_types.png",
@@ -7490,7 +7490,7 @@
       "bytes": 355967,
       "step": "curves",
       "figure": "F3_occupancy_curves",
-      "caption": "Hill-form model engagement against free concentration for the four-compound panel, one insect target (solid, blue) and its vertebrate counterpart (dashed, orange) per compound. The shaded band is the selectivity window between the two EC50s, annotated in log10 units; the dotted vertical line is the 1 µM working concentration used elsewhere in the paper. Ivermectin's window is the GluCl/GlyR pair, deltamethrin's the Nav pair. Curves are the teaching library, not measured concentration-response data."
+      "caption": "Hill-form model engagement against free concentration for the four-compound panel, one insect target (solid, blue) and its vertebrate counterpart (dashed, orange) per compound. The shaded band is the selectivity window between the two EC50s, annotated in log10 units; the dotted vertical line is the 1 \u00b5M working concentration used elsewhere in the paper. Ivermectin's window is the GluCl/GlyR pair, deltamethrin's the Nav pair. Curves are the teaching library, not measured concentration-response data."
     },
     {
       "name": "F4_taste_motor_graph.png",
@@ -7506,7 +7506,7 @@
       "bytes": 132804,
       "step": "veto",
       "figure": "F5_bitter_veto",
-      "caption": "MN9 firing on the map-extracted labellar-GRN path, driven through the real MaleCNS sweet (34) and bitter (38) GRN body IDs at 150 Hz, never by driving MN9 directly. Left: leaky rate engine. Right: Shiu-style LIF engine with a background Poisson drive. In vehicle, adding bitter drive takes MN9 to zero on both engines (veto ratio 0.00). Fipronil at 1 µM blocks RDL, raises the sugar-only rate and partially relieves the veto (ratio 0.41 rate, 0.16 LIF). Imidacloprid silences MN9 altogether, so its ratio is undefined rather than zero. Outputs differ between engines by construction and are not calibrated to any recording."
+      "caption": "MN9 firing on the map-extracted labellar-GRN path, driven through the real MaleCNS sweet (34) and bitter (38) GRN body IDs at 150 Hz, never by driving MN9 directly. Left: leaky rate engine. Right: Shiu-style LIF engine with a background Poisson drive. In vehicle, adding bitter drive takes MN9 to zero on both engines (veto ratio 0.00). Fipronil at 1 \u00b5M blocks RDL, raises the sugar-only rate and partially relieves the veto (ratio 0.41 rate, 0.16 LIF). Imidacloprid silences MN9 altogether, so its ratio is undefined rather than zero. Outputs differ between engines by construction and are not calibrated to any recording."
     },
     {
       "name": "F6_dependence_profile.png",
@@ -7514,7 +7514,7 @@
       "bytes": 282678,
       "step": "dependence",
       "figure": "F6_dependence_profile",
-      "caption": "Histograms are the drug effect (treated minus vehicle on the network mean rate) measured on 1000 degraded copies of the 1-hop MN9/DNp01 `named` cut; the red line is the same contrast on the real cut. Columns run in increasing order of destruction: transmitter labels permuted while holding outgoing-weight shares near their real values, synapse weights permuted, degree-preserving double-edge rewiring, Erdős–Rényi. Insets show the central 99% of the concentrated Erdős–Rényi null distributions. Titles carry the empirical two-sided permutation p and the three-way verdict against the declared point-gap margin (delta = 0.332 model rate units, 5 % of the vehicle readout): `distinguishable` means the test rejected, `within point-gap tolerance` means the gap from the null median is below the margin after non-rejection, and `not resolved` means neither -- no label is a statistical equivalence test. The plain label permutation is documented in T23: it moves weighted excitation/inhibition balance and is a joint null rather than a ladder rung. Imidacloprid is composition-dominated (necessary level: degree_sequence, equivalent_within_tolerance); fipronil is topology-dependent (necessary level: wiring_with_weighted_transmitter_balance)."
+      "caption": "Histograms are the drug effect (treated minus vehicle on the network mean rate) measured on 1000 degraded copies of the 1-hop MN9/DNp01 `named` cut; the red line is the same contrast on the real cut. Columns run in increasing order of destruction: transmitter labels permuted while holding outgoing-weight shares near their real values, synapse weights permuted, degree-preserving double-edge rewiring, Erd\u0151s\u2013R\u00e9nyi. Insets show the central 99% of the concentrated Erd\u0151s\u2013R\u00e9nyi null distributions. Titles carry the empirical two-sided permutation p and the three-way verdict against the declared point-gap margin (delta = 0.332 model rate units, 5 % of the vehicle readout): `distinguishable` means the test rejected, `within point-gap tolerance` means the gap from the null median is below the margin after non-rejection, and `not resolved` means neither -- no label is a statistical equivalence test. The plain label permutation is documented in T23: it moves weighted excitation/inhibition balance and is a joint null rather than a ladder rung. Imidacloprid is composition-dominated (necessary level: degree_sequence, equivalent_within_tolerance); fipronil is topology-dependent (necessary level: wiring_with_weighted_transmitter_balance)."
     },
     {
       "name": "F12_dependence_landscape.png",
@@ -7538,7 +7538,7 @@
       "bytes": 152743,
       "step": "ablation",
       "figure": "F13_ablation",
-      "caption": "Each level predicts the same 21 compounds with one layer of information removed, and is scored by rank agreement with the full model's *ordering* of the library (levels have different units, so values are not comparable; the correlation is signed, so a perfect inversion scores -1 rather than 1). Crosses mark the historical depression-only level-C rule, which applied a multiplier of at most 1.0 to every transmitter alike and so could not express disinhibition: its poor correlation follows partly from that restriction. With a direction-aware rule level C rises to 0.968 at 1 uM from 0.161. The short green interval at B shows the 5th–95th percentile of the matched one-gain-per-pseudo-compound B-versus-D reference distribution (T24), with its median dashed. The composition level's agreement with the full model must be read against that distribution."
+      "caption": "Each level predicts the same 21 compounds with one layer of information removed, and is scored by rank agreement with the full model's *ordering* of the library (levels have different units, so values are not comparable; the correlation is signed, so a perfect inversion scores -1 rather than 1). Crosses mark the historical depression-only level-C rule, which applied a multiplier of at most 1.0 to every transmitter alike and so could not express disinhibition: its poor correlation follows partly from that restriction. With a direction-aware rule level C rises to 0.968 at 1 uM from 0.161. The short green interval at B shows the 5th\u201395th percentile of the matched one-gain-per-pseudo-compound B-versus-D reference distribution (T24), with its median dashed. The composition level's agreement with the full model must be read against that distribution."
     },
     {
       "name": "F7_selectivity_landscape.png",
@@ -7554,7 +7554,7 @@
       "bytes": 181391,
       "step": "dose",
       "figure": "F8_dose_response_sensitivity",
-      "caption": "Left: the model's own dose-response for imidacloprid on the 1-hop MN9/DNp01 cut. Points are 4 replicates per concentration with log-normal EC50 jitter (sd 0.3 log10 units) and drive jitter; the curve is a 4-parameter Hill fit, and the band is a 200-resample bootstrap CI on the fitted IC50 (34.7 nM). This is the *model's* circuit IC50, not a receptor IC50 and not an animal IC50. Right: one-at-a-time sensitivity of the same readout at 1 µM, each parameter halved and doubled. The gain-rule coefficient dominates; the EC50 and Hill coefficient have zero span because occupancy is already saturated at this dose."
+      "caption": "Left: the model's own dose-response for imidacloprid on the 1-hop MN9/DNp01 cut. Points are 4 replicates per concentration with log-normal EC50 jitter (sd 0.3 log10 units) and drive jitter; the curve is a 4-parameter Hill fit, and the band is a 200-resample bootstrap CI on the fitted IC50 (34.7 nM). This is the *model's* circuit IC50, not a receptor IC50 and not an animal IC50. Right: one-at-a-time sensitivity of the same readout at 1 \u00b5M, each parameter halved and doubled. The gain-rule coefficient dominates; the EC50 and Hill coefficient have zero span because occupancy is already saturated at this dose."
     },
     {
       "name": "F9_genotype_panel.png",
@@ -7581,14 +7581,6 @@
       "caption": "Each row is a model-output predicate; each column is one tested way of turning receptor engagement into synaptic gain, with transmitter signs and synapse assignment fixed. Green retains the predicate, red reverses it, and amber means the readout does not exist under that specification. The topology rows are decided on 100 permutations per specification and on Benjamini-Hochberg adjusted probabilities across the 100 structural component tests of the run; this is not a cell-level FDR guarantee. Retained by every tested specification: C2_rdl_disinhibition, C3_imidacloprid_topology_not_distinguishable, C4_fipronil_topology_exceeds, C7_map_bitter_veto. The nicotinic suppression predicate reverses under every monotone rule in this family. For a predicate based on non-rejection, T14 separates descriptive point-gap passes from indeterminate cases; neither is a formal equivalence result."
     },
     {
-      "name": "F15_uncertainty_voi.png",
-      "path": "figures/F15_uncertainty_voi.png",
-      "bytes": 163556,
-      "step": "uncertainty",
-      "figure": "F15_uncertainty_voi",
-      "caption": "Left: the share of the variance of the neighbourhood mean rate attributable to each assumption, first-order and total-order, from a Saltelli cross-sample with Jansen estimators, with bootstrap first-order confidence intervals. A factor is **resolved** only when its interval excludes zero; the starred rows are not, and a factor's index exceeding the noise floor does not resolve it. The dashed line is that floor, defined as the largest magnitude among the *negative* first-order estimates: a true first-order index cannot be negative, so that magnitude is a measured lower bound on the estimator's error, and on this run it is several times the declared null factor's own draw (0.046 set by gain_coef, against lif_seed at -0.007). Right: the same shares scaled back into the readout's variance and mapped onto the experiment that would resolve each assumption; a negative estimate is clipped to zero for the heuristic score. This is not formal expected value of information. Green marks a factor that needs no experiment at all, only a re-analysis of data already held."
-    },
-    {
       "name": "F1_architecture.png",
       "path": "figures/F1_architecture.png",
       "bytes": 314341,
@@ -7603,6 +7595,14 @@
       "step": "architecture",
       "figure": "F1_architecture",
       "caption": null
+    },
+    {
+      "name": "F15_uncertainty_voi.png",
+      "path": "figures/F15_uncertainty_voi.png",
+      "bytes": 163556,
+      "step": "uncertainty",
+      "figure": "F15_uncertainty_voi",
+      "caption": "Left: the share of the variance of the neighbourhood mean rate attributable to each assumption, first-order and total-order, from a Saltelli cross-sample with Jansen estimators, with bootstrap first-order confidence intervals. A factor is **resolved** only when its interval excludes zero; the starred rows are not, and a factor's index exceeding the noise floor does not resolve it. The dashed line is that floor, defined as the largest magnitude among the *negative* first-order estimates: a true first-order index cannot be negative, so that magnitude is a measured lower bound on the estimator's error, and on this run it is several times the declared null factor's own draw (0.046 set by gain_coef, against lif_seed at -0.007). Right: the same shares scaled back into the readout's variance and mapped onto the experiment that would resolve each assumption; a negative estimate is clipped to zero for the heuristic score. This is not formal expected value of information. Green marks a factor that needs no experiment at all, only a re-analysis of data already held."
     }
   ],
   "tables": [
@@ -7971,48 +7971,6 @@
       "step": "stability"
     },
     {
-      "name": "T16_uncertainty_budget.csv",
-      "path": "tables/T16_uncertainty_budget.csv",
-      "bytes": 1284,
-      "rows": 10,
-      "step": "uncertainty"
-    },
-    {
-      "name": "T16_uncertainty_budget.md",
-      "path": "tables/T16_uncertainty_budget.md",
-      "bytes": 1765,
-      "rows": 10,
-      "step": "uncertainty"
-    },
-    {
-      "name": "T17_value_of_information.csv",
-      "path": "tables/T17_value_of_information.csv",
-      "bytes": 2465,
-      "rows": 9,
-      "step": "uncertainty"
-    },
-    {
-      "name": "T17_value_of_information.md",
-      "path": "tables/T17_value_of_information.md",
-      "bytes": 1964,
-      "rows": 9,
-      "step": "uncertainty"
-    },
-    {
-      "name": "T18_claim_provenance.csv",
-      "path": "tables/T18_claim_provenance.csv",
-      "bytes": 3371,
-      "rows": 9,
-      "step": "claims"
-    },
-    {
-      "name": "T18_claim_provenance.md",
-      "path": "tables/T18_claim_provenance.md",
-      "bytes": 2907,
-      "rows": 9,
-      "step": "claims"
-    },
-    {
       "name": "T26_scale_frontier.csv",
       "path": "tables/T26_scale_frontier.csv",
       "bytes": 699,
@@ -8039,6 +7997,48 @@
       "bytes": 2783,
       "rows": 14,
       "step": "scale"
+    },
+    {
+      "name": "T16_uncertainty_budget.csv",
+      "path": "tables/T16_uncertainty_budget.csv",
+      "bytes": 1284,
+      "rows": 10,
+      "step": "uncertainty"
+    },
+    {
+      "name": "T16_uncertainty_budget.md",
+      "path": "tables/T16_uncertainty_budget.md",
+      "bytes": 1765,
+      "rows": 10,
+      "step": "uncertainty"
+    },
+    {
+      "name": "T17_value_of_information.csv",
+      "path": "tables/T17_value_of_information.csv",
+      "bytes": 2496,
+      "rows": 9,
+      "step": "uncertainty"
+    },
+    {
+      "name": "T17_value_of_information.md",
+      "path": "tables/T17_value_of_information.md",
+      "bytes": 1964,
+      "rows": 9,
+      "step": "uncertainty"
+    },
+    {
+      "name": "T18_claim_provenance.csv",
+      "path": "tables/T18_claim_provenance.csv",
+      "bytes": 3463,
+      "rows": 9,
+      "step": "claims"
+    },
+    {
+      "name": "T18_claim_provenance.md",
+      "path": "tables/T18_claim_provenance.md",
+      "bytes": 2999,
+      "rows": 9,
+      "step": "claims"
     }
   ],
   "notes": [
@@ -8052,7 +8052,7 @@
     "[dependence] instrument validation: the ladder recovered 2 of 3 planted topology-dependent effects at n = 200 and returned no false positive on the unplanted control. Detection over the planted grid by permutation count is n=50: 0.61, n=200: 0.61, n=1000: 0.67 and by planted strength strength 0.25: 0.00-0.17; strength 0.5: 0.67-0.83; strength 1: 1.00-1.00; unplanted controls were detected in 0 of 18 runs. In this finite grid, observed detection was 1.00 at planted strength 1 and at most 0.25 at 0.25; these fractions are not general power estimates.",
     "[dependence] multiplicity changes the headline count on the `named` cut: 11 cells are topology-dependent on the raw permutation p and 0 survive Benjamini-Hochberg across the 168 structural tests of the landscape. The corrected count is the one the paper quotes.",
     "[dependence] the descriptive class distribution differs on a denser cut: repeated on `taste_motor` (1841 nodes, 19066 edges, mean degree 10.4) the landscape returns 0 composition-dominated cells of 84, against 44 of 84 on the in-star `named` cut. The composition-dominated majority is a property of the tested cut and runtime, not a general result about connectomes.",
-    "[ablation] the ablation ladder's ranking is concentration-dependent: with the historical depression-only level-C rule the weakest level is 10 nM: C_topology_only; 100 nM: A_receptor_only; 1 µM: A_receptor_only; 10 µM: A_receptor_only. Any sentence of the form 'the topology-only level is the worst of the four' is true of one column and false of the others.",
+    "[ablation] the ablation ladder's ranking is concentration-dependent: with the historical depression-only level-C rule the weakest level is 10 nM: C_topology_only; 100 nM: A_receptor_only; 1 \u00b5M: A_receptor_only; 10 \u00b5M: A_receptor_only. Any sentence of the form 'the topology-only level is the worst of the four' is true of one column and false of the others.",
     "[ablation] the level-C rank comparison depends on the generic rule: with a direction-aware rule the topology-only baseline's rank correlation with the full model at 1 uM rises from 0.161 (depression-only floor, which cannot express disinhibition and whose every entry is at most zero) to 0.968. 'The connectome without the pharmacology is not a cheap substitute' was a statement about a sign-broken baseline.",
     "[ablation] the composition-versus-full correlation carries no compound-level evidence from a label shuffle: shuffling the compound-to-gain assignment leaves it identically 0.921, and pharmacology-free pseudo-compounds whose gain vectors have the shape the mechanism rules produce already reach a median of 0.847. Both levels are functions of the same gain vector, so the number is a statement about the map from gains to readouts.",
     "[ablation] the composition verdict is not robust to the engine's row normalisation: the B-versus-D rank correlation at 1 uM is 0.921 under the shipped `row_abs` mode and 0.551 under a degree-corrected one. The normalisation is an documented modelling choice that makes each cell's recurrent input a composition-weighted average of its presynaptic gains.",
@@ -8064,11 +8064,11 @@
     "[stability] the supplement's claim that the monotone rules 'buffer at least as much, never less' is false: 3 of the 6 reversing specifications with a defined index buffer LESS than the shipped rule (linear@1.50x, saturating@1.25x, saturating@1.50x), and the aggregate of -0.893 is carried by the extreme of a range running -0.199 to -1.734.",
     "[stability] T8 and T15 have different scopes and must be read that way: T8 scores the whole library on both cuts, T15 only the 10 compounds of the two mechanism classes the conclusion is about. acetylcholine carries a circuit index in T8 and is outside T15's compound set entirely.",
     "[stability] the amplify/buffer split is NOT stable across the 3x3 threshold grid: nav_ache fails at circuit_frac=0.40,vert_limit=0.10, circuit_frac=0.50,vert_limit=0.10. The paper quotes the range over the grid, never the point estimate.",
+    "[scale] scale study: 7 cuts (scale_1k, named, taste_motor, scale_5k, scale_10k, scale_25k, scale_50k); verdicts settled on the clean ladder: yes. imidacloprid: the verdict is 'topology-dependent' on the largest 5 of 7 cuts tested, first reached at 'taste_motor'. fipronil: the verdict is 'topology-dependent' on the largest 7 of 7 cuts tested, first reached at 'scale_1k'.",
     "[uncertainty] the estimator's noise floor is 0.046, set by the most negative first-order estimate (gain_coef), not by the declared null factor lif_seed at -0.007. Only gain_transform, weight_threshold have a first-order confidence interval that excludes zero; every other factor is unresolved at this sample size, and a negative point estimate is estimator error rather than a negative contribution.",
-    "[claims] the provenance chain behind a circuit readout has 9 links and exactly 1 of them (malecns_edges) is a measurement of the system being simulated; the rest are literature reuse, asserted modelling choices and computation.",
-    "[scale] scale study: 7 cuts (scale_1k, named, taste_motor, scale_5k, scale_10k, scale_25k, scale_50k); verdicts settled on the clean ladder: yes. imidacloprid: the verdict is 'topology-dependent' on the largest 5 of 7 cuts tested, first reached at 'taste_motor'. fipronil: the verdict is 'topology-dependent' on the largest 7 of 7 cuts tested, first reached at 'scale_1k'."
+    "[claims] the provenance chain behind a circuit readout has 9 links and exactly 1 of them (malecns_edges) is a measurement of the system being simulated; the rest are literature reuse, asserted modelling choices and computation."
   ],
-  "partial": false,
+  "partial": true,
   "honesty": [
     "Every number in this file is model_derived: it comes from the teaching EC50 library, the gain patch rules and one or two hops-limited MaleCNS cuts. Nothing here was measured in a living fly.",
     "live_lab is null in every notebook this pipeline produced.",

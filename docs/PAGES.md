@@ -26,6 +26,12 @@ The static application reaches the same core through flylab/browser/bridge.py.
 
 The user interface is shared.
 
+The bench stores the primary run and experiment-design settings in the current
+browser. **Export setup** writes a versioned JSON preset that can be imported
+in another browser build; it contains settings, not assay results. At phone
+widths, the FlyLab and Bench tab rows become a single grouped native panel
+picker, synchronized with the active panel.
+
 ## What "same core" means
 
 The browser and server builds share:
@@ -177,13 +183,21 @@ Fast test suite:
 python -m pytest -q
 ~~~
 
-Longer end-to-end browser and static-build checks:
+Longer end-to-end browser and static-build checks (the browser smoke test
+requires Playwright and Chromium):
 
 ~~~bash
-pytest -m slow
+python -m pip install -e ".[dev,viz,browser-test]"
+python -m playwright install chromium
+pytest -q -m slow
 ~~~
 
-The ordinary tests workflow currently runs the fast suite. Slow checks should be run before tagged research releases and can also be placed in a scheduled or release-specific CI job.
+The scheduled and manually dispatched slow CI job installs Chromium and runs
+the static browser smoke test. It builds the Pages site, boots Pyodide in a
+headless browser, runs the dashboard through the bridge, switches panels, and
+blocks the chart scripts to check that their data tables remain available.
+Pyodide and its packages still load from the configured runtime URLs in this
+test; it does not verify a fully offline browser session.
 
 ## Performance
 

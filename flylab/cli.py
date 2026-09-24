@@ -1434,9 +1434,11 @@ TUTORIAL_LESSONS: tuple[dict[str, Any], ...] = (
                 "note": (
                     "Same compound, same dose, same readout, opposite verdict. The "
                     "paper-scale command is the same line with --n 1000. The scale "
-                    "ladder (flylab.analysis.scale.available_cuts) moves it again with "
-                    "size alone: composition-dominated at ~1100 cells, distinguishable "
-                    "from every null at ~5000. See docs/INTERPRETATION.md section 4."
+                    "saved scale-ladder results are consistent with recurrence, not node "
+                    "count, tracking the change; this does not isolate a causal feature. "
+                    "At 5k the imidacloprid effect is distinguishable from the three "
+                    "ranked edge/wiring nulls. The exact large cuts are not present in "
+                    "every checkout. See docs/INTERPRETATION.md section 4."
                 ),
             },
         ],

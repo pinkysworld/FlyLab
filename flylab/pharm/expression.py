@@ -243,35 +243,74 @@ def coverage(
     aggregation: str = "mean",
     path: Path | None = None,
 ) -> dict[str, Any]:
-    """How many cells of the loaded graphs sit in classes with known expression."""
+    """Summarize class-annotation coverage, never cell-level expression.
+
+    ``fraction_cell_receptor_pairs_annotated`` is the share of graph-node ×
+    receptor-key pairs whose superclass has any known class-level statement
+    in the cross-atlas dataset. It does not estimate the fraction of cells
+    expressing a receptor. The legacy ``fraction_known_overall`` key remains
+    as an alias for compatibility.
+    """
     from flylab.circuit.rate import GRAPHS
 
     names = list(graphs) if graphs is not None else list(GRAPHS)
     receptors = [receptor] if receptor else list(RECEPTOR_GENES)
     per_graph: dict[str, Any] = {}
-    totals = {"n_cells": 0, "n_known": 0}
+    totals = {
+        "n_graph_nodes": 0,
+        "n_nodes_with_any_annotation": 0,
+        "n_cell_receptor_pairs": 0,
+        "n_annotated_cell_receptor_pairs": 0,
+    }
     for name in names:
         try:
             classes = _graph_superclasses(name)
         except Exception:  # pragma: no cover - graph not committed in this checkout
             continue
         block: dict[str, Any] = {"n_cells": len(classes)}
+        annotated_superclasses: set[str] = set()
         for rec in receptors:
             index = _superclass_index(rec, None, default_unknown, aggregation, path)
             known = sum(1 for sc in classes if sc and index.get(sc, {}).get("known"))
+            annotated_superclasses.update(
+                sc for sc in classes if sc and index.get(sc, {}).get("known")
+            )
             block[rec] = {
                 "n_known": known,
                 "n_unknown": len(classes) - known,
                 "fraction_known": known / len(classes) if classes else 0.0,
             }
-            totals["n_known"] += known
-            totals["n_cells"] += len(classes)
+            totals["n_annotated_cell_receptor_pairs"] += known
+            totals["n_cell_receptor_pairs"] += len(classes)
+        block["n_cells_with_any_class_annotation"] = sum(
+            1 for sc in classes if sc and sc in annotated_superclasses
+        )
+        block["fraction_cells_with_any_class_annotation"] = (
+            block["n_cells_with_any_class_annotation"] / len(classes) if classes else 0.0
+        )
+        totals["n_nodes_with_any_annotation"] += block["n_cells_with_any_class_annotation"]
+        totals["n_graph_nodes"] += len(classes)
         per_graph[name] = block
-    overall = totals["n_known"] / totals["n_cells"] if totals["n_cells"] else 0.0
+    pair_fraction = (
+        totals["n_annotated_cell_receptor_pairs"] / totals["n_cell_receptor_pairs"]
+        if totals["n_cell_receptor_pairs"]
+        else 0.0
+    )
     return {
         "graphs": per_graph,
         "receptors": receptors,
-        "fraction_known_overall": overall,
+        "fraction_cell_receptor_pairs_annotated": pair_fraction,
+        "n_annotated_cell_receptor_pairs": totals["n_annotated_cell_receptor_pairs"],
+        "n_cell_receptor_pairs": totals["n_cell_receptor_pairs"],
+        "fraction_graph_nodes_with_any_class_annotation": (
+            totals["n_nodes_with_any_annotation"] / totals["n_graph_nodes"]
+            if totals["n_graph_nodes"]
+            else 0.0
+        ),
+        "n_graph_nodes": totals["n_graph_nodes"],
+        # Backwards-compatible alias; this has always been a cell-receptor-pair fraction.
+        "fraction_known_overall": pair_fraction,
+        "coverage_unit": "graph_node_x_receptor_key_pair",
         "aggregation": aggregation,
         "default_unknown": default_unknown,
         "warning": EXPRESSION_WARNING,

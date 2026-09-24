@@ -22,7 +22,8 @@ abstract: >-
   are demonstrated on cuts of the public MaleCNS v1.0 connectome, where the
   headline result is methodological: a dependence verdict obtained on one
   extract of a network can invert on another extract of the same network, and
-  the extract's recurrence rather than its size predicts which way.
+  the saved extracts associate the verdict change more with recurrence than node
+  count, without isolating recurrence as a cause.
   Concretely, FlyLab maps a compound and a free concentration onto a typed engagement
   panel for insect receptors and their vertebrate counterparts at the same
   dose, converts the insect side through a fixed mechanism table into gain

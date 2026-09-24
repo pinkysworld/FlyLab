@@ -1369,8 +1369,9 @@ def connectome_information_score(
 
     ``panel`` may be a :func:`null_panel` result or its ``rows``; when it is
     ``None`` the panel is computed first.  ``assay`` filters the rows to one
-    assay arm (default: all rows).  1.0 means the connectome mattered against
-    every null; 0.0 means a shuffled graph reproduced the drug effect.
+    assay arm (default: all rows).  1.0 means the real graph was distinguishable
+    from every included null at the selected threshold; 0.0 means none was.
+    This legacy summary does not establish equivalence when a null is not rejected.
     
 
     .. deprecated:: 0.6

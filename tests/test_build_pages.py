@@ -24,6 +24,21 @@ assert spec.loader is not None
 spec.loader.exec_module(build_pages)
 
 
+@pytest.fixture(autouse=True)
+def local_chart_vendor(monkeypatch: pytest.MonkeyPatch):
+    """Keep layout tests offline while still checking vendored asset paths."""
+    def write_stub_assets(out: Path) -> list[str]:
+        dest = out / "vendor"
+        dest.mkdir(parents=True, exist_ok=True)
+        paths = []
+        for name in build_pages.JS_VENDOR:
+            (dest / name).write_text("/* test-only chart vendor stub */\n")
+            paths.append(f"vendor/{name}")
+        return paths
+
+    monkeypatch.setattr(build_pages, "vendor_js", write_stub_assets)
+
+
 @pytest.fixture
 def stub_wheel(tmp_path: Path) -> Path:
     """A wheel-shaped zip: enough for the layout checks, free to make."""
@@ -46,6 +61,8 @@ def test_site_has_every_file_the_bench_needs(site):
     out, _ = site
     for name in ("index.html", "app.js", "styles.css", "flylab-boot.js", "manifest.json"):
         assert (out / name).is_file(), name
+    for name in build_pages.JS_VENDOR:
+        assert (out / "vendor" / name).is_file(), name
     assert (out / "wheels" / "flylab-0.5.0-py3-none-any.whl").is_file()
     for rel in build_pages.DATA_FILES:
         assert (out / rel).is_file(), rel

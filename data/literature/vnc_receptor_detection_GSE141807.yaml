@@ -1,0 +1,489 @@
+schema_version: 1
+source:
+  accession: GSE141807
+  archive: GSE141807_RAW.tar
+  archive_sha256: bda31982a53a432bb4712ebdaf11ac7d8b9e7be580f72c2acaf7a58912e64daf
+  geo_url: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE141807
+  paper_url: https://elifesciences.org/articles/54074
+method:
+  scope: adult VNC-wide transcript detection; cells are not assigned to cell classes
+  qc_thresholds_from_paper:
+    nGene_gt: 200
+    nUMI_gt: 1200
+    nUMI_lte: 10000
+    prop_mito_lte: 0.15
+  detection_rule: one or more UMI for the gene in a QC-passing barcode
+  dropout_note: a zero count is not evidence that a cell does not express the gene
+  not_used_for: MaleCNS superclass gains, receptor-complex inference, or MN9 expression
+cells_after_qc_total: 26770
+published_cells_after_qc_total: 26768
+all_replicate_cell_counts_match_paper: false
+cell_count_reproduction_note: Three replicate counts match the paper. GSM4213598 retains
+  6,524 cells versus 6,522 reported (difference +2) under the cited QC thresholds;
+  this small discrepancy is unresolved and was not adjusted away.
+replicates:
+  GSM4213596:
+    sample_id: GSM4213596
+    sex: female
+    cells_in_matrix: 30000
+    genes_in_matrix: 12253
+    cells_after_published_qc: 2590
+    published_cells_after_qc: 2590
+    cell_count_difference: 0
+    mitochondrial_genes:
+    - mt:ATPase6
+    - mt:ATPase8
+    - mt:CoI
+    - mt:CoII
+    - mt:CoIII
+    - mt:Cyt-b
+    - mt:ND1
+    - mt:ND2
+    - mt:ND3
+    - mt:ND4
+    - mt:ND4L
+    - mt:ND5
+    - mt:ND6
+    - mt:lrRNA
+    - mt:srRNA
+    - mt:tRNA:Arg-TCG
+    - mt:tRNA:Cys-GCA
+    - mt:tRNA:Gly-TCC
+    - mt:tRNA:Leu-TAA
+    - mt:tRNA:Lys-CTT
+    - mt:tRNA:Ser-GCT
+    - mt:tRNA:Ser-TGA
+    - mt:tRNA:Val-TAC
+    targets:
+      insect_nAChR:
+        n_genes_matched: 10
+        genes:
+          nAChRalpha1:
+            n_detected: 1206
+            fraction_detected: 0.46563706563706564
+          nAChRalpha2:
+            n_detected: 167
+            fraction_detected: 0.06447876447876448
+          nAChRalpha3:
+            n_detected: 1540
+            fraction_detected: 0.5945945945945946
+          nAChRalpha4:
+            n_detected: 562
+            fraction_detected: 0.21698841698841698
+          nAChRalpha5:
+            n_detected: 1858
+            fraction_detected: 0.7173745173745174
+          nAChRalpha6:
+            n_detected: 2154
+            fraction_detected: 0.8316602316602316
+          nAChRalpha7:
+            n_detected: 1861
+            fraction_detected: 0.7185328185328186
+          nAChRbeta1:
+            n_detected: 2348
+            fraction_detected: 0.9065637065637066
+          nAChRbeta2:
+            n_detected: 1302
+            fraction_detected: 0.5027027027027027
+          nAChRbeta3:
+            n_detected: 1
+            fraction_detected: 0.0003861003861003861
+        n_cells_with_any_matched_gene_detected: 2568
+        fraction_cells_with_any_matched_gene_detected: 0.9915057915057915
+      insect_RDL:
+        n_genes_matched: 1
+        genes:
+          Rdl:
+            n_detected: 2554
+            fraction_detected: 0.9861003861003861
+        n_cells_with_any_matched_gene_detected: 2554
+        fraction_cells_with_any_matched_gene_detected: 0.9861003861003861
+      insect_GluCl:
+        n_genes_matched: 1
+        genes:
+          GluClalpha:
+            n_detected: 1223
+            fraction_detected: 0.4722007722007722
+        n_cells_with_any_matched_gene_detected: 1223
+        fraction_cells_with_any_matched_gene_detected: 0.4722007722007722
+      insect_OctR:
+        n_genes_matched: 4
+        genes:
+          Oct-TyrR:
+            n_detected: 195
+            fraction_detected: 0.07528957528957529
+          Octbeta1R:
+            n_detected: 147
+            fraction_detected: 0.05675675675675676
+          Octbeta2R:
+            n_detected: 796
+            fraction_detected: 0.3073359073359073
+          Octbeta3R:
+            n_detected: 1094
+            fraction_detected: 0.4223938223938224
+        n_cells_with_any_matched_gene_detected: 1614
+        fraction_cells_with_any_matched_gene_detected: 0.6231660231660232
+      insect_AChE:
+        n_genes_matched: 2
+        genes:
+          Ace:
+            n_detected: 1270
+            fraction_detected: 0.49034749034749037
+          Acer:
+            n_detected: 184
+            fraction_detected: 0.07104247104247104
+        n_cells_with_any_matched_gene_detected: 1364
+        fraction_cells_with_any_matched_gene_detected: 0.5266409266409267
+  GSM4213597:
+    sample_id: GSM4213597
+    sex: female
+    cells_in_matrix: 30000
+    genes_in_matrix: 13525
+    cells_after_published_qc: 9060
+    published_cells_after_qc: 9060
+    cell_count_difference: 0
+    mitochondrial_genes:
+    - mt:ATPase6
+    - mt:ATPase8
+    - mt:CoI
+    - mt:CoII
+    - mt:CoIII
+    - mt:Cyt-b
+    - mt:ND1
+    - mt:ND2
+    - mt:ND3
+    - mt:ND4
+    - mt:ND4L
+    - mt:ND5
+    - mt:ND6
+    - mt:lrRNA
+    - mt:srRNA
+    - mt:tRNA:Ala-TGC
+    - mt:tRNA:Arg-TCG
+    - mt:tRNA:Cys-GCA
+    - mt:tRNA:Gly-TCC
+    - mt:tRNA:His-GTG
+    - mt:tRNA:Leu-TAA
+    - mt:tRNA:Leu-TAG
+    - mt:tRNA:Lys-CTT
+    - mt:tRNA:Met-CAT
+    - mt:tRNA:Phe-GAA
+    - mt:tRNA:Ser-GCT
+    - mt:tRNA:Ser-TGA
+    - mt:tRNA:Trp-TCA
+    - mt:tRNA:Tyr-GTA
+    - mt:tRNA:Val-TAC
+    targets:
+      insect_nAChR:
+        n_genes_matched: 10
+        genes:
+          nAChRalpha1:
+            n_detected: 3415
+            fraction_detected: 0.3769315673289183
+          nAChRalpha2:
+            n_detected: 2678
+            fraction_detected: 0.29558498896247243
+          nAChRalpha3:
+            n_detected: 4842
+            fraction_detected: 0.5344370860927152
+          nAChRalpha4:
+            n_detected: 2312
+            fraction_detected: 0.25518763796909494
+          nAChRalpha5:
+            n_detected: 6234
+            fraction_detected: 0.6880794701986755
+          nAChRalpha6:
+            n_detected: 7333
+            fraction_detected: 0.8093818984547462
+          nAChRalpha7:
+            n_detected: 6223
+            fraction_detected: 0.6868653421633554
+          nAChRbeta1:
+            n_detected: 8021
+            fraction_detected: 0.8853200883002208
+          nAChRbeta2:
+            n_detected: 4050
+            fraction_detected: 0.4470198675496689
+          nAChRbeta3:
+            n_detected: 18
+            fraction_detected: 0.001986754966887417
+        n_cells_with_any_matched_gene_detected: 8867
+        fraction_cells_with_any_matched_gene_detected: 0.9786975717439294
+      insect_RDL:
+        n_genes_matched: 1
+        genes:
+          Rdl:
+            n_detected: 8741
+            fraction_detected: 0.9647902869757174
+        n_cells_with_any_matched_gene_detected: 8741
+        fraction_cells_with_any_matched_gene_detected: 0.9647902869757174
+      insect_GluCl:
+        n_genes_matched: 1
+        genes:
+          GluClalpha:
+            n_detected: 4989
+            fraction_detected: 0.5506622516556291
+        n_cells_with_any_matched_gene_detected: 4989
+        fraction_cells_with_any_matched_gene_detected: 0.5506622516556291
+      insect_OctR:
+        n_genes_matched: 4
+        genes:
+          Oct-TyrR:
+            n_detected: 993
+            fraction_detected: 0.10960264900662252
+          Octbeta1R:
+            n_detected: 901
+            fraction_detected: 0.09944812362030905
+          Octbeta2R:
+            n_detected: 2614
+            fraction_detected: 0.28852097130242826
+          Octbeta3R:
+            n_detected: 2904
+            fraction_detected: 0.3205298013245033
+        n_cells_with_any_matched_gene_detected: 5276
+        fraction_cells_with_any_matched_gene_detected: 0.5823399558498896
+      insect_AChE:
+        n_genes_matched: 2
+        genes:
+          Ace:
+            n_detected: 4975
+            fraction_detected: 0.5491169977924945
+          Acer:
+            n_detected: 599
+            fraction_detected: 0.06611479028697571
+        n_cells_with_any_matched_gene_detected: 5207
+        fraction_cells_with_any_matched_gene_detected: 0.5747240618101546
+  GSM4213598:
+    sample_id: GSM4213598
+    sex: male
+    cells_in_matrix: 30000
+    genes_in_matrix: 13261
+    cells_after_published_qc: 6524
+    published_cells_after_qc: 6522
+    cell_count_difference: 2
+    mitochondrial_genes:
+    - mt:ATPase6
+    - mt:ATPase8
+    - mt:CoI
+    - mt:CoII
+    - mt:CoIII
+    - mt:Cyt-b
+    - mt:ND1
+    - mt:ND2
+    - mt:ND3
+    - mt:ND4
+    - mt:ND4L
+    - mt:ND5
+    - mt:ND6
+    - mt:lrRNA
+    - mt:srRNA
+    - mt:tRNA:Ala-TGC
+    - mt:tRNA:Arg-TCG
+    - mt:tRNA:Gly-TCC
+    - mt:tRNA:His-GTG
+    - mt:tRNA:Leu-TAA
+    - mt:tRNA:Lys-CTT
+    - mt:tRNA:Ser-GCT
+    - mt:tRNA:Ser-TGA
+    - mt:tRNA:Val-TAC
+    targets:
+      insect_nAChR:
+        n_genes_matched: 10
+        genes:
+          nAChRalpha1:
+            n_detected: 2516
+            fraction_detected: 0.38565297363580625
+          nAChRalpha2:
+            n_detected: 811
+            fraction_detected: 0.12431023911710606
+          nAChRalpha3:
+            n_detected: 3456
+            fraction_detected: 0.5297363580625383
+          nAChRalpha4:
+            n_detected: 1395
+            fraction_detected: 0.21382587369711833
+          nAChRalpha5:
+            n_detected: 4391
+            fraction_detected: 0.6730533415082771
+          nAChRalpha6:
+            n_detected: 5302
+            fraction_detected: 0.8126916002452483
+          nAChRalpha7:
+            n_detected: 4509
+            fraction_detected: 0.6911404046597179
+          nAChRbeta1:
+            n_detected: 5838
+            fraction_detected: 0.8948497854077253
+          nAChRbeta2:
+            n_detected: 2911
+            fraction_detected: 0.4461986511342734
+          nAChRbeta3:
+            n_detected: 3
+            fraction_detected: 0.0004598405885959534
+        n_cells_with_any_matched_gene_detected: 6451
+        fraction_cells_with_any_matched_gene_detected: 0.9888105456774985
+      insect_RDL:
+        n_genes_matched: 1
+        genes:
+          Rdl:
+            n_detected: 6381
+            fraction_detected: 0.9780809319435929
+        n_cells_with_any_matched_gene_detected: 6381
+        fraction_cells_with_any_matched_gene_detected: 0.9780809319435929
+      insect_GluCl:
+        n_genes_matched: 1
+        genes:
+          GluClalpha:
+            n_detected: 3022
+            fraction_detected: 0.4632127529123237
+        n_cells_with_any_matched_gene_detected: 3022
+        fraction_cells_with_any_matched_gene_detected: 0.4632127529123237
+      insect_OctR:
+        n_genes_matched: 4
+        genes:
+          Oct-TyrR:
+            n_detected: 417
+            fraction_detected: 0.06391784181483752
+          Octbeta1R:
+            n_detected: 480
+            fraction_detected: 0.07357449417535254
+          Octbeta2R:
+            n_detected: 1824
+            fraction_detected: 0.2795830778663397
+          Octbeta3R:
+            n_detected: 2080
+            fraction_detected: 0.31882280809319435
+        n_cells_with_any_matched_gene_detected: 3591
+        fraction_cells_with_any_matched_gene_detected: 0.5504291845493562
+      insect_AChE:
+        n_genes_matched: 2
+        genes:
+          Ace:
+            n_detected: 3105
+            fraction_detected: 0.47593500919681175
+          Acer:
+            n_detected: 400
+            fraction_detected: 0.061312078479460456
+        n_cells_with_any_matched_gene_detected: 3282
+        fraction_cells_with_any_matched_gene_detected: 0.503065603923973
+  GSM4213599:
+    sample_id: GSM4213599
+    sex: male
+    cells_in_matrix: 30000
+    genes_in_matrix: 14232
+    cells_after_published_qc: 8596
+    published_cells_after_qc: 8596
+    cell_count_difference: 0
+    mitochondrial_genes:
+    - mt:ATPase6
+    - mt:ATPase8
+    - mt:CoI
+    - mt:CoII
+    - mt:CoIII
+    - mt:Cyt-b
+    - mt:ND1
+    - mt:ND2
+    - mt:ND3
+    - mt:ND4
+    - mt:ND4L
+    - mt:ND5
+    - mt:ND6
+    - mt:lrRNA
+    - mt:srRNA
+    - mt:tRNA:Ala-TGC
+    - mt:tRNA:Arg-TCG
+    - mt:tRNA:Cys-GCA
+    - mt:tRNA:Gln-TTG
+    - mt:tRNA:Glu-TTC
+    - mt:tRNA:Gly-TCC
+    - mt:tRNA:His-GTG
+    - mt:tRNA:Leu-TAA
+    - mt:tRNA:Lys-CTT
+    - mt:tRNA:Phe-GAA
+    - mt:tRNA:Ser-GCT
+    - mt:tRNA:Ser-TGA
+    - mt:tRNA:Trp-TCA
+    - mt:tRNA:Tyr-GTA
+    - mt:tRNA:Val-TAC
+    targets:
+      insect_nAChR:
+        n_genes_matched: 10
+        genes:
+          nAChRalpha1:
+            n_detected: 3213
+            fraction_detected: 0.3737785016286645
+          nAChRalpha2:
+            n_detected: 2575
+            fraction_detected: 0.29955793392275476
+          nAChRalpha3:
+            n_detected: 4273
+            fraction_detected: 0.49709167054443926
+          nAChRalpha4:
+            n_detected: 2117
+            fraction_detected: 0.24627733829688228
+          nAChRalpha5:
+            n_detected: 5985
+            fraction_detected: 0.6962540716612378
+          nAChRalpha6:
+            n_detected: 6972
+            fraction_detected: 0.8110749185667753
+          nAChRalpha7:
+            n_detected: 5948
+            fraction_detected: 0.6919497440670079
+          nAChRbeta1:
+            n_detected: 7610
+            fraction_detected: 0.885295486272685
+          nAChRbeta2:
+            n_detected: 3731
+            fraction_detected: 0.43403908794788276
+          nAChRbeta3:
+            n_detected: 15
+            fraction_detected: 0.0017449976733364355
+        n_cells_with_any_matched_gene_detected: 8455
+        fraction_cells_with_any_matched_gene_detected: 0.9835970218706375
+      insect_RDL:
+        n_genes_matched: 1
+        genes:
+          Rdl:
+            n_detected: 8314
+            fraction_detected: 0.967194043741275
+        n_cells_with_any_matched_gene_detected: 8314
+        fraction_cells_with_any_matched_gene_detected: 0.967194043741275
+      insect_GluCl:
+        n_genes_matched: 1
+        genes:
+          GluClalpha:
+            n_detected: 4664
+            fraction_detected: 0.542577943229409
+        n_cells_with_any_matched_gene_detected: 4664
+        fraction_cells_with_any_matched_gene_detected: 0.542577943229409
+      insect_OctR:
+        n_genes_matched: 4
+        genes:
+          Oct-TyrR:
+            n_detected: 864
+            fraction_detected: 0.10051186598417869
+          Octbeta1R:
+            n_detected: 858
+            fraction_detected: 0.09981386691484412
+          Octbeta2R:
+            n_detected: 2478
+            fraction_detected: 0.28827361563517917
+          Octbeta3R:
+            n_detected: 2637
+            fraction_detected: 0.3067705909725454
+        n_cells_with_any_matched_gene_detected: 4907
+        fraction_cells_with_any_matched_gene_detected: 0.5708469055374593
+      insect_AChE:
+        n_genes_matched: 2
+        genes:
+          Ace:
+            n_detected: 4936
+            fraction_detected: 0.5742205677059097
+          Acer:
+            n_detected: 568
+            fraction_detected: 0.0660772452303397
+        n_cells_with_any_matched_gene_detected: 5159
+        fraction_cells_with_any_matched_gene_detected: 0.6001628664495114
+interpretation: Descriptive VNC-wide RNA detection only. Detection fractions are not
+  receptor complex prevalence or cell-type-specific expression fractions.

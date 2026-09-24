@@ -40,7 +40,10 @@ sources:
   allen_2020:
     citation: "Allen AM, Neville MC, Birtles S, et al. (2020) A single-cell transcriptomic atlas of the adult Drosophila ventral nerve cord. eLife 9:e54074. DOI 10.7554/eLife.54074. PMID 32314735. PMCID PMC7173974"
     scale: "26,768 high-quality cells; 120 clusters (110 neuronal); >100 transcriptionally distinct cell types"
-    covers: "adult VNC"
+    covers: "adult VNC; public primary count data in GEO GSE141807"
+  mckellar_2020:
+    citation: "McKellar CE, Siwanowicz I, Dickson BJ, Simpson JH (2020) Controlling motor neurons of every muscle for fly proboscis reaching. eLife 9:e54978. DOI 10.7554/eLife.54978. PMID 32584254. PMCID PMC7316511"
+    covers: "anatomy of identified adult proboscis motor neurons, including their arbors in the brain's subesophageal zone"
   croset_2018:
     citation: "Croset V, Treiber CD, Waddell S (2018) Cellular diversity in the Drosophila midbrain revealed by single-cell transcriptomics. eLife 7:e34550. DOI 10.7554/eLife.34550. PMID 29671739. PMCID PMC5927767"
     scale: "19,260 cells sequenced, 10,286 high-quality (>=800 UMI); authors estimate ~45,000 cells in the fly midbrain"
@@ -348,12 +351,29 @@ by_transmitter_class:
 motor_neuron_gap:
   status: not_sourced
   description: >-
-    The task asked specifically for Rdl and nAChR expression in leg and labellar
-    motor neurons. No source among Fly Cell Atlas, Davie 2018, Allen 2020,
-    Croset 2018 or Konstantinides 2018 was found that reports receptor
-    expression for an identified motor neuron population in the adult. Allen et
-    al. 2020 is the closest (adult VNC, contains leg motor neurons) but the
-    retrieved text names no motor-neuron cluster with receptor expression.
+    No expression fractions for identified adult motor-neuron classes have been
+    added to this dataset. Allen et al. 2020 deposited primary adult VNC
+    single-cell count data (GEO GSE141807); those matrices have now been
+    reprocessed into descriptive, VNC-wide gene-detection fractions after the
+    published QC filters (see `vnc_receptor_detection_GSE141807.yaml`). The
+    available summary has no cell-class assignments and cannot estimate
+    motor-neuron-specific fractions. The VNC dataset does not itself identify MN9:
+    McKellar et al. 2020 place the proboscis motor-neuron arbors in the brain's
+    subesophageal zone. MN9 therefore still needs a brain/SEZ data source with
+    a defensible cell-type match or a targeted expression assay.
+  public_data_lead:
+    source_key: allen_2020
+    accession: GSE141807
+    status: reanalyzed_vnc_wide_cell_classes_unresolved
+    scope: adult VNC, not the brain subesophageal zone containing MN9
+    summary_file: vnc_receptor_detection_GSE141807.yaml
+    processing_note: >-
+      Per-gene and target-family detection fractions were recomputed from all
+      four deposited replicates after the published QC filters, with sample and
+      sex composition, one-UMI detection, dropout caveat and a small unresolved
+      two-cell replicate discrepancy recorded. The pooled VNC-wide results are
+      not cell-class or receptor-complex prevalence estimates. An atlas zero is
+      not evidence of receptor absence in a cell.
   consequence_for_flylab: >-
     FlyLab currently patches g_ACh and g_GABA at MN9 as part of a whole-graph
     gain. There is no published per-cell receptor evidence justifying a
@@ -361,10 +381,12 @@ motor_neuron_gap:
     stay, and any notebook that patches motor neurons should keep a warning
     saying the receptor complement of those cells is unmeasured.
   suggested_next_step: >-
-    Query the Fly Cell Atlas VNC/head snRNA-seq directly (SCope or cellxgene)
-    for nAChRalpha1-7, nAChRbeta1-3, Rdl, GluClalpha, Ace and Oct receptor genes
-    restricted to annotated motor neuron cell types, and record the resulting
-    fractions here as literature_value with the atlas version pinned.
+    Determine whether adult VNC motor-neuron labels can be defensibly joined to
+    the reprocessed GEO barcodes, then report class-specific subunit detection
+    fractions with the atlas version, sample composition, detection rule and
+    dropout treatment pinned. Resolve MN9 separately with a brain/SEZ atlas
+    that supports an identified cell-type match or a targeted expression assay;
+    do not transfer a generic VNC motor-neuron value to MN9.
 
 not_sourced:
   - "Per-subunit fractions of cells expressing each nAChR alpha/beta subunit (only ordinal statements retrieved)."

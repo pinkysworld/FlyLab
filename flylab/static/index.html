@@ -82,6 +82,15 @@
 
     <button id="btn-run" class="primary" type="button">Run</button>
     <div class="hint">Press <kbd>R</kbd> anywhere to run the open tab.</div>
+    <div class="hint">Main run settings are saved in this browser.</div>
+    <div class="preset-tools" role="group" aria-label="Portable design preset">
+      <div class="row">
+        <button id="btn-preset-export" class="small" type="button">Export setup</button>
+        <button id="btn-preset-import" class="small" type="button">Import setup</button>
+      </div>
+      <input id="f-preset-file" type="file" accept="application/json,.json" hidden />
+      <div id="preset-status" class="hint" role="status" aria-live="polite">Share these settings as a versioned JSON file.</div>
+    </div>
   </aside>
 
   <!-- ------------------------------------------------------ main -->
@@ -107,6 +116,31 @@
       <button role="tab" id="tab-uncertainty" aria-controls="panel-uncertainty" aria-selected="false">Uncertainty</button>
       <button role="tab" id="tab-controls" aria-controls="panel-controls" aria-selected="false">Controls</button>
     </nav>
+    <div class="mobile-panel-picker">
+      <label for="mobile-panel-picker">Open panel</label>
+      <select id="mobile-panel-picker">
+        <optgroup label="FlyLab">
+          <option value="dashboard">Dashboard</option>
+          <option value="dose">Dose-response</option>
+          <option value="circuit">Circuit</option>
+          <option value="genotype">Genotype</option>
+          <option value="mixtures">Mixtures</option>
+          <option value="experiment">Experiment</option>
+          <option value="evidence">Evidence</option>
+          <option value="notebook">Notebook</option>
+        </optgroup>
+        <optgroup label="Bench">
+          <option value="scorecard">Scorecard</option>
+          <option value="curves">Curves</option>
+          <option value="spikes">Spikes</option>
+          <option value="taste">Taste</option>
+          <option value="wholecns">Whole CNS</option>
+          <option value="exposure">Exposure</option>
+          <option value="uncertainty">Uncertainty</option>
+          <option value="controls">Controls</option>
+        </optgroup>
+      </select>
+    </div>
 
     <!-- 0. Dashboard (landing) -->
     <section class="panel active" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">

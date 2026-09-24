@@ -963,8 +963,10 @@ def necessary_information_level(
     This function used to report "the weakest graph model that already
     reproduces the effect".  It no longer does, and no string it returns says
     "reproduces": failing to reject a null is not evidence of equivalence.
-    When every null is distinguishable the answer is ``real_connectome``:
-    nothing less than the MaleCNS cut is indistinguishable from it.
+    When every ranked information-ladder rung is distinguishable the answer is
+    ``real_connectome``: nothing less than the MaleCNS cut is indistinguishable
+    from it. The orthogonal plain ``sign_permute`` joint target-and-sign null is
+    not part of that ladder and does not determine this answer.
     """
     if isinstance(profile, dict):
         rows = list(profile.get("modes") or [])

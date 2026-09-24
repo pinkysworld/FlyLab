@@ -75,17 +75,34 @@ over:
 
 Only the equivalent-within-tolerance verdict licenses the word "reproduces", and even then it means "within the prespecified margin", never "the shuffle gave the same effect". Check the verdict against a run rather than assuming: for imidacloprid at the headline dose and n = 1000, the weight, degree-preserving and weight-matched transmitter modes fall inside the margin and report **equivalent_within_tolerance**, while the plain transmitter permutation reports **indeterminate** (gap 2.65 Hz against a margin of 0.33 Hz) and the Erdos-Renyi control is **distinguishable**.
 
-### The verdict depends on the extract, recurrence predicts it, and that is now the result
+### The verdict depends on the extract; the saved scale ladder points to recurrence
 
 The single most important thing to know before writing any dependence sentence: **the same analysis, with the same instrument and no parameter changed, gives opposite answers on different extracts of one connectome.** On the sparse 1-hop `named` cut — an in-star, most of whose edges terminate on four seed cells and most of whose nodes receive no input — most cells come back composition-dominated. On the denser `taste_motor` cut, none does.
 
-The scaling study (`flylab.analysis.scale.dependence_vs_scale`, T27) then says what the inversion tracks, and the answer is **not** size. Across seven extracts the composition-dominated verdict survives on exactly one — the in-star — while `scale_1k` has *fewer* nodes than `named` (1000 against 1126) and a mean degree of 22.9 against 1.21, and is already topology-dependent. At the 5k and 10k rungs the prediction is distinguishable from every null on the ladder. A degree-preserving rewire of an in-star is close to the identity, so a negative topology verdict there is weak evidence rather than a finding. Three consequences:
+The saved scaling study (`flylab.analysis.scale.dependence_vs_scale`, T27)
+contains seven extracts. The composition-dominated verdict occurs only on the
+sparse `named` in-star; `scale_1k` has fewer nodes than `named` (1000 against
+1126), a mean degree of 22.9 instead of 1.21, and is already topology-dependent.
+This is consistent with recurrence tracking the difference, but it does not
+isolate a causal feature: the extracts differ in more than node count. The
+larger `scale_5k`–`scale_50k` inputs are absent from the current checkout, so
+T27 cannot be independently rebuilt here.
+
+At `scale_5k` and `scale_10k`, the imidacloprid effect is distinguishable from
+all three ranked edge/wiring nulls (`weight_permute`,
+`rewire_degree_preserving`, `erdos_renyi`). The plain transmitter-label null is
+indeterminate at `scale_10k`; it is an orthogonal check outside the ranked
+necessary-information ladder. At `scale_25k` and `scale_50k`, the three ranked
+edge/wiring nulls remain distinguishable, while the two transmitter-label
+checks are not both distinguishable. The 25k and 50k runs use n = 20, where the
+minimum p is 0.048 against α = 0.05, so those rejections are the smallest the
+test can express and confirm rather than establish the pattern.
 
 1. **Never state a dependence class without the extract it was measured on**, and quote `flylab.analysis.dependence.cut_census` (mean degree, share of edges onto seeds, share of nodes with any input, recurrence budget) beside it.
-2. **"Most predictions do not need the connectome" is withdrawn**, along with "the topology-dependent set is exactly the chloride-channel blockers". What replaces them is a methodological claim: the dependence verdict is a joint property of the prediction and the extract, **recurrence rather than size predicts which way it goes**, and that is the transferable result.
-3. **Do not quote the top of the ladder as strong evidence.** The 25k and 50k rungs run at n = 20, where the smallest attainable probability is 0.048 against α = 0.05; they confirm a verdict settled at better-powered rungs rather than establishing it.
+2. **"Most predictions do not need the connectome" is withdrawn**, along with "the topology-dependent set is exactly the chloride-channel blockers". What replaces them is a methodological claim: the dependence verdict is a joint property of the prediction and the extract; the saved extracts associate the inversion more with recurrence than node count, but do not show that recurrence alone causes it.
+3. **Do not quote the top of the ladder as strong evidence.** The 25k and 50k rungs run at n = 20. Raising n requires restoring the exact cuts and validating any faster degree-preserving sampler against the same graph invariants and permutation procedure.
 
-The instrument itself is not in doubt here: `ladder_recovery` and `ladder_power` plant a recurrent loop of known strength in a synthetic graph of matched size, density and composition, recover it, and give an empirical false-positive rate on the unplanted control. The reversal is therefore about the graphs, not about power.
+The planted-cycle checks provide limited evidence that the ladder recovers that one synthetic mechanism; they do not establish general power for biological endpoints. The `named` versus `taste_motor` landscape uses the same n = 1000 effort, so its contrast is conditional on those two extracts and settings. The T27 scale rungs use different, often smaller permutation counts; that trend is descriptive and cannot rule out power differences.
 
 ## Current headline comparisons
 
@@ -117,7 +134,7 @@ Describe the landscape as:
 
 > "Topology-sensitive classifications are concentrated among perturbations affecting inhibitory signalling, with mechanism and concentration-specific exceptions."
 
-The exact counts and classifications should be taken from papers/results.json, not copied by hand into durable project descriptions. That record has not been regenerated since the current round of revisions, so check any number against the shipped defaults before quoting it.
+The exact counts and classifications should be taken from the generated `papers/results.json` and identified with the shipped defaults. T27 is an imported scale-study record; its 5k–50k input cuts are not in this checkout.
 
 ## Specification robustness
 

@@ -82,9 +82,32 @@ expressed in the midbrain but α1/α5/α6/α7 in far more cells than α2/α3/α4
 β1 in more than twice as many cells as β2 (Croset 2018) — meaning
 `insect_nAChR` is not one receptor and subunit-selective compounds reach only
 partly overlapping cell sets; and GluClα is broadly expressed in the VNC.
-**Motor neurons are a confirmed gap**: no cited source reports Rdl or nAChR
-expression for identified adult leg or labellar motor neurons, which is
-recorded in a `motor_neuron_gap` block with a suggested next step.
+**Motor-neuron receptor fractions have not been added to this dataset.** We
+reprocessed the four adult VNC count matrices deposited in GEO GSE141807 into
+VNC-wide gene-detection fractions after the paper's QC filters; see
+[`vnc_receptor_detection_GSE141807.yaml`](vnc_receptor_detection_GSE141807.yaml).
+These summaries have no cell-class assignments, so they do not estimate
+motor-neuron fractions or receptor-complex prevalence. One replicate retains
+two more cells than the paper's reported count under its published thresholds;
+the discrepancy is recorded rather than adjusted. To reproduce the summary,
+download `GSE141807_RAW.tar` from GEO and run
+`python scripts/reanalyze_vnc_expression.py GSE141807_RAW.tar`; the script checks
+the archive SHA-256 before processing. The matrices do not identify
+MN9: McKellar et al. place the identified proboscis motor-neuron arbors in the
+brain subesophageal zone. The `motor_neuron_gap` block records this scope and a
+next step. Keep uniform gains until a defensible cell-class match is available.
+
+The GEO samples expose replicate-specific barcode matrices, but no published
+barcode-to-cell-class table. Allen et al. provide annotations for 120 clusters
+in [Figure 1 source data 1](https://cdn.elifesciences.org/articles/54074/elife-54074-fig1-data1-v1.xlsx)
+and [source data 2](https://cdn.elifesciences.org/articles/54074/elife-54074-fig1-data2-v1.xlsx);
+these files do not map individual barcodes to clusters. Recovering barcode-level
+labels requires rerunning the authors' [Seurat analysis](https://github.com/aaron-allen/VNC_scRNAseq)
+or obtaining its cell-level object, then joining cluster IDs to the paper's
+cluster summaries. That still would not make predicted hemilineage a motor-neuron
+label. Any reconstructed key must include both the GEO sample accession and the
+barcode, since barcodes alone are not a safe join across replicates. These adult
+VNC data also do not cover MN9's brain/SEZ arbors.
 
 **`mixtures.yaml` — 4 reference models, 7 empirical entries.** Bliss
 independence and Loewe additivity are written out as equations with variable
