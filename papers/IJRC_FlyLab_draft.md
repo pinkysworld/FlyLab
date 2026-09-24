@@ -183,7 +183,7 @@ python scripts/reproduce_paper.py --only dependence --outdir /tmp/x
 
 Beyond the paper, `flylab run` turns a declarative spec into a self-describing run directory whose manifest records the spec, code and library hashes, the seeds and two hashes per artifact; the same spec and seed reproduce it byte for byte (`docs/WORKFLOW.md`). `papers/results.json` carries every scalar quoted above with its value, rendered text, unit and producing step; two runs at one commit and seed produce identical values, runtimes excepted, and a test asserts it. Numeric placeholders in this template are drawn from that record. Tests check placeholder presence, the effort mode and recorded statistical defaults; those tests do not independently verify source-value attribution or reproduce the absent larger scale inputs.
 
-The wheel also runs in a browser tab on Pyodide; `tests/test_browser_bridge.py` asserts **endpoint parity** — equal JSON, every readout, warning and provenance field, for a representative call to each route, which is route-level equality rather than a whole-analysis equality claim. The MaleCNS download page lists CC-BY; the FlyWire public release guidelines list CC BY-NC 4.0 [5], [6]. Both sources require attribution. An archival DOI has not yet been minted.
+The wheel also runs in a browser tab on Pyodide; `tests/test_browser_bridge.py` asserts **endpoint parity** — equal JSON, every readout, warning and provenance field, for a representative call to each route, which is route-level equality rather than a whole-analysis equality claim. The MaleCNS download page lists CC-BY; the FlyWire public release guidelines list CC BY-NC 4.0 [5], [6]. Both sources require attribution. The code release has no separate archival DOI.
 
 ## 4. Discussion
 
@@ -211,13 +211,19 @@ Next steps are direct calibration of the engagement-to-gain transformation, veri
 
 ## Statements
 
-**AI assistance.** OpenAI Codex assisted implementation, literature screening, statistical checks and prose revision; Claude Opus 5.5 provided peer-review comments. The author remains responsible for source, analysis and claim verification. A row-level audit identified unresolved source-value links; these are reported as limitations. Numerical results are produced by the code pipeline from its parameter table, not measured in living animals.
+**AI use.** OpenAI Codex assisted code implementation, computational reruns and checks, bibliography and source-value screening, figure preparation, and language editing. Claude Opus 5.5 supplied informal manuscript critiques. The author remains responsible for the methods, analyses, citations and final text. A row-level audit identified unresolved source-value links; these are reported as limitations. Numerical results are produced by the stated code and parameter table, not measured in living animals.
 
 **Animal research.** No animal experiments were performed and no live-animal data are reported. The `live_lab` field of every notebook produced by this pipeline is `null`. The protocols in `protocols/` are unexecuted drafts.
 
-**Data and code availability.** Code: https://github.com/pinkysworld/FlyLab (MIT). Connectome data: official MaleCNS v1.0 (CC-BY) and FlyWire public release (CC BY-NC 4.0), downloaded and not redistributed; derived cuts are committed under `data/derived/` with their citation strings. Literature datasets: `data/literature/`. The receptor library carries source descriptions for all rows, but many numeric rows still lack a directly recorded DOI or PMID; source-to-parameter attribution remains under audit.
+**Data and code availability.** Versioned analysis code and derived cuts are available at https://github.com/pinkysworld/FlyLab/tree/d0ce21d777000b38bb57d786c308a059c4430c95 (Git revision `d0ce21d777000b38bb57d786c308a059c4430c95`; MIT). The repository contains keyed results and the literature parameter library; source-to-value support remains incomplete for some numeric rows. The official MaleCNS v1.0 dataset (CC-BY) and FlyWire public release (CC BY-NC 4.0) were downloaded but are not redistributed. Literature datasets are under `data/literature/`. A separate archival DOI for the code has not been minted; the article DOI is assigned by the journal upon publication.
 
-**Competing interests and funding.** Declarations are supplied on the separate title page for editorial review.
+**Funding.** This study received no funding.
+
+**Competing interests.** The author declares no competing interests.
+
+**Author contributions.** The sole author was responsible for conceptualization, methodology, software, formal analysis, interpretation and writing.
+
+**SDG alignment.** The audit method and reusable analysis code are relevant to SDG 9, particularly target 9.5 on scientific research and innovation. The study does not measure progress toward an SDG target.
 
 ## References
 

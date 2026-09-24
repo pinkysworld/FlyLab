@@ -14,7 +14,7 @@ python -m pytest -q                    # must be green
 
 IJRC is a computing research journal and the manuscript is written as one. The lead is the general problem — *a simulation built on a measured network and literature parameters cannot say which of its inputs its predictions depend on* — and the contribution is four transferable instruments: typed evidence propagation under a checked soundness invariant; input-dependence testing against an ordered ladder with an equivalence margin and multiplicity control; an ablation ladder scored against a matched reference; and specification-family robustness with variance attribution. §3 evaluates **the instruments**. The fly pharmacology is the demonstration domain, with its census, readouts and literature concordance as supporting material in §S6 and §S10.
 
-The headline is methodological: **a dependence verdict obtained on one extract of a network can invert on another extract of the same network, and the extract's recurrence — not its size — predicts which way** (§3.2, T27).
+The result is methodological: two structurally different extracts yield different descriptive dependence-label counts. Density, composition, extraction rule and recurrent paths vary together; the comparison does not identify recurrence or network size as the cause. The larger-scale study is an imported record whose 5k–50k input cuts are absent from this review package.
 
 Internal review history lives in `papers/reviews/`. It is archived critique, not journal correspondence: the corrections it forced are in the manuscript and the code, and a formal point-by-point response belongs to an actual resubmission against real referees' numbered comments.
 
@@ -22,38 +22,40 @@ Internal review history lives in `papers/reviews/`. It is archived critique, not
 
 | Item | State | Where |
 |---|---|---|
-| Title, author block, affiliations | **missing** — authors are "FlyLab contributors" | needs real names, ORCIDs, affiliations, a corresponding author and an email |
+| Title, author block, affiliations | prepared on a separate editorial title page; withheld from the blind manuscript | Michél Nguyen, University of the People, ORCID and correspondence details |
 | Abstract | done — computing problem first, the methodological headline, the central limitation | draft §Abstract |
 | Index terms / keywords | done | draft §Index terms |
-| Numbered references | 76 entries after removing an unverifiable citation; full source-by-source audit remains open | draft §References |
+| Numbered references | 76 source-paper entries; DOI and PMID identities checked, assay-level support remains incomplete | draft §References and review audit |
 | In-text citation of every reference | check with the grep in §D | — |
 | Figures, 300 dpi, captions | done — 16 figures (F16 is the instrument validation) | `papers/figures/`, `figures/captions.md` |
 | Tables | done — T0–T27 as CSV and Markdown | `papers/tables/` |
 | Word count | done — inside the 5000–7000 target, generated and test-enforced | `values.paper_words_body` |
 | Required section structure | done | draft §1–§5 |
-| Supplementary material | done — S1–S10 | `papers/SUPPLEMENT.md` |
-| Data / code / ethics / AI statements | done | draft §Statements |
-| Archival DOI | **placeholder** — Zenodo deposit not created | draft §3.7, `CITATION.cff` |
-| Submission format (LaTeX/Word template) | **not done** — the draft is Markdown | convert once the venue's template is confirmed |
+| Supplementary material | S1–S11 prepared, with cited figures and tables in a companion archive | `papers/SUPPLEMENT.md` and separate review files |
+| Funding / competing interests | author declares no funding and no competing interests | draft §Statements and editorial title page |
+| Author contributions / AI / ethics / SDG mapping | supplied; SDG 9.5 is a relevance mapping, not an impact result | draft §Statements and editorial title page |
+| Data and code | numerical code at a commit-specific GitHub URL; masked review archive supplied | draft §Statements and review package |
+| DOI | IJRC assigns the article DOI after publication; a separate code archive DOI is optional and currently absent | draft §Statements |
+| Submission format | blinded Word manuscript, separate title page and formatted supplement prepared | local review package |
 | Cover letter | **not written** | — |
 | Suggested reviewers | **not chosen** | — |
 
-## B. What is still missing for a **results** paper
+## B. Work not claimed as completed
 
-1. **One live *Drosophila* assay.** Climbing first: a complete published protocol and control statistics exist. Until a real table is imported by hand into `live_lab`, H1–H7 stay prospective software predictions.
-2. **The one fitted parameter.** The variance budget names it: the engagement→gain transformation, not a potency value, which the model cannot see at a saturating dose.
-3. **Better power at the top of the scale ladder.** The ladder settles the verdict, but its 25k/50k rungs run at n = 20 (resolution 0.048), where a rejection is the smallest the test can express. More permutations there, or a cheaper null, would turn confirmation into evidence.
-4. **Expression coverage above its current value**, with adult motor-neuron receptor expression sourced or the bound declared permanent.
-5. **An externally archived release**, without which "prospective" may not become "pre-registered".
+1. **Biological validation.** No live *Drosophila* assay was performed. H1–H7 remain prospective software predictions, not empirical effects.
+2. **Engagement-to-gain calibration.** The transformation and five transmitter-sign magnitudes remain assumed model inputs; the reported specification family does not vary all of them.
+3. **Independent large-scale reproduction.** The 5k–50k cuts and their inputs are absent, so ST27 is an imported exploratory record. Its low permutation counts also limit resolution.
+4. **Assay-level library provenance.** Bibliographic identity does not establish the potency value used in every numeric receptor row.
+5. **Preregistration.** Neither a public repository nor a later code DOI can retrospectively preregister H1–H7; a dated, frozen experimental protocol would be needed before a future experiment.
 
 ## C. Known weaknesses a reviewer will find first
 
-1. **The central RQ2 result reverses between the two cuts.** Answer: that *is* the result, it is measured rather than argued, the instrument is validated against planted ground truth (F16, T22) so the reversal is not an artefact of power, the structural difference is reported in advance (T19), and the scaling study over seven extracts (T27) identifies recurrence rather than size as what predicts it.
-2. **The top rungs of the scale ladder run at n = 20.** Answer: stated in §3.2 and §S2.4 with the resolution (0.048 against α = 0.05) — those rungs confirm a verdict already settled at better-powered rungs, and the paper says they do not establish it.
+1. **The two cuts yield different labels.** The manuscript reports descriptive differences and a limited planted-cycle positive control; it does not attribute the contrast causally to recurrence or claim general power for the paper endpoint.
+2. **The top rungs of the saved scale study run at n = 20.** Their minimum attainable probability is 0.048, and the input cuts are unavailable here. The study is exploratory, not independent confirmation.
 3. **The composition-versus-full correlation is nearly an algebraic identity.** Answer: stated as such, with a matched reference distribution (T24) and a normalisation sweep (T25); the generalisation drawn from it is withdrawn.
-4. **The headline circuit result's direction depends on the gain rule.** Answer: a first-class result (§3.4), quantified over the prespecified specification family, and nominated by the variance budget as the measurement to make next.
+4. **One model-output direction depends on the gain rule.** The tested family is reported in §3.4 and §S1.1; fixed sign magnitudes and transmitter assignment remain outside it.
 5. **The gain rules and five transmitter signs are asserted coefficients.** Answer: published (T2, T21) and named as such; the paper says which of its own claims that costs it.
-6. **No independent out-of-sample validation.** Answer: stated in §2.5 and §S10, with shared-source rank comparisons flagged by the pipeline. The ground-truth experiment validates the instrument, not the domain model, and the paper says so.
+6. **No independent out-of-sample validation.** This is stated in §2.5 and §S10, with detectable shared-source rank comparisons flagged by the pipeline. The planted-cycle test is a limited synthetic positive control; it does not validate the domain model or estimate general detection power.
 7. **Two of the instruments were broken.** Answer: found by us, published in §3.4, §S1.1 and §S2, and both fixed with the corrected numbers in the text. Neither failure was detectable by a determinism check, which is itself reported as a finding.
 8. **`--fast` is not the paper.** Answer: one test refuses a committed record from a fast run, another asserts the record's statistical knobs equal the shipped defaults.
 
@@ -99,9 +101,10 @@ python -m pytest -q tests/test_reproduce.py
 
 ## E. Final pass before sending
 
-- [ ] Real authors, affiliations, ORCIDs, corresponding author.
-- [ ] Zenodo deposit created; DOI substituted for the placeholder in the draft and in `CITATION.cff`; only then may the predictions be called pre-registered.
-- [ ] Tag the release; confirm `git_sha` in `papers/results.json` matches the tag.
+- [x] Author, affiliation, ORCID and correspondence details are on the separate editorial title page.
+- [x] Funding, competing interests, AI use, contributions, ethics, data/code and SDG statements are drafted; check editorial metadata entry at submission.
+- [x] The article DOI is left to IJRC; the code uses a commit-specific URL and hash. No code DOI or preregistration is claimed.
+- [ ] Confirm that the blinded manuscript, formatted supplement and masked code archive are accessible to reviewers without exposing the title page.
 - [ ] Re-run `scripts/reproduce_paper.py` on a clean checkout and confirm the values are unchanged.
 - [ ] `python -m pytest -q` green; `pytest -m slow` green.
 - [ ] GitHub Pages bench live, and the link works from a private window.
