@@ -2107,10 +2107,9 @@ def step_dependence(ctx: Ctx) -> None:
     )
     ctx.note(
         "instrument validation: %s Detection over the planted grid by permutation "
-        "count is %s and by planted strength %s; the empirical false-positive rate on "
-        "the unplanted control is %d of %d. Effect size dominates the permutation "
-        "count: full power at planted strength %s, detection at or below one in four "
-        "at %s."
+        "count is %s and by planted strength %s; unplanted controls were detected in "
+        "%d of %d runs. In this finite grid, observed detection was 1.00 at planted "
+        "strength %s and at most 0.25 at %s; these fractions are not general power estimates."
         % (
             rec["statement"],
             ctx.text("val_power_by_n"),
@@ -2166,14 +2165,16 @@ def step_dependence(ctx: Ctx) -> None:
             "p_weight",
             "p_degree",
         ],
-        "Ground-truth recovery and power for the dependence ladder. A recurrent "
-        "cholinergic cycle of known strength is planted in a synthetic cut of the same "
-        "size, density and transmitter composition as the `named` cut, and a gain patch "
+        "Limited planted-cycle recovery check for the dependence ladder. A recurrent "
+        f"cholinergic cycle of known strength is planted in a synthetic {ctx.get('val_recovery_nodes')}-node cut "
+        f"with about {ctx.get('val_recovery_edges')} background edges. Its transmitter mix was chosen close to "
+        "the `named` cut, but size and connectivity were not matched. A gain patch "
         "that collapses `g_ach` removes an amplification that exists only while the "
         "cycle is intact -- so the drug *contrast*, not merely the rate, depends on the "
-        "wiring. `loop_strength = 0` plants nothing and is the negative control, whose "
-        "detection rate is the empirical false-positive rate. Nothing here touches the "
-        "connectome or the compound library: the experiment is about the instrument.",
+        "wiring. `loop_strength = 0` plants nothing and is the negative control. "
+        "The small sample gives an observed control count, not a precise false-positive "
+        "rate or power estimate for the paper's endpoint. Nothing here touches the "
+        "connectome or the compound library.",
         md_fields=["experiment", "loop_strength", "n", "replicates", "detection_rate", "class"],
     )
 
@@ -5116,7 +5117,6 @@ STEP_NAMES = [s[0] for s in STEPS]
 #: none has rotted into a wish list; regenerate this tuple from the two
 #: templates whenever their prose changes.
 PAPER_KEYS: tuple[str, ...] = (
-    "abl_composition_survives_normalisations",
     "abl_compounds",
     "abl_concs",
     "abl_generic_floor_note",
@@ -5323,7 +5323,6 @@ PAPER_KEYS: tuple[str, ...] = (
     "rank_shared_source_verb",
     "rank_skipped",
     "rank_source_disjoint",
-    "rank_source_disjoint_be",
     "scale_1k_edges",
     "scale_1k_in_star",
     "scale_1k_mean_degree",

@@ -2,17 +2,17 @@
 
 | conc_M | normalisation | spearman_rho_b_vs_d | reproduces_full_ordering |
 |---|---|---|---|
-| 1.00e-06 | row_abs | 0.988 | True |
-| 1.00e-06 | none | 0.906 | True |
-| 1.00e-06 | degree | 0.666 | False |
-| 1.00e-08 | row_abs | 0.906 | True |
-| 1.00e-08 | none | 0.921 | True |
-| 1.00e-08 | degree | -0.372 | False |
-| 1.00e-08 | glutamate sign: wholens (B excitatory) | 0.906 | -- |
-| 1.00e-08 | glutamate sign: rate_engine (B inhibitory) | 0.964 | -- |
-| 1.00e-07 | glutamate sign: wholens (B excitatory) | 0.989 | -- |
-| 1.00e-07 | glutamate sign: rate_engine (B inhibitory) | 0.987 | -- |
-| 1.00e-06 | glutamate sign: wholens (B excitatory) | 0.988 | -- |
-| 1.00e-06 | glutamate sign: rate_engine (B inhibitory) | 0.984 | -- |
-| 1.00e-05 | glutamate sign: wholens (B excitatory) | 0.987 | -- |
-| 1.00e-05 | glutamate sign: rate_engine (B inhibitory) | 0.979 | -- |
+| 1.00e-06 | row_abs | 0.921 | True |
+| 1.00e-06 | none | 0.935 | True |
+| 1.00e-06 | degree | 0.551 | False |
+| 1.00e-08 | row_abs | 0.876 | False |
+| 1.00e-08 | none | 0.909 | True |
+| 1.00e-08 | degree | -0.583 | False |
+| 1.00e-08 | glutamate sign: wholens (B excitatory) | 0.876 | -- |
+| 1.00e-08 | glutamate sign: rate_engine (B inhibitory) | 0.963 | -- |
+| 1.00e-07 | glutamate sign: wholens (B excitatory) | 0.918 | -- |
+| 1.00e-07 | glutamate sign: rate_engine (B inhibitory) | 0.992 | -- |
+| 1.00e-06 | glutamate sign: wholens (B excitatory) | 0.921 | -- |
+| 1.00e-06 | glutamate sign: rate_engine (B inhibitory) | 0.991 | -- |
+| 1.00e-05 | glutamate sign: wholens (B excitatory) | 0.954 | -- |
+| 1.00e-05 | glutamate sign: rate_engine (B inhibitory) | 0.992 | -- |

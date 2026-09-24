@@ -1,6 +1,6 @@
 condition,spearman_rho,n_compounds,draws,note
-observed (library gain vectors),0.9878103669773378,21,,what the paper used to quote on its own
-"library, floor-saturated compounds dropped",0.9892086330935252,15,,compounds on the 0.05 gain floor removed (the tie artefact)
+observed (library gain vectors),0.9214816983710898,21,,what the paper used to quote on its own
+"library, floor-saturated compounds dropped",0.8263565891472867,16,,compounds on the 0.05 gain floor removed (the tie artefact)
 matched reference: one gain moved per pseudo-compound,0.8467627880513988,21,50,"matched reference: one gain moved per pseudo-compound, which is the shape every shipped mechanism rule produces. This is the distribution the observed value should be read against."
 dense reference: every gain moved per pseudo-compound,0.807555470491887,21,50,"arbitrary gain vectors, every gain moved at once: the structural part of the correlation, with no pharmacology in it"
-compound labels shuffled,0.9878103669773378,21,1,provably identical to the observed value: both levels are functions of the same gain vector
+compound labels shuffled,0.9214816983710898,21,1,provably identical to the observed value: both levels are functions of the same gain vector

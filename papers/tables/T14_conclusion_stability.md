@@ -4,7 +4,7 @@
 |---|---|---|---|---|---|---|---|
 | C1_nicotinic_suppression | 25 | 15 | 10 | 0 | -- | -- | -- |
 | C5_nicotinic_buffering | 25 | 18 | 0 | 7 | -- | -- | -- |
-| C6_nav_ache_amplification | 25 | 19 | 6 | 0 | -- | -- | -- |
+| C6_nav_ache_amplification | 25 | 18 | 7 | 0 | -- | -- | -- |
 | C2_rdl_disinhibition | 25 | 25 | 0 | 0 | -- | -- | -- |
 | C3_imidacloprid_topology_not_distinguishable | 25 | 25 | 0 | 0 | 25 | 17 | 8 |
 | C4_fipronil_topology_exceeds | 25 | 25 | 0 | 0 | 25 | 0 | 0 |
