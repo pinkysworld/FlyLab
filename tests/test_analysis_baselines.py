@@ -139,7 +139,7 @@ def test_composition_only_reproduces_the_full_model_for_nicotinic_agonists():
     b = rows["B_composition_only"]
     assert b["spearman_rho_vs_full"] >= 0.9
     assert b["reproduces_full_ordering"] is True
-    assert any("B_composition_only REPRODUCES" in s for s in out["statements"])
+    assert any("B_composition_only meets the declared rank-agreement threshold" in s for s in out["statements"])
     # and it is the composition layer specifically: the receptor scorecard on
     # its own gets the ordering wrong (it has no gain rule).
     assert rows["A_receptor_only"]["reproduces_full_ordering"] is False
@@ -151,7 +151,7 @@ def test_receptor_only_does_not_reproduce_the_full_model():
     out = ablation("imidacloprid", PAPER_CONC, compounds=SET)
     rows = {r["level"]: r for r in out["information_gain"]["levels"]}
     assert rows["A_receptor_only"]["reproduces_full"] is False
-    assert any("A_receptor_only does NOT reproduce" in s for s in out["statements"])
+    assert any("A_receptor_only is below the declared rank threshold" in s for s in out["statements"])
 
 
 def test_information_gain_can_be_switched_off():
@@ -309,7 +309,7 @@ def test_composition_reference_distribution_gives_an_unsurprising_range():
     # shuffling compound labels cannot move the correlation: both levels are
     # functions of the same gain vector. That is the point of the condition.
     assert cond["shuffled_compound_assignment"]["identical_to_observed"] is True
-    assert any("EVIDENCE AGAINST" in s for s in out["statements"])
+    assert any("observed value should be read against the matched reference" in s for s in out["statements"])
     assert any("floor" in s for s in out["statements"])
     json.dumps(out)
 

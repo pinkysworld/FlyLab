@@ -1760,14 +1760,21 @@ def _trust_block(
         {
             "area": "Receptor expression",
             "status": (
-                f"{coverage * 100:.1f}% of cells mapped" if coverage is not None else "unmapped"
+                f"{coverage * 100:.1f}% of graph-node × receptor-key pairs annotated"
+                if coverage is not None
+                else "annotation coverage unavailable"
             ),
             "classification": "MODEL-ASSUMPTION",
             "basis": (
-                "Gains are applied uniformly. Adult motor-neuron receptor expression -- the "
-                "class MN9 belongs to -- is a confirmed gap in the literature."
+                "The percentage is the share of graph-node × receptor-key pairs with a coarse "
+                "cross-atlas class annotation, not the share of cells measured to express a "
+                "receptor. Gains remain uniform. MN9-specific receptor expression is unresolved."
             ),
-            "detail": {"fraction_cells_mapped": coverage, "motor_neuron_gap": mn9_gap},
+            "detail": {
+                "fraction_cell_receptor_pairs_annotated": coverage,
+                "coverage_unit": "graph_node_x_receptor_key_pair",
+                "motor_neuron_gap": mn9_gap,
+            },
         },
         {
             "area": "Live validation",
@@ -1797,11 +1804,18 @@ def _expression_coverage() -> tuple[float | None, dict[str, Any] | None]:
         table = expression_table()
     except Exception:  # pragma: no cover - optional module
         return None, None
-    coverage = (table.get("coverage") or {}).get("fraction_known_overall")
+    coverage_block = table.get("coverage") or {}
+    coverage = coverage_block.get("fraction_cell_receptor_pairs_annotated")
+    if coverage is None:
+        coverage = coverage_block.get("fraction_known_overall")
     gap = table.get("motor_neuron_gap")
     slim = None
     if isinstance(gap, dict):
-        slim = {"status": gap.get("status"), "description": gap.get("description")}
+        slim = {
+            "status": gap.get("status"),
+            "description": gap.get("description"),
+            "public_data_lead": gap.get("public_data_lead"),
+        }
     try:
         coverage = float(coverage)
     except (TypeError, ValueError):

@@ -195,18 +195,20 @@ EXPERIMENTS: dict[str, dict[str, Any]] = {
         "experiment": "FISH / scRNA-seq for receptor expression in the named cell class",
         "design": (
             "HCR-FISH for nAChR subunits, Rdl and GluCl on identified adult "
-            "labellar motor neurons (MN9) and the labellar GRN types, or a "
-            "MaleCNS-registered single-cell atlas that carries superclass labels."
+            "labellar motor neurons (MN9) and the labellar GRN types; first "
+            "determine whether adult VNC motor-neuron labels can be joined to the "
+            "reprocessed GEO GSE141807 barcodes, then use a separate "
+            "MaleCNS-registered brain/SEZ atlas or targeted assay for MN9."
         ),
         "resolves": (
-            "which cells actually carry the receptor the drug acts on; FlyLab's "
-            "expression coverage is 0.21 and adult motor-neuron receptor "
-            "expression -- MN9, the main readout -- has no source at all"
+            "which cells actually carry the receptor the drug acts on; only 0.205 of "
+            "graph-node × receptor-key pairs currently have a coarse class-level annotation, "
+            "and MN9-specific receptor expression remains unresolved"
         ),
-        "why_now": "a confirmed literature gap, and a data problem rather than a modelling one",
+        "why_now": "VNC-wide counts are reprocessed; class mapping and an MN9 brain/SEZ match remain",
         "cost": "medium",
-        "feasibility": "standard method; the MN9 result would be new",
-        "blocking_gate": "v0.6 gate 1 (expression coverage)",
+        "feasibility": "VNC barcode-to-class mapping needs assessment; an MN9-specific result may require new data",
+        "blocking_gate": "v0.7 gate 7 (receptor-expression evidence)",
     },
     "weight_threshold": {
         "experiment": "no experiment: a reconstruction-confidence analysis",

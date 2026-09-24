@@ -265,38 +265,60 @@ On `taste_motor`, `rewire_degree_preserving` reaches the resolution floor
 (p = 0.0050 at n = 200) and the cell is topology-dependent. On `named`, no
 structure-preserving null can be told apart at all.
 
-### And again with size
+### The saved scale ladder
 
-The repository now carries a scale ladder — the same connectome, cut at 1000,
-5000, 10 000, 25 000 and 50 000 cells (`flylab/maps/ladder.py`,
-`flylab.analysis.scale.available_cuts()`). Walking a dependence profile up that
-ladder moves the verdict again:
+T27 records a scale study across seven cuts; its values are imported from the
+saved `papers/scale_study.json`. The versioned checkout contains the 1k rung
+but not the larger 5k–50k cuts or the source Feather files. On 2026-09-24, the
+larger cuts were rebuilt from public MaleCNS v1.0 inputs for a separate
+exploratory follow-up; see
+[`data/derived/scale_study_high_power_2026-09-24.json`](../data/derived/scale_study_high_power_2026-09-24.json).
+The rebuilt 1k nodes and edges match the committed cut exactly, and the larger
+rungs match T27's node/edge counts. Historical input and cut hashes were not
+recorded, so byte identity to the original 5k–50k cuts cannot be verified.
 
-> At about 1100 cells imidacloprid is composition-dominated. At about 5000 cells
-> the same compound, at the same concentration, on the same engine, is
-> distinguishable from **every** null — including the weight-matched transmitter
-> null, the hardest rung on the ladder.
+On the saved `scale_1k` cut (1000 nodes, mean degree 22.86), imidacloprid is
+topology-dependent even though it has fewer nodes than `named` (1126 nodes,
+mean degree 1.21), which is composition-dominated. This comparison is
+consistent with recurrence tracking the difference, but does not isolate a
+causal structural feature: construction rule and graph structure differ too.
 
-At the time of writing, that is an in-flight measurement, not a committed
-number. `papers/results.json` records `scale_study_status: "not yet run"`, and
-its `scale_study_statement` says so in words:
+At `scale_5k` and `scale_10k`, the imidacloprid effect is distinguishable from
+each of the three ranked edge/wiring nulls (`weight_permute`,
+`rewire_degree_preserving`, `erdos_renyi`). At 5k both transmitter-label checks
+are also distinguishable; at 10k the plain `sign_permute` check is
+indeterminate. At 25k and 50k the three ranked edge/wiring nulls remain
+distinguishable, while the transmitter-label checks are not both
+distinguishable. Those top rungs use n = 20 (p resolution 0.0476), so each
+rejection is the smallest this test can express and confirms rather than
+establishes the pattern. The orthogonal transmitter-label checks are separate
+from the ranked necessary-information ladder.
 
-> Where the verdict settles with the size of the cut has not been measured at
-> this commit: the scale ladder's rungs on disk are scale_1k, scale_5k,
-> scale_10k, scale_25k, scale_50k and the study over the full ladder had not
-> been run.
+T27 remains the original saved result; the 2026-09-24 follow-up is a separate
+run and does not replace it. The follow-up used n = 100 at 5k and n = 50 at
+10k–50k for imidacloprid and fipronil. All eight profiles are classified
+topology-dependent. For each profile, the three ranked structural nulls
+(`weight_permute`, `rewire_degree_preserving`, `erdos_renyi`) are
+distinguishable at the smallest attainable p: 0.0099 at 5k and 0.0196 at
+10k–50k. The transmitter-label checks vary separately: at 50k, imidacloprid's
+plain label permutation is equivalent within the margin (p = 0.843), while its
+weight-matched check is indeterminate (p = 0.529); both checks are
+distinguishable for fipronil (p = 0.0196 and 0.0392). These eight profiles are
+exploratory because n is below the confirmatory threshold of 1000, and no
+multiplicity adjustment was made across the cut-by-compound family. Do not
+promote them to confirmatory evidence or fold them into T27 without a reviewed
+paper rerender.
 
-**Where the verdict settles — whether it settles at all before the whole CNS —
-is an open question currently being measured.** When the study lands, the
-per-rung verdicts come from `flylab.analysis.scale.dependence_vs_scale()` and
-`verdict_stability()`, and the shipped numbers from
-`papers/results.json` (`scale_study_settled`,
-`scale_study_settled_clean_ladder`, `scale_study_statement`). Quote those, not
-this paragraph.
+The degree-preserving edge-swap sampler remains the cost bottleneck. Observed
+local wall time per profile ranged from 7.4–7.6 minutes at 5k, 8.4–8.7 minutes
+at 10k, 24.9–27.4 minutes at 25k, and 35.3–41.4 minutes at 50k, using four
+workers. Any faster sampler must retain a simple degree-preserving graph and a
+valid, seeded permutation procedure; do not extrapolate a new verdict from
+partial rewires or a changed null definition.
 
-A related limit is already committed: `papers/tables/T26_scale_frontier.md` puts
-the largest feasible dependence profile at `scale_50k`, and a profile on the
-whole 165 122-cell CNS at about 59 hours on one core — outside the feasible
+A related limit is already committed: `papers/tables/T26_scale_frontier.md`
+puts the largest feasible dependence profile at `scale_50k`, and a profile on
+the whole 165 122-cell CNS at about 59 hours on one core — outside the feasible
 envelope. So "run it on the whole connectome and settle it" is not currently an
 option, which is exactly why the caveat has to travel with the verdict.
 
@@ -339,9 +361,10 @@ Repeat any negative topology result on a denser cut before generalising it.
 ```
 
 **What it does not mean.** Neither verdict is "the truth about imidacloprid".
-Both are true statements about a readout on a substrate, and the interesting
-question is not which one is right — it is *where the verdict settles as the cut
-grows*, which is the thing the scale study is measuring.
+Both are statements about a readout on a particular substrate. T27 records how
+the verdict changes across its saved ladder; absent larger cut files prevent an
+independent rerun here, and the cross-cut comparison does not prove recurrence
+is the cause.
 
 **The misreading to avoid.** Referee item **B3**: the paper generalised from the
 `named` cut anyway. Never write "imidacloprid's effect does not need the
@@ -351,14 +374,15 @@ distinguishable from the degree-preserving null ensemble at n = 1000" — and if
 you are making a negative claim, repeat it on a denser cut before you believe
 it.
 
-NOVELTY.md now treats this reversal as the result rather than a caveat ("The
-verdict is substrate-dependent, and that is now the result"), and withdraws
-"most predictions do not need the connectome" along with it. The instrument is
-not what is in doubt: `synthetic_cut`, `ladder_recovery` and `ladder_power` in
-`dependence.py` plant a recurrent loop of known strength in a synthetic graph of
-matched size, density and composition, check that the ladder recovers it and
-that the unplanted control is not called, and map detection rate against effect
-size and permutation count. The reversal is about the graphs.
+NOVELTY.md now treats the two-cut difference as a substrate-conditional result
+and withdraws "most predictions do not need the connectome". The instrument
+also has a limited planted-cycle check: `synthetic_cut`, `ladder_recovery` and
+`ladder_power` test recovery for one planted mechanism and report a control
+count, but do not establish general power for biological endpoints. The
+`named` versus `taste_motor` comparison uses the same n = 1000 effort; the T27
+scale rungs use different, often smaller permutation counts. So the two-cut
+contrast is conditional on those extracts and settings, while the scale trend
+is descriptive and cannot rule out power differences.
 
 **Always name four things with a dependence verdict** — the compound, the
 concentration, the readout and the cut — **and two numbers about the cut**: its
@@ -774,8 +798,11 @@ particular:
   *predicted* consensus transmitters. A wrong prediction flips a synapse, and
   the drug patch follows the label rather than the biology.
 - **No per-cell receptor expression.** The gain is applied uniformly to every
-  cell of a transmitter class; about 20% of cells are mapped. A cell that does
-  not express the receptor is patched exactly like one that does.
+  cell of a transmitter class. About 20.5% of graph-node × receptor-key pairs
+  across the two committed cuts have a coarse class-level annotation; this is
+  annotation availability, not the share of cells measured to express a
+  receptor. A cell that does not express the receptor is patched exactly like
+  one that does.
 
 And there is deliberately **no single confidence score** anywhere in the bench.
 The layers fail independently, and one blended number would hide which of them

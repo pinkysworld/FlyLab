@@ -59,7 +59,9 @@ jobs:
           python-version: "3.12"
       - run: |
           python -m pip install --upgrade pip wheel setuptools
-          python -m pip install -e ".[dev,viz]"
+          python -m pip install -e ".[dev,viz,browser-test]"
+      - name: install Chromium for the static-browser smoke check
+        run: python -m playwright install --with-deps chromium
       - name: pytest (slow suite)
         run: pytest -q -m slow
       - name: verify the artifact manifest

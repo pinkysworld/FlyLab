@@ -22,7 +22,7 @@
 | chlordimeform | formamidine | insect_RDL | unknown | -- | none | class_placeholder |
 | chlordimeform | formamidine | vertebrate_nAChR_a4b2 | unknown | -- | none | class_placeholder |
 | chlordimeform | formamidine | vertebrate_GABA_A | unknown | -- | none | class_placeholder |
-| chlorpyrifos_oxon | organophosphate (oxon metabolite) | insect_AChE | IC50 | 1.00e-08 | inhibitor | literature_order |
+| chlorpyrifos_oxon | organophosphate (oxon metabolite) | insect_AChE | unknown | -- | none | class_placeholder |
 | chlorpyrifos_oxon | organophosphate (oxon metabolite) | vertebrate_AChE | IC50 | 3.00e-07 | inhibitor | literature_order |
 | chlorpyrifos_oxon | organophosphate (oxon metabolite) | insect_nAChR | unknown | -- | none | class_placeholder |
 | chlorpyrifos_oxon | organophosphate (oxon metabolite) | vertebrate_nAChR_a4b2 | unknown | -- | none | class_placeholder |
@@ -66,7 +66,7 @@
 | imidacloprid | neonicotinoid | insect_nAChR_native_dmel | Kd | 2.00e-09 | agonist | literature_order |
 | imidacloprid | neonicotinoid | insect_nAChR_beta1 | Kd | 8.30e-11 | agonist | literature_order |
 | ivermectin | avermectin | insect_GluCl | EC50 | 2.00e-08 | agonist | literature_order |
-| ivermectin | avermectin | insect_RDL | EC50 | 1.00e-06 | positive_modulator | literature_order |
+| ivermectin | avermectin | insect_RDL | unknown | -- | none | class_placeholder |
 | ivermectin | avermectin | vertebrate_GlyR | EC50 | 1.00e-06 | positive_modulator | literature_order |
 | ivermectin | avermectin | vertebrate_GABA_A | EC50 | 1.00e-05 | positive_modulator | literature_order |
 | ivermectin | avermectin | insect_nAChR | unknown | -- | none | class_placeholder |
@@ -79,22 +79,22 @@
 | nitenpyram | neonicotinoid | vertebrate_GABA_A | unknown | -- | none | class_placeholder |
 | nitenpyram | neonicotinoid | insect_RDL | unknown | -- | none | class_placeholder |
 | permethrin | type I pyrethroid | insect_Nav | EC50 | 4.00e-07 | positive_modulator | literature_order |
-| permethrin | type I pyrethroid | vertebrate_Nav1_x | EC50 | 4.00e-05 | positive_modulator | literature_order |
+| permethrin | type I pyrethroid | vertebrate_Nav1_x | unknown | -- | none | class_placeholder |
 | permethrin | type I pyrethroid | insect_nAChR | unknown | -- | none | class_placeholder |
 | permethrin | type I pyrethroid | insect_RDL | unknown | -- | none | class_placeholder |
 | permethrin | type I pyrethroid | vertebrate_GABA_A | unknown | -- | none | class_placeholder |
 | picrotoxin | plant convulsant | insect_RDL | IC50 | 1.00e-06 | antagonist | literature_order |
 | picrotoxin | plant convulsant | vertebrate_GABA_A | IC50 | 1.00e-06 | antagonist | literature_order |
-| picrotoxin | plant convulsant | vertebrate_GlyR | IC50 | 1.00e-05 | antagonist | literature_order |
+| picrotoxin | plant convulsant | vertebrate_GlyR | unknown | -- | none | class_placeholder |
 | picrotoxin | plant convulsant | insect_nAChR | unknown | -- | none | class_placeholder |
 | picrotoxin | plant convulsant | vertebrate_nAChR_a4b2 | unknown | -- | none | class_placeholder |
-| spinosad | spinosyn | insect_nAChR | EC50 | 5.00e-06 | positive_modulator | literature_order |
+| spinosad | spinosyn | insect_nAChR | unknown | -- | none | class_placeholder |
 | spinosad | spinosyn | vertebrate_nAChR_a4b2 | unknown | -- | none | class_placeholder |
 | spinosad | spinosyn | vertebrate_nAChR_a7 | unknown | -- | none | class_placeholder |
 | spinosad | spinosyn | insect_RDL | unknown | -- | none | class_placeholder |
 | spinosad | spinosyn | vertebrate_GABA_A | unknown | -- | none | class_placeholder |
-| spinosad | spinosyn | insect_nAChR_alpha6 | EC50 | 5.00e-06 | positive_modulator | literature_order |
-| sulfoxaflor | sulfoximine | insect_nAChR | EC50 | 1.50e-04 | agonist | literature_order |
+| spinosad | spinosyn | insect_nAChR_alpha6 | unknown | -- | none | class_placeholder |
+| sulfoxaflor | sulfoximine | insect_nAChR | unknown | -- | none | class_placeholder |
 | sulfoxaflor | sulfoximine | vertebrate_nAChR_a4b2 | EC50 | 0.001 | agonist | literature_order |
 | sulfoxaflor | sulfoximine | vertebrate_nAChR_a7 | unknown | -- | none | class_placeholder |
 | sulfoxaflor | sulfoximine | insect_RDL | unknown | -- | none | class_placeholder |

@@ -82,9 +82,32 @@ expressed in the midbrain but α1/α5/α6/α7 in far more cells than α2/α3/α4
 β1 in more than twice as many cells as β2 (Croset 2018) — meaning
 `insect_nAChR` is not one receptor and subunit-selective compounds reach only
 partly overlapping cell sets; and GluClα is broadly expressed in the VNC.
-**Motor neurons are a confirmed gap**: no cited source reports Rdl or nAChR
-expression for identified adult leg or labellar motor neurons, which is
-recorded in a `motor_neuron_gap` block with a suggested next step.
+**Motor-neuron receptor fractions have not been added to this dataset.** We
+reprocessed the four adult VNC count matrices deposited in GEO GSE141807 into
+VNC-wide gene-detection fractions after the paper's QC filters; see
+[`vnc_receptor_detection_GSE141807.yaml`](vnc_receptor_detection_GSE141807.yaml).
+These summaries have no cell-class assignments, so they do not estimate
+motor-neuron fractions or receptor-complex prevalence. One replicate retains
+two more cells than the paper's reported count under its published thresholds;
+the discrepancy is recorded rather than adjusted. To reproduce the summary,
+download `GSE141807_RAW.tar` from GEO and run
+`python scripts/reanalyze_vnc_expression.py GSE141807_RAW.tar`; the script checks
+the archive SHA-256 before processing. The matrices do not identify
+MN9: McKellar et al. place the identified proboscis motor-neuron arbors in the
+brain subesophageal zone. The `motor_neuron_gap` block records this scope and a
+next step. Keep uniform gains until a defensible cell-class match is available.
+
+The GEO samples expose replicate-specific barcode matrices, but no published
+barcode-to-cell-class table. Allen et al. provide annotations for 120 clusters
+in [Figure 1 source data 1](https://cdn.elifesciences.org/articles/54074/elife-54074-fig1-data1-v1.xlsx)
+and [source data 2](https://cdn.elifesciences.org/articles/54074/elife-54074-fig1-data2-v1.xlsx);
+these files do not map individual barcodes to clusters. Recovering barcode-level
+labels requires rerunning the authors' [Seurat analysis](https://github.com/aaron-allen/VNC_scRNAseq)
+or obtaining its cell-level object, then joining cluster IDs to the paper's
+cluster summaries. That still would not make predicted hemilineage a motor-neuron
+label. Any reconstructed key must include both the GEO sample accession and the
+barcode, since barcodes alone are not a safe join across replicates. These adult
+VNC data also do not cover MN9's brain/SEZ arbors.
 
 **`mixtures.yaml` — 4 reference models, 7 empirical entries.** Bliss
 independence and Loewe additivity are written out as equations with variable
@@ -281,7 +304,7 @@ Every source used across the six files, once each.
 - Chen W, Gu X, Yang YT, Batterham P, Perry T (2022) Dual nicotinic acetylcholine receptor subunit gene knockouts reveal limits to functional redundancy. *Pestic Biochem Physiol* 184:105118. DOI 10.1016/j.pestbp.2022.105118. PMID 35715057.
 - French AS, Sellier MJ, Ali Agha M, Guigue A, Chabaud MA, Reeb PD, Mitra A, Grau Y, Soustelle L, Marion-Poll F (2015) Dual mechanism for bitter avoidance in *Drosophila*. *J Neurosci* 35(9):3990–4004. DOI 10.1523/JNEUROSCI.1312-14.2015. PMID 25740527.
 - Gargano JW, Martin I, Bhandari P, Grotewiel MS (2005) Rapid iterative negative geotaxis (RING): a new method for assessing age-related locomotor decline in *Drosophila*. *Exp Gerontol* 40(5):386–395. DOI 10.1016/j.exger.2005.02.005. PMID 15919590.
-- Lee HY, Zhou L, Ghanta S, Asplund M, Zhu C, et al. (2014) Mechanisms of naturally evolved ethanol resistance in *Drosophila melanogaster*. *J Exp Biol*. DOI 10.1242/jeb.110510. *(cited only as the source of a null in `fly_pharmacokinetics.yaml`)*
+- Fry JD (2014) Mechanisms of naturally evolved ethanol resistance in *Drosophila melanogaster*. *J Exp Biol* 217(22):3996–4003. DOI 10.1242/jeb.110510. *(cited only as the source of a null in `fly_pharmacokinetics.yaml`)*
 - Martelli F, Zhongyuan Z, Wang J, Wong CO, Karagas NE, Roessner U, Rupasinghe T, Venkatachalam K, Perry T, Bellen HJ, Batterham P (2020) Low doses of the neonicotinoid insecticide imidacloprid induce ROS triggering neurological and metabolic impairments in *Drosophila*. *Proc Natl Acad Sci USA* 117(41):25840–25850. DOI 10.1073/pnas.2011828117. PMID 32989137.
 
 ### Cited in `flylab/pharm/library.yaml` and re-checked here

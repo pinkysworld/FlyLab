@@ -23,6 +23,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx>=0.27"]
 viz = ["matplotlib>=3.8"]
+browser-test = ["playwright>=1.48"]
 # The science core only needs these two. This is what the static (Pyodide)
 # build installs; fastapi/pydantic/typer/pandas/pyarrow are server and CLI
 # dependencies and are never loaded in the browser -- see docs/PAGES.md.

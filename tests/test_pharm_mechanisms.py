@@ -103,10 +103,13 @@ def test_library_compounds_reach_each_gain():
         "g_glu": gains_from_occupancy(compare_compound("ivermectin", 1e-6)["receptors"])["g_glu"],
         "g_nav": gains_from_occupancy(compare_compound("deltamethrin", 1e-6)["receptors"])["g_nav"],
         "g_oct": gains_from_occupancy(compare_compound("chlordimeform", 1e-4)["receptors"])["g_oct"],
-        "ach_tone": gains_from_occupancy(compare_compound("chlorpyrifos_oxon", 1e-7)["receptors"])["ach_tone"],
     }
     for key, value in reached.items():
         assert value != 1.0, f"{key} never leaves 1.0"
+    # The cited review does not establish a Drosophila oxon IC50, so this
+    # compound must not activate the AChE-derived gain until it is sourced.
+    oxon = gains_from_occupancy(compare_compound("chlorpyrifos_oxon", 1e-7)["receptors"])
+    assert oxon["ach_tone"] == 1.0
 
 
 def test_mechanism_table_is_renderable():

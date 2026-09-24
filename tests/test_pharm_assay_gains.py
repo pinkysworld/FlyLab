@@ -52,14 +52,13 @@ def test_taste_still_warns_about_gains_it_really_cannot_inject():
     assert any("g_nav" in w and "not applied" in w for w in nb["warnings"])
 
 
-def test_ache_inhibitor_reaches_the_taste_circuit():
-    """Low AChE inhibition raises ACh tone and MN9 drive; high inhibition blocks it."""
+def test_unsourced_ache_parameter_cannot_change_the_taste_circuit():
+    """Withheld chlorpyrifos-oxon potency must yield no insect AChE gain."""
     low = run_taste_assay("chlorpyrifos_oxon", 3e-9, sugar_hz=20.0)
     high = run_taste_assay("chlorpyrifos_oxon", 1e-6, sugar_hz=20.0)
-    assert low["gains"]["ach_tone"] > 1.0
-    assert high["gains"]["ach_tone"] > low["gains"]["ach_tone"]
-    assert low["readouts"]["mn9_sugar_hz"] > low["readouts"]["mn9_vehicle_sugar_hz"]
-    assert high["readouts"]["mn9_sugar_hz"] < high["readouts"]["mn9_vehicle_sugar_hz"]
+    assert low["gains"]["ach_tone"] == high["gains"]["ach_tone"] == 1.0
+    assert low["readouts"]["mn9_sugar_hz"] == low["readouts"]["mn9_vehicle_sugar_hz"]
+    assert high["readouts"]["mn9_sugar_hz"] == high["readouts"]["mn9_vehicle_sugar_hz"]
 
 
 @census

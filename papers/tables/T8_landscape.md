@@ -10,8 +10,8 @@
 | caffeine | methylxanthine | taste_motor | -- | -- | -- |
 | chlordimeform | formamidine | named | -- | -- | -- |
 | chlordimeform | formamidine | taste_motor | -- | -- | -- |
-| chlorpyrifos_oxon | organophosphate (oxon metabolite) | named | 1.477 | 1.967 | 0.490 |
-| chlorpyrifos_oxon | organophosphate (oxon metabolite) | taste_motor | 1.477 | 2.083 | 0.605 |
+| chlorpyrifos_oxon | organophosphate (oxon metabolite) | named | -- | -- | -- |
+| chlorpyrifos_oxon | organophosphate (oxon metabolite) | taste_motor | -- | -- | -- |
 | clothianidin | neonicotinoid | named | 3.523 | 2.625 | -0.897 |
 | clothianidin | neonicotinoid | taste_motor | 3.523 | 2.617 | -0.906 |
 | ddt | organochlorine | named | 1.187 | 1.368 | 0.181 |
@@ -34,13 +34,13 @@
 | nicotine | alkaloid | taste_motor | 0.699 | -0.136 | -0.835 |
 | nitenpyram | neonicotinoid | named | 2.602 | 1.710 | -0.892 |
 | nitenpyram | neonicotinoid | taste_motor | 2.602 | 1.715 | -0.887 |
-| permethrin | type I pyrethroid | named | 2.000 | 2.222 | 0.222 |
-| permethrin | type I pyrethroid | taste_motor | 2.000 | 2.210 | 0.210 |
+| permethrin | type I pyrethroid | named | -- | -- | -- |
+| permethrin | type I pyrethroid | taste_motor | -- | -- | -- |
 | picrotoxin | plant convulsant | named | 0.000 | -- | -- |
 | picrotoxin | plant convulsant | taste_motor | 0.000 | -- | -- |
 | spinosad | spinosyn | named | -- | -- | -- |
 | spinosad | spinosyn | taste_motor | -- | -- | -- |
-| sulfoxaflor | sulfoximine | named | 0.824 | -- | -- |
-| sulfoxaflor | sulfoximine | taste_motor | 0.824 | -- | -- |
+| sulfoxaflor | sulfoximine | named | -- | -- | -- |
+| sulfoxaflor | sulfoximine | taste_motor | -- | -- | -- |
 | thiamethoxam | neonicotinoid | named | -- | -- | -- |
 | thiamethoxam | neonicotinoid | taste_motor | -- | -- | -- |

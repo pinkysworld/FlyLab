@@ -728,7 +728,7 @@ def test_trust_panel_is_per_layer_and_never_blended(imidacloprid_dashboard):
     } <= areas
     assert trust["blended_confidence"] is None
     expression = next(r for r in trust["rows"] if r["area"] == "Receptor expression")
-    assert "20." in expression["status"]  # 20.5% mapped
+    assert "20." in expression["status"]  # graph-node × receptor-key annotation availability
     topology = next(r for r in trust["rows"] if r["area"] == "Circuit topology")
     assert topology["classification"] == "LITERATURE"
     transmitters = next(r for r in trust["rows"] if r["area"] == "Transmitter identity")

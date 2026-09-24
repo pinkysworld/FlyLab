@@ -25,3 +25,14 @@ changing underneath it. **Only the 1k rung is small enough for git** (1.1 MB);
 `malecns-scale-ladder` artifact and are not committed. Drop them anywhere on
 `flylab.circuit.rate.DATA_DIRS` (e.g. `~/.flylab/`) and
 `flylab.analysis.scale.available_cuts()` will find them.
+
+`scale_study_high_power_2026-09-24.json` is a separate exploratory rerun of
+imidacloprid and fipronil on the 5k–50k rungs. It records all eight profiles,
+the four rebuilt-cut hashes, the three public input Feather hashes, code hashes,
+and per-profile runtimes. It does not replace the original `papers/scale_study.json`
+or its T27 results: the historical larger-cut hashes were never recorded, and
+these follow-up profiles use n = 50 or 100 with no across-profile multiplicity
+adjustment. Its `path` values identify the temporary files used on the run host;
+the 5k–50k graph files are not distributed in this checkout. Rebuild them from
+the public Feather inputs with `flylab.maps.extract.extract_ladder` and compare
+the resulting hashes with the report before rerunning a profile.

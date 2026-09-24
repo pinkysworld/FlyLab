@@ -111,8 +111,11 @@ def test_transmitters_are_flagged_as_predictions(audit):
 
 def test_expression_link_carries_the_coverage_and_the_mn9_gap(audit):
     expr = next(link for link in audit["chain"] if link["step"] == "expression_assumption")
-    fraction = expr["detail"]["fraction_cells_mapped"]
+    fraction = expr["detail"]["fraction_cell_receptor_pairs_annotated"]
     assert fraction is None or 0.0 < fraction < 1.0
+    assert expr["detail"]["coverage_unit"] == "graph_node_x_receptor_key_pair"
+    assert "graph-node × receptor-key pairs" in expr["statement"]
+    assert "per-cell expression measurement" in expr["statement"]
     assert any("MN9" in u for u in expr["unknowns"])
 
 
@@ -280,4 +283,3 @@ def test_an_unsupported_row_reports_no_engagement(audit):
         if not row["modelled"]:
             assert row["engagement"] is None       # N/A, never a small number
             assert row["param_value_M"] is None
-

@@ -47,6 +47,8 @@ dependence | ablation | robustness | uncertainty
 
 The result is not just a simulated firing rate. FlyLab records what evidence entered the model, which assumptions transformed it, which graph was used, and how strongly the prediction depends on those choices.
 
+The browser bench saves your primary run and experiment-design settings in the current browser. Use **Export setup** and **Import setup** to share those settings as a versioned JSON preset; the preset contains inputs, not calculated results. On narrow screens, the two tab rows collapse into one grouped panel picker.
+
 ## Why it is different
 
 ### 1. Evidence is typed, not flattened into one fake "EC50" field
@@ -72,7 +74,7 @@ This makes it possible to separate effects that are sensitive to detailed wiring
 
 The ladder itself is validated rather than assumed to work. A recurrent loop of known strength is planted in a synthetic graph of the same size, density and transmitter composition as a real cut, and the analysis is asked to find it; the unplanted control gives an empirical false-positive rate, and a power surface maps detection against effect size and permutation count.
 
-**The verdict this analysis returns depends on the extract it is measured on, and recurrence — not size — predicts which way.** The repository's two committed cuts disagree: the same landscape classifies most cells composition-dominated on the sparse 1-hop `named` cut and none of them on the denser `taste_motor` cut. Run across a ladder of nested cuts of 1k to 50k cells (`flylab.analysis.scale`), the composition-dominated verdict survives on exactly one extract — the in-star — while a cut with *fewer* nodes but twenty times the mean degree is already topology-dependent. A dependence result is therefore only quotable together with the structure of the graph it was measured on.
+**The verdict this analysis returns depends on the extract it is measured on.** The saved scale study associates the change more with recurrence than node count, but it does not isolate a causal structural feature. The repository's two committed cuts disagree: the same landscape classifies most cells composition-dominated on the sparse 1-hop `named` cut and none of them on the denser `taste_motor` cut. Across the saved 1k–50k ladder, only the `named` in-star is composition-dominated; `scale_1k` has fewer nodes but twenty times its mean degree and is already topology-dependent. At 5k and 10k the imidacloprid effect is distinguishable from all three ranked edge/wiring nulls; transmitter-label shuffles are separate and indeterminate at some rungs. The larger scale cut files are absent from this checkout, so those results remain imported observations. Quote any dependence result with the structure of the graph it was measured on.
 
 ### 3. Model conclusions are stress-tested
 
@@ -86,7 +88,7 @@ FlyLab includes:
 | **Global uncertainty** | Which assumptions dominate variance in a model output? |
 | **Value of information** | Which measurement or re-analysis would reduce the most model uncertainty? |
 | **Claim provenance** | Which links in a result are observations, literature-derived inputs, modelling assumptions, or computations? |
-| **Scale ladder** | Does the dependence verdict settle as the extract grows, and what structural property predicts it? |
+| **Scale ladder** | How do dependence verdicts vary across saved extracts of different sizes and structure? |
 
 Negative results are first-class outputs. If a conclusion depends on an asserted gain rule, or a connectome-specific interpretation is not supported by the null analysis, FlyLab is designed to show that rather than hide it.
 

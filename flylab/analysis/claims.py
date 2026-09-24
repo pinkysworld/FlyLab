@@ -96,13 +96,17 @@ UNIVERSAL_UNKNOWNS: tuple[dict[str, str], ...] = (
         "id": "mn9_receptor_expression",
         "statement": "The receptor complement of MN9 -- the main motor readout -- is not measured.",
         "why": (
-            "No cited atlas reports Rdl or nAChR expression for identified adult leg or "
-            "labellar motor neurons, so MN9 carries the 'unknown' default weight and the "
-            "model patches it with the same uniform gain as every other cell."
+            "No class-specific receptor fractions for identified adult leg or labellar motor "
+            "neurons have been added to this dataset. Adult VNC primary counts (GEO GSE141807) "
+            "have been reanalyzed for VNC-wide gene detection, but the summary has no "
+            "cell-class assignments and does not identify MN9 in the brain subesophageal zone. "
+            "MN9 therefore carries the 'unknown' default weight, and the model patches it with "
+            "the same uniform gain as every other cell."
         ),
         "would_resolve": (
-            "Adult VNC snRNA-seq restricted to annotated motor-neuron types, reporting "
-            "nAChR / Rdl / GluCl / Ace expression."
+            "A defensible mapping from the reprocessed GEO GSE141807 barcodes to adult VNC "
+            "motor-neuron classes, plus a separate class-matched brain/SEZ atlas or targeted "
+            "assay for MN9."
         ),
     },
     {
@@ -430,13 +434,19 @@ def claim_audit(notebook_or_result: Mapping[str, Any] | None = None, **kw: Any) 
             "MODEL-ASSUMPTION",
             "MODEL-ASSUMPTION",
             (
-                "The gain is applied uniformly to every cell of a transmitter class, because "
-                "per-cell receptor expression is largely unmapped"
-                + (f" ({coverage * 100:.1f}% of cells mapped)" if coverage is not None else "")
-                + ". A cell that does not express the receptor is patched exactly like one that does."
+                "The gain is applied uniformly to every cell of a transmitter class. Coarse "
+                "cross-atlas class-level annotation is available for"
+                + (
+                    f" {coverage * 100:.1f}% of graph-node × receptor-key pairs"
+                    if coverage is not None
+                    else " an unquantified share of graph-node × receptor-key pairs"
+                )
+                + "; this is annotation availability, not a per-cell expression measurement. "
+                "A cell that does not express the receptor is patched exactly like one that does."
             ),
             detail={
-                "fraction_cells_mapped": coverage,
+                "fraction_cell_receptor_pairs_annotated": coverage,
+                "coverage_unit": "graph_node_x_receptor_key_pair",
                 "motor_neuron_gap": mn9_gap,
                 "primary_model": "uniform gains",
             },
@@ -818,7 +828,12 @@ def _expression_facts() -> tuple[float | None, dict[str, Any] | None]:
         table = expression_table()
     except Exception:  # pragma: no cover - optional module
         return None, None
-    coverage = _num((table.get("coverage") or {}).get("fraction_known_overall"))
+    coverage_block = table.get("coverage") or {}
+    coverage = _num(
+        coverage_block.get("fraction_cell_receptor_pairs_annotated")
+        if "fraction_cell_receptor_pairs_annotated" in coverage_block
+        else coverage_block.get("fraction_known_overall")
+    )
     gap = table.get("motor_neuron_gap")
     slim = None
     if isinstance(gap, Mapping):
@@ -826,6 +841,7 @@ def _expression_facts() -> tuple[float | None, dict[str, Any] | None]:
             "status": gap.get("status"),
             "description": gap.get("description"),
             "consequence_for_flylab": gap.get("consequence_for_flylab"),
+            "public_data_lead": gap.get("public_data_lead"),
         }
     return coverage, slim
 

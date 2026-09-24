@@ -8,4 +8,4 @@
 | H4 | subgraph | diazepam | mean_hz | none | 0.000 | -- | software_prediction |
 | H5 | taste_map | -- | mn9_sugar_bitter_hz - mn9_sugar_hz | decrease | -0.296 | 23 | software_prediction |
 | H6 | taste_map | fipronil | bitter_veto_ratio | increase | 0.413 | 16 | software_prediction |
-| H7 | subgraph | picrotoxin | mean_hz | increase | 0.340 | 16 | software_prediction |
+| H7 | subgraph | picrotoxin | mean_hz | increase | 0.400 | 16 | software_prediction |
